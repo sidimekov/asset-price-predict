@@ -1,0 +1,31 @@
+{
+  "name": "asset-price-predict",
+  "version": "1.0.0",
+  "packageManager": "pnpm@9.0.0",
+  "description": "Web-app for forecasting timeseries of asset prices",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "prettier -w .",
+    "format:check": "prettier -c .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "e2e": "pnpm -r e2e"
+  },
+  "devDependencies": {
+    "eslint": "^9.37.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sidimekov/asset-price-predict.git"
+  },
+  "private": true
+}
