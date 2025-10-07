@@ -1,11 +1,15 @@
 {
   "name": "@assetpredict/web",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "start": "next start"
+    "start": "next start",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@assetpredict/shared": "workspace:^",
@@ -18,6 +22,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

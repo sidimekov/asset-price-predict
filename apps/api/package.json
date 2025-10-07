@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@assetpredict/shared": "workspace:*"
