@@ -6,7 +6,7 @@ export default function Home() {
             <h1>Welcome to the Home Page!</h1>
             <Link href="/FirstPage">Go to Next Page</Link>
             <br/>
-            <Link href="/SeconddвввPage">Go to Another Page</Link>
+            <Link href="/FirstPage">Go to Another Page</Link>
         </div>
     );
 }
