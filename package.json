@@ -1,7 +1,7 @@
 {
   "name": "asset-price-predict",
   "version": "1.0.0",
-  "packageManager": "pnpm@10.18.1",
+  "packageManager": "pnpm@9.0.0",
   "description": "Web-app for forecasting timeseries of asset prices",
   "workspaces": [
     "apps/*",
