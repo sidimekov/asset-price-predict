@@ -19,7 +19,16 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
     css: true,
-    environmentOptions: { jsdom: { url: 'http://localhost' } },
+    environmentOptions: {
+    jsdom: {
+      url: 'http://localhost',
+      resources: "usable",
+      runScripts: "dangerously" 
+    }
+  },
+  deps: {
+    inline: ['whatwg-url', 'webidl-conversions'] 
+  },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'clover', 'json'],
