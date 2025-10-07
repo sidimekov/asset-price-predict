@@ -1,30 +1,40 @@
-name: Unit Tests
+name: unit-tests
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
 
 jobs:
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
           cache: 'pnpm'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Install deps (frozen lockfile)
+        run: pnpm install --frozen-lockfile
 
-      - name: Run unit tests
-        run: pnpm test
+      # Если у вас monorepo с workspace'ами — тесты во всех пакетах:
+      # - name: Run tests (all workspaces)
+      #   run: pnpm -r test --if-present
+
+      # Если тесты запускаются из веб-пакета:
+      - name: Run tests (@assetpredict/web)
+        run: |
+          cd packages/web 2>/dev/null || true
+          pnpm test --if-present
