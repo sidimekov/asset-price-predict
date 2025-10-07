@@ -1,0 +1,33 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm (reads version from package.json)
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false   # не устанавливаем зависимости на этом шаге
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies (workspace root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests (apps/web)
+        working-directory: apps/web
+        run: pnpm test
