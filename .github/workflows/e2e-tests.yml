@@ -1,52 +1,59 @@
 name: e2e-tests
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches: [ main ]
+  pull_request:
 
 jobs:
-  e2e-tests:
+  e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    env:
+      PORT: 3001
+      BASE_URL: http://127.0.0.1:3001
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false    # ВАЖНО: НЕ УКАЗЫВАТЬ "version"
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: 'pnpm'
 
-      - name: Install dependencies (root, lockfile)
+      - name: Install deps
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm --filter @assetpredict/web exec playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Build app
-        run: pnpm --filter @assetpredict/web build
+        run: pnpm run build
 
-      - name: Start app on :3001 (background)
+      - name: Start app on :${{ env.PORT }} (background)
         run: |
-          pnpm --filter @assetpredict/web start -- -p 3001 &
-          echo $! > .next_pid
+          (PORT=$PORT pnpm run start -- --port $PORT || pnpm run preview -- --port $PORT) &
+          echo $! > server.pid
 
       - name: Wait for app to be ready
-        run: npx --yes wait-on http://127.0.0.1:3001
+        run: npx --yes wait-on --timeout 180000 http-get://127.0.0.1:$PORT
 
       - name: Run Playwright tests
-        run: pnpm --filter @assetpredict/web exec playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ env.BASE_URL }}
+        run: pnpm exec playwright test --reporter=github
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop app
         if: always()
         run: |
-          if [ -f .next_pid ]; then kill $(cat .next_pid) || true; fi
+          if [ -f server.pid ]; then kill $(cat server.pid) || true; fi
