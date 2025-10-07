@@ -42,6 +42,6 @@ describe("Calculator page", () => {
         fireEvent.change(screen.getByLabelText("Число B"), { target: { value: "0" } })
         fireEvent.change(screen.getByLabelText("Операция"), { target: { value: "/" } })
         fireEvent.click(screen.getByText("Посчитать"))
-        expect(await screen.findByRole("alert")).toHaveTextContent(/деление на ноль/i)
+        expect(await screen.findByRole("alert")).toHaveTextContent(/ошибка при делении на ноль/i)
     })
 })
