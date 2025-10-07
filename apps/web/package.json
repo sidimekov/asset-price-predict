@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@assetpredict/shared": "workspace:^",
@@ -22,11 +22,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^5.0.4",
     "jsdom": "^27.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   }
 }
