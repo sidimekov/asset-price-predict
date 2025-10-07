@@ -4,7 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main, '*']
+
+    branches: [main, '*']  # Триггер на все PR, включая другие ветки для демо
+
 
 jobs:
   e2e-tests:
@@ -17,13 +19,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # Убедитесь, что версия совпадает с вашим проектом
-          cache: 'pnpm'
+
+          node-version: '20'  # Используйте версию Node, совместимую с вашим проектом
+          cache: 'pnpm'  # Кэширование для pnpm
+
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
+
           run_install: false  # Не запускать pnpm install автоматически
 
       - name: Verify pnpm installation
@@ -31,23 +36,28 @@ jobs:
           pnpm --version
           echo "PATH=$PATH" >> $GITHUB_ENV  # Добавляем текущий PATH в окружение
 
+
       - name: Get pnpm store directory
         id: pnpm-store
         run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
+
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
 
+
       - name: Start Next.js dev server
         run: |
           cd apps/web
           pnpm dev &  # Запуск сервера в фоновом режиме
+
           npx wait-on http://localhost:3000
 
       - name: Run E2E tests
         run: pnpm --filter web e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
+
