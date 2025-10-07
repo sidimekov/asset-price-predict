@@ -1,7 +1,7 @@
 {
   "name": "asset-price-predict",
   "version": "1.0.0",
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.18.1",
   "description": "Web-app for forecasting timeseries of asset prices",
   "workspaces": [
     "apps/*",
@@ -21,11 +21,11 @@
     "e2e": "pnpm -r e2e"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9.37.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
-    "@vitest/coverage-v8": "^3.2.4"
+    "vitest": "^3.2.4"
   },
   "repository": {
     "type": "git",
