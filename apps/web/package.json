@@ -26,9 +26,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "jsdom": "^27.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "webidl-conversions": "^8.0.0",
+    "whatwg-url": "^15.1.0"
   }
 }
