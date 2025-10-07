@@ -5,6 +5,7 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: {
+        // Node.js globals
         console: 'readonly',
         process: 'readonly',
         __dirname: 'readonly',
@@ -12,10 +13,17 @@ export default [
         Buffer: 'readonly',
         module: 'readonly',
         require: 'readonly',
+        exports: 'readonly',
+        global: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
       },
     },
     rules: {
       'no-unused-vars': 'warn',
+      'no-undef': 'error',
     },
   },
   {

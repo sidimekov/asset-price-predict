@@ -10,7 +10,10 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "test-cov": "vitest run --coverage",
-    "coverage:report": "vitest run --coverage --reporter=html"
+    "coverage:report": "vitest run --coverage --reporter=html",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@assetpredict/shared": "workspace:^",

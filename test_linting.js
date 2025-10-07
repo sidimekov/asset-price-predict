@@ -1,2 +1,2 @@
-const  bebra=1
-console.log( bebra    )  
+const bebra = 1;
+console.log(bebra);
