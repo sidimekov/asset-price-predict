@@ -12,7 +12,7 @@ export function calculate(a: number, b: number, op: '+' | '-' | '*' | '/'): numb
     case '-': return a - b
     case '*': return a * b
     case '/': {
-      if (b === 0) throw new Error('Division by zero')
+      if (b === 0) throw new Error('ошибка при делении на ноль')
       return a / b
     }
     default: throw new Error('Invalid operator')
