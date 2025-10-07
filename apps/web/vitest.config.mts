@@ -26,8 +26,10 @@ export default defineConfig({
         runScripts: "dangerously"
       }
     },
-    deps: {
-      inline: ['whatwg-url', 'webidl-conversions']
+    server: {
+      deps: {
+        inline: []
+      }
     },
     coverage: {
       provider: 'v8',
