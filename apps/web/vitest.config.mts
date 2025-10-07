@@ -20,15 +20,15 @@ export default defineConfig({
     setupFiles: ['./src/setupTests.ts'],
     css: true,
     environmentOptions: {
-    jsdom: {
-      url: 'http://localhost',
-      resources: "usable",
-      runScripts: "dangerously" 
-    }
-  },
-  deps: {
-    inline: ['whatwg-url', 'webidl-conversions'] 
-  },
+      jsdom: {
+        url: 'http://localhost',
+        resources: "usable",
+        runScripts: "dangerously"
+      }
+    },
+    deps: {
+      inline: ['whatwg-url', 'webidl-conversions']
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'clover', 'json'],
@@ -44,4 +44,3 @@ export default defineConfig({
     },
   },
 });
-
