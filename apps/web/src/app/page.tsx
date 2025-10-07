@@ -32,7 +32,7 @@ export default function Home() {
     }
 
     if (op === "/" && numB === 0) {
-      setError("Ошибка: деление на ноль.")
+      setError("0")
       return
     }
 
