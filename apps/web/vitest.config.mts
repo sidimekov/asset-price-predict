@@ -18,5 +18,15 @@ export default defineConfig({
     setupFiles: ['./src/setupTests.ts'],
     css: true,
     environmentOptions: { jsdom: { url: 'http://localhost' } },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'clover', 'json'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80
+      }
+    }
   },
 })
