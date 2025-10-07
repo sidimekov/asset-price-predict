@@ -1,0 +1,47 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, '*']  # Триггер на все PR, включая другие ветки для демо
+
+jobs:
+  e2e-tests:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # Используйте версию Node, совместимую с вашим проектом
+          cache: 'pnpm'  # Кэширование для pnpm
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile  # Установка зависимостей для всех workspaces
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps  # Установка браузеров с зависимостями
+
+      - name: Start Next.js dev server
+        run: |
+          cd apps/web
+          pnpm dev &  # Запуск сервера в фоновом режиме
+          npx wait-on http://localhost:3000  # Ожидание запуска сервера
+
+      - name: Run E2E tests
+        run: pnpm --filter web e2e  # Запуск тестов в apps/web
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000  # Указание базового URL для тестов
