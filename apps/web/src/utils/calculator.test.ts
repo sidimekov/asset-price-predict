@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test, describe } from 'vitest'
 import { parseNumber, calculate } from './calculator'
 
 describe('parseNumber', () => {
