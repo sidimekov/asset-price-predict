@@ -34,7 +34,7 @@ describe('calculate', () => {
   })
 
   test('выбрасывает ошибку при делении на ноль', () => {
-    expect(() => calculate(10, 0, '/')).toThrow('Division by zero')
+    expect(() => calculate(10, 0, '/')).toThrow('ошибка при делении на ноль')
   })
 
   test('выбрасывает ошибку для некорректного оператора', () => {
