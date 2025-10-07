@@ -8,7 +8,7 @@
     "start": "next start",
     "test": "vitest run",
     "e2e": "playwright test",
-    "test-cov": "vitest run src/utils --coverage",
+    "test-cov": "vitest run --coverage",
     "coverage:report": "vitest run --coverage --reporter=html"
   },
   "dependencies": {
