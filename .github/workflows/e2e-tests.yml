@@ -1,59 +1,46 @@
-name: e2e-tests
+name: E2E Тесты
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
-  e2e:
+  e2e-tests:
     runs-on: ubuntu-latest
-    env:
-      PORT: 3001
-      BASE_URL: http://127.0.0.1:3001
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Получение кода
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
-        with: { version: 9 }
-
-      - uses: actions/setup-node@v4
+      - name: Установка pnpm
+        uses: pnpm/action-setup@v4
         with:
-          node-version: 20
+          run_install: false
+          version: 9.0.0
+
+      - name: Установка Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
           cache: 'pnpm'
 
-      - name: Install deps
+      - name: Установка зависимостей
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+      - name: Установка браузеров Playwright
+        run: pnpm -C apps/web exec playwright install --with-deps
 
-      - name: Build app
-        run: pnpm run build
+      - name: Build web
+        run: pnpm -C apps/web build
 
-      - name: Start app on :${{ env.PORT }} (background)
-        run: |
-          (PORT=$PORT pnpm run start -- --port $PORT || pnpm run preview -- --port $PORT) &
-          echo $! > server.pid
+      - name: Запуск Playwright тестов
+        run: pnpm e2e
 
-      - name: Wait for app to be ready
-        run: npx --yes wait-on --timeout 180000 http-get://127.0.0.1:$PORT
-
-      - name: Run Playwright tests
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ env.BASE_URL }}
-        run: pnpm exec playwright test --reporter=github
-
-      - name: Upload Playwright report
+      - name: Загрузка отчёта о тестах
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Stop app
-        if: always()
-        run: |
-          if [ -f server.pid ]; then kill $(cat server.pid) || true; fi
+          path: apps/web/playwright-report/
