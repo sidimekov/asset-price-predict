@@ -9,7 +9,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
-    "@assetpredict/shared": "workspace:^",
+    "@assetpredict/shared": "workspace:*",
     "@playwright/test": "1.56.0",
     "next": "15.5.4",
     "react": "19.1.0",
