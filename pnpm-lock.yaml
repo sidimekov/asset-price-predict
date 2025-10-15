@@ -8,9 +8,6 @@ importers:
 
   .:
     devDependencies:
-      '@playwright/test':
-        specifier: ^1.56.0
-        version: 1.56.0
       eslint:
         specifier: ^9.37.0
         version: 9.37.0(jiti@2.6.1)
