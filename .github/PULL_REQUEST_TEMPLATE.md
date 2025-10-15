@@ -22,7 +22,6 @@
 1. `pnpm i`
 2. `pnpm build`, `pnpm dev` в `apps/web` / `apps/api` (нужное оставить)
 3. Открыть `http://localhost:3000` и ...
-4. (для e2e) `pnpm e2e`
 
 
 ## Дополнительно
