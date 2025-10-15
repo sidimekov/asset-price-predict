@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
-import path from "path";
+import type { NextConfig } from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   webpack(config) {
@@ -13,4 +13,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

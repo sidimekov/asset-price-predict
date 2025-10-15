@@ -22,14 +22,14 @@ export default defineConfig({
     environmentOptions: {
       jsdom: {
         url: 'http://localhost',
-        resources: "usable",
-        runScripts: "dangerously"
-      }
+        resources: 'usable',
+        runScripts: 'dangerously',
+      },
     },
     server: {
       deps: {
-        inline: []
-      }
+        inline: [],
+      },
     },
     coverage: {
       provider: 'v8',
