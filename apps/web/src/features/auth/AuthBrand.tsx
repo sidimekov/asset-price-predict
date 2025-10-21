@@ -1,10 +1,32 @@
 import React from 'react';
 
-const AuthBrand: React.FC = () => {
+interface AuthBrandProps {
+    style?: React.CSSProperties;
+}
+
+const AuthBrand: React.FC<AuthBrandProps> = ({ style }) => {
     return (
-        <div className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
-            Asset<span className="text-white">Predict</span>
-        </div>
+        <h1
+            style={{
+                margin: 0,
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '32px',
+                fontWeight: 700,
+                ...style,
+            }}
+        >
+      <span
+          style={{
+              background: 'linear-gradient(to right, #FF409A, #C438EF)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+          }}
+      >
+        Asset
+      </span>
+            <span style={{ color: '#FFFFFF' }}>Predict</span>
+        </h1>
     );
 };
 

@@ -1,58 +1,74 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Input } from '@/shared/ui/Input';
-import { Button } from '@/shared/ui/Button';
 
-const SignInForm: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [errors, setErrors] = useState({ email: '', password: '' });
-    const [isLoading, setIsLoading] = useState(false);
+interface SignInFormProps {
+  onSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
+}
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrors({ email: '', password: '' });
-        setIsLoading(true);
+const SignInForm: React.FC<SignInFormProps> = ({ onSubmit, isLoading }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '' });
 
-        let hasError = false;
-        if (!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
-            setErrors((prev) => ({ ...prev, email: 'Пожалуйста, введите корректный email' }));
-            hasError = true;
-        }
-        if (!password) {
-            setErrors((prev) => ({ ...prev, password: 'Пароль не может быть пустым' }));
-            hasError = true;
-        }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({ email: '', password: '' });
 
-        if (!hasError) {
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            alert('Вход выполнен (мок)');
-        }
+    let hasError = false;
+    if (!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
+      setErrors((prev) => ({ ...prev, email: 'Please enter the correct email address' }));
+      hasError = true;
+    }
+    if (!password) {
+      setErrors((prev) => ({ ...prev, password: 'The password cann\'t be empty' }));
+      hasError = true;
+    }
 
-        setIsLoading(false);
-    };
+    if (!hasError) {
+      onSubmit(e);
+    }
+  };
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-                label="Ваш email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)} // Убрана явная типизация
-                error={errors.email}
-                ariaDescribedby="email-error"
-            />
-            <Input
-                label="Ваш пароль"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)} // Убрана явная типизация
-                error={errors.password}
-                ariaDescribedby="password-error"
-            />
-            <Button type="submit" disabled={isLoading} ariaBusy={isLoading}>
-                Подтвердить
-            </Button>
-        </form>
-    );
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
+      <Input
+        placeholder="Your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        error={errors.email}
+        ariaDescribedby="email-error"
+      />
+      <Input
+        placeholder="Your password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        error={errors.password}
+        ariaDescribedby="password-error"
+      />
+      <button
+        type="submit"
+        disabled={isLoading}
+        style={{
+          color: '#FFFFFF',
+          fontFamily: 'Montserrat, sans-serif',
+          fontSize: '16px',
+          fontWeight: 600,
+          background: 'none',
+          border: 'none',
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          opacity: isLoading ? 0.5 : 1,
+          padding: 0,
+          marginTop: '16px',
+        }}
+      >
+        Confirm
+      </button>
+    </form>
+  );
 };
 
 export default SignInForm;

@@ -1,71 +1,87 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Input } from '@/shared/ui/Input';
-import { Button } from '@/shared/ui/Button';
 
-const SignUpForm: React.FC = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [errors, setErrors] = useState({ email: '', password: '', confirm: '' });
-    const [isLoading, setIsLoading] = useState(false);
+interface SignUpFormProps {
+  onSubmit: (e: React.FormEvent) => void;
+  isLoading: boolean;
+}
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrors({ email: '', password: '', confirm: '' });
-        setIsLoading(true);
+const SignUpForm: React.FC<SignUpFormProps> = ({ onSubmit, isLoading }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState({ email: '', password: '', confirm: '' });
 
-        let hasError = false;
-        if (!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
-            setErrors((prev) => ({ ...prev, email: 'Пожалуйста, введите корректный email' }));
-            hasError = true;
-        }
-        if (!password) {
-            setErrors((prev) => ({ ...prev, password: 'Пароль не может быть пустым' }));
-            hasError = true;
-        }
-        if (confirmPassword !== password) {
-            setErrors((prev) => ({ ...prev, confirm: 'Пароли не совпадают' }));
-            hasError = true;
-        }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({ email: '', password: '', confirm: '' });
 
-        if (!hasError) {
-            await new Promise((resolve) => setTimeout(resolve, 800));
-            alert('Зарегистрировано (мок)');
-        }
+    let hasError = false;
+    if (!email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
+      setErrors((prev) => ({ ...prev, email: 'Please enter the correct email address' }));
+      hasError = true;
+    }
+    if (!password) {
+      setErrors((prev) => ({ ...prev, password: 'The password cann\'t be empty' }));
+      hasError = true;
+    }
+    if (confirmPassword !== password) {
+      setErrors((prev) => ({ ...prev, confirm: 'Passwords don\'t match' }));
+      hasError = true;
+    }
 
-        setIsLoading(false);
-    };
+    if (!hasError) {
+      onSubmit(e);
+    }
+  };
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-                label="Ваш email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)} // Убрана явная типизация
-                error={errors.email}
-                ariaDescribedby="email-error"
-            />
-            <Input
-                label="Ваш пароль"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)} // Убрана явная типизация
-                error={errors.password}
-                ariaDescribedby="password-error"
-            />
-            <Input
-                label="Повторите пароль"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)} // Убрана явная типизация
-                error={errors.confirm}
-                ariaDescribedby="confirm-error"
-            />
-            <Button type="submit" disabled={isLoading} ariaBusy={isLoading}>
-                Подтвердить
-            </Button>
-        </form>
-    );
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
+      <Input
+        placeholder="Your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        error={errors.email}
+        ariaDescribedby="email-error"
+      />
+      <Input
+        placeholder="Your password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        error={errors.password}
+        ariaDescribedby="password-error"
+      />
+      <Input
+        placeholder="Your password again"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        error={errors.confirm}
+        ariaDescribedby="confirm-error"
+      />
+      <button
+        type="submit"
+        disabled={isLoading}
+        style={{
+          color: '#FFFFFF',
+          fontFamily: 'Montserrat, sans-serif',
+          fontSize: '16px',
+          fontWeight: 600,
+          background: 'none',
+          border: 'none',
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          opacity: isLoading ? 0.5 : 1,
+          padding: 0,
+          marginTop: '16px',
+        }}
+      >
+          Confirm
+      </button>
+    </form>
+  );
 };
 
 export default SignUpForm;
