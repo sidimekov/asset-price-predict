@@ -1,20 +1,37 @@
-import Image from 'next/image';
+import React from 'react';
+import profile from '@/mocks/profile.json';
 
-// Мок-данные (будут заменены на вызов API позже)
-const mockProfile = {
-    username: 'Stepan Mikhailyuk',
-    login: 'Anonymous123',
-    avatarUrl: 'https://via.placeholder.com/150',
-};
-
-export default function ProfileHeader() {
+export const ProfileHeader: React.FC = () => {
     return (
-        <div className="flex items-center mb-8">
-            <div className="w-24 h-24 bg-gray-700 rounded-full mr-6 animate-pulse" />
+        <div
+            style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: '24px',
+                marginBottom: '40px',
+                flexWrap: 'wrap',
+            }}
+        >
+            <img
+                src={profile.avatarUrl}
+                alt={`${profile.username} avatar`}
+                style={{
+                    width: '128px',
+                    height: '128px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                }}
+            />
             <div>
-                <h1 className="text-white text-xl font-bold">Username: {mockProfile.username}</h1>
-                <p className="text-gray-400 text-sm">Login: {mockProfile.login}</p>
+                <p style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '18px' }}>
+                    Username:{' '}
+                    <span style={{ color: 'rgba(255,255,255,0.9)' }}>{profile.username}</span>
+                </p>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                    Login: {profile.login}
+                </p>
             </div>
         </div>
     );
-}
+};
