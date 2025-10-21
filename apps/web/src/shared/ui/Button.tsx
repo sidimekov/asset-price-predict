@@ -26,7 +26,10 @@ export const Button: React.FC<ButtonProps> = ({ type = 'button', disabled, ariaB
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.5 : 1,
                 transition: 'opacity 0.2s',
+                outline: 'none',
             }}
+            onFocus={(e) => (e.currentTarget.style.outline = '2px solid #FF409A')}
+            onBlur={(e) => (e.currentTarget.style.outline = 'none')}
         >
             {children}
         </button>
