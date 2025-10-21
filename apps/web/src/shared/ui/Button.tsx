@@ -1,19 +1,32 @@
 import React from 'react';
 
 interface ButtonProps {
-    children: React.ReactNode;
-    type?: 'button' | 'submit';
+    type?: 'submit' | 'button';
     disabled?: boolean;
     ariaBusy?: boolean;
+    children: React.ReactNode;
 }
 
-export const Button: React.FC<ButtonProps> = ({ children, type = 'button', disabled = false, ariaBusy = false }) => {
+export const Button: React.FC<ButtonProps> = ({ type = 'button', disabled, ariaBusy, children }) => {
     return (
         <button
             type={type}
             disabled={disabled}
-            className="w-full bg-gradient-to-r from-pink-500 to-purple-700 text-white p-2 rounded hover:from-pink-600 hover:to-purple-800 transition-colors"
             aria-busy={ariaBusy}
+            style={{
+                width: '100%',
+                height: '48px',
+                background: 'linear-gradient(to right, #FF409A, #C438EF)',
+                color: '#FFFFFF',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '16px',
+                fontWeight: 600,
+                borderRadius: '8px',
+                border: 'none',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'opacity 0.2s',
+            }}
         >
             {children}
         </button>
