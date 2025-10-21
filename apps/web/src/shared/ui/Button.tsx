@@ -1,36 +1,65 @@
+"use client";
+
 import React from 'react';
 
 interface ButtonProps {
-    children: React.ReactNode;
-    type?: 'button' | 'submit';
+    type?: 'submit' | 'button';
     disabled?: boolean;
     ariaBusy?: boolean;
-    variant?: 'primary' | 'secondary' | 'danger';
+    children: React.ReactNode;
+    variant?: 'primary' | 'secondary' | 'danger-gradient';
+    ariaLabel?: string;
     onClick?: (e: React.MouseEvent<any>) => void;
 }
 
 export const Button: React.FC<ButtonProps> = ({
-                                                  children,
                                                   type = 'button',
-                                                  disabled = false,
-                                                  ariaBusy = false,
+                                                  disabled,
+                                                  ariaBusy,
+                                                  children,
                                                   variant = 'primary',
+                                                  ariaLabel,
                                                   onClick,
                                               }) => {
-    const baseStyles = 'w-full p-2 rounded text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors';
-    const variantStyles = {
-        primary: 'bg-gradient-to-r from-pink-500 to-purple-700 hover:from-pink-600 hover:to-purple-800',
-        secondary: 'bg-gray-600 hover:bg-gray-700',
-        danger: 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600',
+    const getGradient = () => {
+        switch (variant) {
+            case 'secondary':
+                return 'linear-gradient(to right, #4B4B4B, #5A5A5A)';
+            case 'danger-gradient':
+                return 'linear-gradient(to right, #FF4B4B, #FF2E2E)';
+            case 'primary':
+            default:
+                return 'linear-gradient(to right, #FF409A, #C438EF)';
+        }
     };
 
     return (
         <button
             type={type}
             disabled={disabled}
-            className={`${baseStyles} ${variantStyles[variant]}`}
             aria-busy={ariaBusy}
+            aria-label={ariaLabel}
             onClick={onClick}
+            style={{
+                width: '100%',
+                height: '48px',
+                background: getGradient(),
+                color: '#FFFFFF',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '16px',
+                fontWeight: 600,
+                borderRadius: '16px',
+                border: 'none',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.6 : 1,
+                transition: 'opacity 0.2s, transform 0.2s',
+                outline: 'none',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}
+            onFocus={(e) => (e.currentTarget.style.outline = '2px solid #FF409A')}
+            onBlur={(e) => (e.currentTarget.style.outline = 'none')}
+            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
             {children}
         </button>
