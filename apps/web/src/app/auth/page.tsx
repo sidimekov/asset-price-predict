@@ -3,40 +3,95 @@
 import React, { useState } from 'react';
 import AuthBrand from '@/features/auth/AuthBrand';
 import { GradientCard } from '@/shared/ui/GradientCard';
-import AuthTabs from '@/features/auth/AuthTabs';
 import SignUpForm from '@/features/auth/SignUpForm';
 import SignInForm from '@/features/auth/SignInForm';
 
 const AuthPage: React.FC = () => {
-    const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+  const [isLoading, setIsLoading] = useState(false);
 
-    const toggleMode = () => {
-        setMode(mode === 'signup' ? 'signin' : 'signup');
-    };
+  const toggleMode = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMode(mode === 'signup' ? 'signin' : 'signup');
+  };
 
-    return (
-        <div className="bg-surface-dark flex items-center justify-center min-h-screen">
-            <div className="container mx-auto p-4">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-                    <AuthBrand />
-                    <a href="#" className="text-ink hover:underline" onClick={toggleMode}>
-                        {mode === 'signup' ? 'У вас уже есть аккаунт? Войти' : 'У вас уже есть аккаунт? Зарегистрироваться'}
-                    </a>
-                </div>
-                <div className="max-w-md w-full mx-auto">
-                    <GradientCard>
-                        <h2 className="text-2xl font-semibold text-center mb-4">
-                            {mode === 'signup' ? 'Регистрация в AssetPredict' : 'Добро пожаловать обратно'}
-                        </h2>
-                        <AuthTabs mode={mode} setMode={setMode} />
-                        <div role="tabpanel" id={mode === 'signup' ? 'signup-tab' : 'signin-tab'}>
-                            {mode === 'signup' ? <SignUpForm /> : <SignInForm />}
-                        </div>
-                    </GradientCard>
-                </div>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    setIsLoading(false);
+    alert(mode === 'signup' ? 'Registered' : 'Entry completed');
+  };
+
+  return (
+    <div
+      style={{
+        backgroundColor: '#201D47',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px' }}>
+        <AuthBrand />
+        <a
+          href="#"
+          onClick={toggleMode}
+          style={{
+            color: '#FFFFFF',
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '14px',
+            fontWeight: 400,
+            textDecoration: 'none',
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+          onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+        >
+          {mode === 'signup' ? 'Already have an account? sign in' : 'No account? sign up'}
+        </a>
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <GradientCard>
+            <h2
+              style={{
+                color: '#FFFFFF',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '20px',
+                fontWeight: 600,
+                textAlign: 'center',
+                marginBottom: '24px',
+              }}
+            >
+              {mode === 'signup' ? 'Sign up for AssetPredict' : 'Sign in for AssetPredict'}
+            </h2>
+            <div style={{ position: 'relative' }}>
+              <div role="tabpanel" id={mode === 'signup' ? 'signup-tab' : 'signin-tab'}>
+                {mode === 'signup' ? (
+                  <SignUpForm onSubmit={handleSubmit} isLoading={isLoading} />
+                ) : (
+                  <SignInForm onSubmit={handleSubmit} isLoading={isLoading} />
+                )}
+              </div>
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '24px',
+                  right: '24px',
+                  color: '#A0A0A0',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: 400,
+                }}
+              >
+              </div>
             </div>
+          </GradientCard>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default AuthPage;
