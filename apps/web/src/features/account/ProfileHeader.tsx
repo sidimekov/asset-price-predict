@@ -1,13 +1,39 @@
 import React from 'react';
 import profile from '@/mocks/profile.json';
+import Skeleton from '@/shared/ui/Skeleton';
 
-export const ProfileHeader: React.FC = () => {
+interface ProfileHeaderProps {
+    loading?: boolean,
+    onClick?: () => void
+}
+
+export const ProfileHeader: React.FC<ProfileHeaderProps> = ({loading = false, onClick}) => {
+    if (loading) {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    gap: '24px',
+                    marginBottom: '40px',
+                    flexWrap: 'wrap',
+                }}
+            >
+                {/* Skeleton для аватара */}
+                <Skeleton width="128px" height="128px"/>
+
+                {/* Skeleton для текста */}
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px', flex: 1}}>
+                    <Skeleton width="200px" height="24px"/>
+                    <Skeleton width="150px" height="18px"/>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div
             style={{
                 display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
                 gap: '24px',
                 marginBottom: '40px',
                 flexWrap: 'wrap',
@@ -24,11 +50,10 @@ export const ProfileHeader: React.FC = () => {
                 }}
             />
             <div>
-                <p style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '18px' }}>
-                    Username:{' '}
-                    <span style={{ color: 'rgba(255,255,255,0.9)' }}>{profile.username}</span>
+                <p style={{color: '#FFFFFF', fontWeight: 600, fontSize: '18px'}}>
+                    Username: <span style={{color: 'rgba(255,255,255,0.9)'}}>{profile.username}</span>
                 </p>
-                <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                <p style={{color: 'rgba(255,255,255,0.6)', marginTop: '4px'}}>
                     Login: {profile.login}
                 </p>
             </div>

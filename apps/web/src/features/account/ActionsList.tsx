@@ -2,45 +2,41 @@
 
 import React from 'react';
 import { Button } from '@/shared/ui/Button';
+import Skeleton from '@/shared/ui/Skeleton';
 
-export const ActionsList: React.FC = () => {
+interface ActionsListProps {
+    loading?: boolean;
+    onClick?: (label: string) => void;
+}
+
+export const ActionsList: React.FC<ActionsListProps> = ({ loading = false, onClick }) => {
+    const actions = ['Edit photo', 'Change password', 'Change username', 'Change login'];
+
     const handleClick = (label: string) => (e: React.MouseEvent<any>) => {
         e.preventDefault();
-        alert(`${label} — Not implemented`);
+        if (!loading) {
+            alert(`${label} — Not implemented`);
+            onClick?.(label);
+        }
     };
 
     return (
-        <div
-            style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '16px',
-                width: '320px',
-            }}
-        >
-            <Button onClick={handleClick('Edit photo')} aria-busy={false}>
-                Edit photo
-            </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '320px' }}>
+            {loading
+                ? actions.map((_, idx) => <Skeleton key={idx} height="48px" />)
+                : actions.map((label) => (
+                    <Button key={label} onClick={handleClick(label)} aria-busy={false}>
+                        {label}
+                    </Button>
+                ))}
 
-            <Button onClick={handleClick('Change password')} aria-busy={false}>
-                Change password
-            </Button>
-
-            <Button onClick={handleClick('Change username')} aria-busy={false}>
-                Change username
-            </Button>
-
-            <Button onClick={handleClick('Change login')} aria-busy={false}>
-                Change login
-            </Button>
-
-            <Button
-                onClick={handleClick('Log out')}
-                variant="danger"
-                aria-busy={false}
-            >
-                Log out
-            </Button>
+            {loading ? (
+                <Skeleton height="48px" />
+            ) : (
+                <Button onClick={handleClick('Log out')} variant="danger" aria-busy={false}>
+                    Log out
+                </Button>
+            )}
         </div>
     );
 };
