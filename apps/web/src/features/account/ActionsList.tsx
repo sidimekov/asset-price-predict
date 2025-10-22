@@ -18,22 +18,26 @@ export const ActionsList: React.FC = () => {
                 width: '320px',
             }}
         >
-            <Button ariaLabel="Edit photo" onClick={handleClick('Edit photo')}>
+            <Button onClick={handleClick('Edit photo')} aria-busy={false}>
                 Edit photo
             </Button>
-            <Button ariaLabel="Change password" onClick={handleClick('Change password')}>
+
+            <Button onClick={handleClick('Change password')} aria-busy={false}>
                 Change password
             </Button>
-            <Button ariaLabel="Change username" onClick={handleClick('Change username')}>
+
+            <Button onClick={handleClick('Change username')} aria-busy={false}>
                 Change username
             </Button>
-            <Button ariaLabel="Change login" onClick={handleClick('Change login')}>
+
+            <Button onClick={handleClick('Change login')} aria-busy={false}>
                 Change login
             </Button>
+
             <Button
-                variant="danger-gradient"
-                ariaLabel="Log out"
                 onClick={handleClick('Log out')}
+                variant="danger"
+                aria-busy={false}
             >
                 Log out
             </Button>
