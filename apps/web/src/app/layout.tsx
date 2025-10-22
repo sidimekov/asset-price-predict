@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 fontFamily: 'Montserrat, sans-serif',
             }}
         >
-        {isAuthenticated && <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />}s
+        {isAuthenticated && <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />}
         <main
             style={{
                 flex: 1,
