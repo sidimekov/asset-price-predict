@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 
 interface ButtonProps {
@@ -7,8 +5,7 @@ interface ButtonProps {
     disabled?: boolean;
     ariaBusy?: boolean;
     children: React.ReactNode;
-    variant?: 'primary' | 'secondary' | 'danger-gradient';
-    ariaLabel?: string;
+    variant?: 'primary' | 'danger';
     onClick?: (e: React.MouseEvent<any>) => void;
 }
 
@@ -18,19 +15,51 @@ export const Button: React.FC<ButtonProps> = ({
                                                   ariaBusy,
                                                   children,
                                                   variant = 'primary',
-                                                  ariaLabel,
                                                   onClick,
                                               }) => {
-    const getGradient = () => {
-        switch (variant) {
-            case 'secondary':
-                return 'linear-gradient(to right, #4B4B4B, #5A5A5A)';
-            case 'danger-gradient':
-                return 'linear-gradient(to right, #FF4B4B, #FF2E2E)';
-            case 'primary':
-            default:
-                return 'linear-gradient(to right, #FF409A, #C438EF)';
-        }
+    const baseStyle: React.CSSProperties = {
+        width: '100%',
+        height: '48px',
+        background:
+            variant === 'danger'
+                ? 'linear-gradient(to right, #FF0000, #FF4D4D)'
+                : 'linear-gradient(to right, #FF409A, #C438EF)',
+        color: '#FFFFFF',
+        fontFamily: 'Montserrat, sans-serif',
+        fontSize: '16px',
+        fontWeight: 600,
+        borderRadius: '16px',
+        border: 'none',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        transition: 'all 0.2s ease',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        outline: 'none',
+    };
+
+    const handleFocus = (e: React.FocusEvent<any>) => {
+        e.currentTarget.style.boxShadow =
+            '0 0 0 3px rgba(255, 64, 154, 0.7), 0 2px 8px rgba(0,0,0,0.15)';
+    };
+
+    const handleBlur = (e: React.FocusEvent<any>) => {
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<any>) => {
+        e.currentTarget.style.transform = 'scale(0.97)';
+    };
+
+    const handleMouseUp = (e: React.MouseEvent<any>) => {
+        e.currentTarget.style.transform = 'scale(1)';
+    };
+
+    const handleMouseEnter = (e: React.MouseEvent<any>) => {
+        e.currentTarget.style.opacity = '0.9';
+    };
+
+    const handleMouseLeave = (e: React.MouseEvent<any>) => {
+        e.currentTarget.style.opacity = disabled ? '0.5' : '1';
     };
 
     return (
@@ -38,28 +67,14 @@ export const Button: React.FC<ButtonProps> = ({
             type={type}
             disabled={disabled}
             aria-busy={ariaBusy}
-            aria-label={ariaLabel}
-            onClick={onClick}
-            style={{
-                width: '100%',
-                height: '48px',
-                background: getGradient(),
-                color: '#FFFFFF',
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '16px',
-                fontWeight: 600,
-                borderRadius: '16px',
-                border: 'none',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.6 : 1,
-                transition: 'opacity 0.2s, transform 0.2s',
-                outline: 'none',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            }}
-            onFocus={(e) => (e.currentTarget.style.outline = '2px solid #FF409A')}
-            onBlur={(e) => (e.currentTarget.style.outline = 'none')}
-            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
-            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            style={baseStyle}
+            onClick={onClick} // ✅ добавлено
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
         >
             {children}
         </button>
