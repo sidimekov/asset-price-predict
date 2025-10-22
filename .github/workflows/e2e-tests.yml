@@ -23,27 +23,41 @@ jobs:
         uses: pnpm/action-setup@v2
         with:
           version: 9.0.0
+          run_install: false
 
-      - name: Установка зависимостей
-        run: pnpm install
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
 
-      - name: Установка браузеров Playwright
-        run: pnpm exec playwright install --with-deps
+      - name: Установка зависимостей монорепо
+        run: pnpm install --frozen-lockfile
 
-      - name: Запуск приложения
-        run: pnpm -r --filter @assetpredict/web dev &
+      - name: Установка браузеров Playwright (в пакете apps/web)
+        run: pnpm -F @assetpredict/web exec playwright install --with-deps
+
+      - name: Сборка фронта (apps/web)
+        run: pnpm -F @assetpredict/web build
         env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Запуск приложения (apps/web)
+        run: pnpm -F @assetpredict/web start &
+        env:
+          PORT: 3000
           CI: true
+          NEXT_TELEMETRY_DISABLED: 1
 
       - name: Ожидание доступности приложения
-        run: npx wait-on http://localhost:3000
+        run: pnpm dlx wait-on http://localhost:3000
 
-      - name: Запуск Playwright тестов
-        run: pnpm -r --filter @assetpredict/web e2e
+      - name: Запуск Playwright тестов (apps/web)
+        run: pnpm -F @assetpredict/web e2e
 
       - name: Загрузка отчета о тестах
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
+          path: apps/web/playwright-report/
