@@ -19,6 +19,7 @@ export default [
         JSX: 'readonly',
         setTimeout: 'readonly',
         alert: 'readonly',
+        module: 'readonly',
       },
     },
     rules: {
