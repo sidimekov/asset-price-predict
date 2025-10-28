@@ -1,15 +1,24 @@
 import React from 'react';
 
 interface InputProps {
-    placeholder: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<any>) => void;
-    error?: string;
-    type?: string;
-    ariaDescribedby: string;
+    placeholder: string,
+    value: string,
+    onChange: (e: React.ChangeEvent<any>) => void,
+    error?: string,
+    type?: string,
+    ariaDescribedby: string,
+    label?: string
 }
 
-export const Input: React.FC<InputProps> = ({ placeholder, value, onChange, error, type = 'text', ariaDescribedby }) => {
+export const Input: React.FC<InputProps> = ({
+                                                placeholder,
+                                                value,
+                                                onChange,
+                                                error,
+                                                type = 'text',
+                                                ariaDescribedby,
+                                                label
+                                            }) => {
     return (
         <div>
             <label
