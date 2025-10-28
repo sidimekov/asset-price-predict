@@ -107,10 +107,15 @@ const AuthPage: React.FC = () => {
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setIsLoading(true);
-        setTimeout(() => {
+
+        // ДОБАВИТЬ data-testid
+        const timer = setTimeout(() => {
             setIsLoading(false);
             alert(mode === 'signup' ? 'Зарегистрировано (мок)' : 'Вход выполнен (мок)');
         }, 800);
+
+        // Позволить мокать
+        (globalThis as any).__AUTH_TIMER = timer;
     }
 };
 
