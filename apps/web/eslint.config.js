@@ -21,6 +21,7 @@ export default [
         alert: 'readonly',
         module: 'readonly',
         process: 'readonly',
+        screen: 'readonly',
       },
     },
     rules: {
