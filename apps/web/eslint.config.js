@@ -20,6 +20,7 @@ export default [
         setTimeout: 'readonly',
         alert: 'readonly',
         module: 'readonly',
+        process: 'readonly',
       },
     },
     rules: {

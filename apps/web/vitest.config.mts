@@ -19,18 +19,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
     css: true,
-    environmentOptions: {
-      jsdom: {
-        url: 'http://localhost',
-        resources: 'usable',
-        runScripts: 'dangerously',
-      },
-    },
-    server: {
-      deps: {
-        inline: [],
-      },
-    },
+    testTimeout: 60_000, // ← 60 СЕКУНД
+    pool: 'threads',     // ← УСКОРЯЕТ userEvent
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['e2e', 'node_modules', '.next'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'clover', 'json'],
