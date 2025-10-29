@@ -19,18 +19,15 @@ describe('RootLayout', () => {
       </RootLayout>,
     );
 
-    // Проверяем document.documentElement (html)
     expect(document.documentElement.tagName).toBe('HTML');
     expect(document.documentElement.lang).toBe('en');
 
-    // Проверяем body
     const body = document.body;
     expect(body).toBeInTheDocument();
     expect(body.className).toContain('--font-geist-sans');
     expect(body.className).toContain('--font-geist-mono');
     expect(body.className).toContain('antialiased');
 
-    // Проверяем ребёнка
     const child = document.querySelector('[data-testid="child"]');
     expect(child).toBeInTheDocument();
     expect(child?.textContent).toBe('Child Content');
