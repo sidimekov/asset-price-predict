@@ -5,31 +5,31 @@
   --foreground: #171717;
 
   /* Цвета */
-  --color-primary: #201D47;
-  --color-primary-light: #2A265F;
-  --color-surface: #2A265F;
-  --color-surface-dark: #1A1738;
-  --color-accent: #FF409A;
-  --color-accent-light: #C438EF;
-  --color-ink: #FFFFFF;
-  --color-ink-muted: #A0A0A0;
-  --color-placeholder: #8480C9;
-  --color-error: #FF4444;
-  --color-danger: #FF0000;
-  --color-danger-light: #FF4D4D;
+  --color-primary: #201d47;
+  --color-primary-light: #2a265f;
+  --color-surface: #2a265f;
+  --color-surface-dark: #1a1738;
+  --color-accent: #ff409a;
+  --color-accent-light: #c438ef;
+  --color-ink: #ffffff;
+  --color-ink-muted: #a0a0a0;
+  --color-placeholder: #8480c9;
+  --color-error: #ff4444;
+  --color-danger: #ff0000;
+  --color-danger-light: #ff4d4d;
 
   /* Градиенты */
-  --gradient-primary: linear-gradient(135deg, #FF409A, #C438EF);
-  --gradient-accent: linear-gradient(to right, #FF409A, #C438EF);
-  --gradient-danger: linear-gradient(to right, #FF0000, #FF4D4D);
-  --gradient-card: linear-gradient(135deg, #FF409A, #C438EF, #201D47);
+  --gradient-primary: linear-gradient(135deg, #ff409a, #c438ef);
+  --gradient-accent: linear-gradient(to right, #ff409a, #c438ef);
+  --gradient-danger: linear-gradient(to right, #ff0000, #ff4d4d);
+  --gradient-card: linear-gradient(135deg, #ff409a, #c438ef, #201d47);
 
   /* Радиусы */
-  --radius-sm: 0.5rem;    /* 8px */
-  --radius-md: 1rem;      /* 16px */
-  --radius-lg: 2rem;      /* 32px */
-  --radius-xl: 2.5rem;    /* 40px */
-  --radius-3xl: 3rem;     /* 48px */
+  --radius-sm: 0.5rem; /* 8px */
+  --radius-md: 1rem; /* 16px */
+  --radius-lg: 2rem; /* 32px */
+  --radius-xl: 2.5rem; /* 40px */
+  --radius-3xl: 3rem; /* 48px */
 
   /* Тени */
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -86,51 +86,103 @@ body {
 /* ====================== */
 
 /* Цвета */
-.bg-primary { background-color: var(--color-primary); }
-.bg-primary-light { background-color: var(--color-primary-light); }
-.bg-surface { background-color: var(--color-surface); }
-.bg-surface-dark { background-color: var(--color-surface-dark); }
-.text-ink { color: var(--color-ink); }
-.text-ink-muted { color: var(--color-ink-muted); }
-.text-placeholder { color: var(--color-placeholder); }
-.text-error { color: var(--color-error); }
+.bg-primary {
+  background-color: var(--color-primary);
+}
+.bg-primary-light {
+  background-color: var(--color-primary-light);
+}
+.bg-surface {
+  background-color: var(--color-surface);
+}
+.bg-surface-dark {
+  background-color: var(--color-surface-dark);
+}
+.text-ink {
+  color: var(--color-ink);
+}
+.text-ink-muted {
+  color: var(--color-ink-muted);
+}
+.text-placeholder {
+  color: var(--color-placeholder);
+}
+.text-error {
+  color: var(--color-error);
+}
 
 /* Градиенты */
-.bg-gradient-primary { background: var(--gradient-primary); }
-.bg-gradient-accent { background: var(--gradient-accent); }
-.bg-gradient-danger { background: var(--gradient-danger); }
-.bg-gradient-card { background: var(--gradient-card); }
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+.bg-gradient-accent {
+  background: var(--gradient-accent);
+}
+.bg-gradient-danger {
+  background: var(--gradient-danger);
+}
+.bg-gradient-card {
+  background: var(--gradient-card);
+}
 
 /* Радиусы */
-.rounded-sm { border-radius: var(--radius-sm); }
-.rounded-md { border-radius: var(--radius-md); }
-.rounded-lg { border-radius: var(--radius-lg); }
-.rounded-xl { border-radius: var(--radius-xl); }
-.rounded-3xl { border-radius: var(--radius-3xl); }
+.rounded-sm {
+  border-radius: var(--radius-sm);
+}
+.rounded-md {
+  border-radius: var(--radius-md);
+}
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+.rounded-xl {
+  border-radius: var(--radius-xl);
+}
+.rounded-3xl {
+  border-radius: var(--radius-3xl);
+}
 
 /* Тени */
-.shadow-soft { box-shadow: var(--shadow-soft); }
-.shadow-card { box-shadow: var(--shadow-card); }
-.shadow-glow { box-shadow: var(--shadow-glow); }
-.shadow-card-elevated { box-shadow: var(--shadow-card-elevated); }
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+.shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+.shadow-card-elevated {
+  box-shadow: var(--shadow-card-elevated);
+}
 
 /* Шрифты */
-.font-montserrat { font-family: var(--font-sans); }
+.font-montserrat {
+  font-family: var(--font-sans);
+}
 
 /* Фокус */
 .focus-ring {
-  outline: 2px solid #FF409A;
+  outline: 2px solid #ff409a;
   outline-offset: 0;
 }
 .focus-ring:focus {
-  outline: 2px solid #FF409A;
+  outline: 2px solid #ff409a;
 }
 
 /* Анимации */
-.transition-fast { transition: all var(--transition-fast); }
-.transition-smooth { transition: all var(--transition-smooth); }
-.scale-on-press:active { transform: scale(0.97); }
-.opacity-on-hover:hover { opacity: 0.9; }
+.transition-fast {
+  transition: all var(--transition-fast);
+}
+.transition-smooth {
+  transition: all var(--transition-smooth);
+}
+.scale-on-press:active {
+  transform: scale(0.97);
+}
+.opacity-on-hover:hover {
+  opacity: 0.9;
+}
 
 /* Подчёркивание */
 .underline-hover:hover {
@@ -154,12 +206,25 @@ body {
 /* УТИЛИТЫ (отступы) */
 /* ====================== */
 
-.pt-6 { padding-top: 1.5rem; }
-.pb-4 { padding-bottom: 1rem; }
-.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.pt-6 {
+  padding-top: 1.5rem;
+}
+.pb-4 {
+  padding-bottom: 1rem;
+}
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
 
-.py-10 { padding-top: 2.5rem; padding-bottom: 2.5rem; }
-.py-8  { padding-top: 2rem;   padding-bottom: 2rem; }
+.py-10 {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+.py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
 
 /* ====================== */
 /* КОМПОНЕНТЫ */
@@ -201,12 +266,22 @@ body {
   box-shadow: var(--shadow-soft);
 }
 
-.btn:focus { outline: 2px solid #FF409A; }
-.btn:active { transform: scale(0.97); }
-.btn:hover { opacity: 0.9; }
+.btn:focus {
+  outline: 2px solid #ff409a;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:hover {
+  opacity: 0.9;
+}
 
-.btn-primary { background: var(--gradient-accent); }
-.btn-danger { background: var(--gradient-danger); }
+.btn-primary {
+  background: var(--gradient-accent);
+}
+.btn-danger {
+  background: var(--gradient-danger);
+}
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -231,7 +306,7 @@ body {
 }
 
 .input:focus {
-  outline: 2px solid #FF409A;
+  outline: 2px solid #ff409a;
 }
 
 /* Password Toggle */
@@ -250,7 +325,7 @@ body {
 }
 
 .password-toggle:focus {
-  outline: 2px solid #FF409A;
+  outline: 2px solid #ff409a;
 }
 
 /* Error */
@@ -270,8 +345,13 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* AuthTabs — по центру, только активная подчёркнута */
@@ -298,19 +378,19 @@ body {
   text-underline-offset: 3px;
 }
 
-.auth-tabs .tab-button[aria-selected="true"] {
+.auth-tabs .tab-button[aria-selected='true'] {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-decoration-color: var(--color-ink);
 }
 
 .auth-tabs .tab-button:focus {
-  outline: 2px solid #FF409A;
+  outline: 2px solid #ff409a;
 }
 
 /* Auth Brand */
 .brand-gradient {
-  background: linear-gradient(to right, #FF409A, #C438EF);
+  background: linear-gradient(to right, #ff409a, #c438ef);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -321,20 +401,45 @@ body {
 /* ====================== */
 
 @media (max-width: 390px) {
-  .mobile\:p-4 { padding: 1rem; }
-  .mobile\:p-6 { padding: 1.5rem; }
-  .mobile\:gap-4 { gap: 1rem; }
-  .mobile\:mb-6 { margin-bottom: 1.5rem; }
-  .mobile\:w-90 { width: 90%; }
-  .mobile\:max-w-md { max-width: 420px; }
-  .mobile\:flex-col { flex-direction: column; }
-  .mobile\:justify-start { justify-content: flex-start; }
-  .mobile\:items-start { align-items: flex-start; }
+  .mobile\:p-4 {
+    padding: 1rem;
+  }
+  .mobile\:p-6 {
+    padding: 1.5rem;
+  }
+  .mobile\:gap-4 {
+    gap: 1rem;
+  }
+  .mobile\:mb-6 {
+    margin-bottom: 1.5rem;
+  }
+  .mobile\:w-90 {
+    width: 90%;
+  }
+  .mobile\:max-w-md {
+    max-width: 420px;
+  }
+  .mobile\:flex-col {
+    flex-direction: column;
+  }
+  .mobile\:justify-start {
+    justify-content: flex-start;
+  }
+  .mobile\:items-start {
+    align-items: flex-start;
+  }
 
   /* Мобильные отступы header */
-  .mobile\:pt-5 { padding-top: 1.25rem; }
-  .mobile\:pb-3 { padding-bottom: 0.75rem; }
-  .mobile\:px-4 { padding-left: 1rem; padding-right: 1rem; }
+  .mobile\:pt-5 {
+    padding-top: 1.25rem;
+  }
+  .mobile\:pb-3 {
+    padding-bottom: 0.75rem;
+  }
+  .mobile\:px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 
   /* AuthTabs на мобильных */
   .auth-tabs {
