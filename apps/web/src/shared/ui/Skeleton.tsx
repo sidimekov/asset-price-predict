@@ -5,7 +5,10 @@ interface SkeletonProps {
   height?: string;
 }
 
-const Skeleton: React.FC<SkeletonProps> = ({ width = '100%', height = '48px' }) => {
+const Skeleton: React.FC<SkeletonProps> = ({
+  width = '100%',
+  height = '48px',
+}) => {
   return (
     <div
       style={{
