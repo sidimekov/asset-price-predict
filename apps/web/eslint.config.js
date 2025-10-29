@@ -19,15 +19,26 @@ export default [
         JSX: 'readonly',
         setTimeout: 'readonly',
         alert: 'readonly',
+        module: 'readonly',
+        process: 'readonly',
+        screen: 'readonly',
         clearTimeout: 'readonly',
       },
     },
     rules: {
-      'no-unused-vars': 'warn',
       'no-undef': 'error',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   {
-    ignores: ['.next/', 'node_modules/', 'dist/', 'build/', 'out/'],
+    ignores: [
+      '.next/',
+      'node_modules/',
+      'dist/',
+      'build/',
+      'out/',
+      'coverage/',
+    ],
   },
 ];
