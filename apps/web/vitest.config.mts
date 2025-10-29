@@ -1,6 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { fileURLToPath } from 'url';
-import path from 'path';
+import * as path from 'path';
 
 export default defineConfig({
   esbuild: {
@@ -10,7 +9,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../../packages/shared/src'),
     },
   },
@@ -19,18 +18,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
     css: true,
-    environmentOptions: {
-      jsdom: {
-        url: 'http://localhost',
-        resources: 'usable',
-        runScripts: 'dangerously',
-      },
-    },
-    server: {
-      deps: {
-        inline: [],
-      },
-    },
+    testTimeout: 60000,
+    pool: 'threads',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['e2e', 'node_modules', '.next'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'clover', 'json'],
