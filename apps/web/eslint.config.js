@@ -26,11 +26,18 @@ export default [
     },
     rules: {
       'no-undef': 'error',
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "off"
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   {
-    ignores: ['.next/', 'node_modules/', 'dist/', 'build/', 'out/', 'coverage/'],
+    ignores: [
+      '.next/',
+      'node_modules/',
+      'dist/',
+      'build/',
+      'out/',
+      'coverage/',
+    ],
   },
 ];
