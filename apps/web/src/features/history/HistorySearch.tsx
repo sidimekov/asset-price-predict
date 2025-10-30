@@ -1,10 +1,10 @@
 'use client';
-import "../../app/globals.css";
-import { useState, useRef, useEffect } from "react";
+import '../../app/globals.css';
+import { useState, useRef, useEffect } from 'react';
 
 type Filters = {
   categories: { c1: boolean; c2: boolean; c3: boolean };
-  order: "desc" | "asc";
+  order: 'desc' | 'asc';
 };
 type Props = {
   onSearch: (q: string) => void;
@@ -12,11 +12,11 @@ type Props = {
 };
 
 export default function SearchBar({ onSearch, onApplyFilters }: Props) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [filterClicked, setFilterClicked] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     categories: { c1: false, c2: false, c3: false },
-    order: "desc",
+    order: 'desc',
   });
 
   const ref = useRef<HTMLDivElement | null>(null);
@@ -28,8 +28,8 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
         setFilterClicked(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleFilter = () => setFilterClicked(!filterClicked);
@@ -78,15 +78,25 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
               <div>
                 <div className="text-[#8480C9] text-sm mb-2">Category</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {["1", "2", "3"].map((num) => (
-                    <label key={num} className="flex items-center gap-2 text-sm ">
+                  {['1', '2', '3'].map((num) => (
+                    <label
+                      key={num}
+                      className="flex items-center gap-2 text-sm "
+                    >
                       <input
                         type="checkbox"
-                        checked={filters.categories[`c${num}` as keyof typeof filters.categories]}
+                        checked={
+                          filters.categories[
+                            `c${num}` as keyof typeof filters.categories
+                          ]
+                        }
                         onChange={(e) =>
                           setFilters((f) => ({
                             ...f,
-                            categories: { ...f.categories, [`c${num}`]: e.target.checked },
+                            categories: {
+                              ...f.categories,
+                              [`c${num}`]: e.target.checked,
+                            },
                           }))
                         }
                         className="accent-[#8480C9]"
@@ -106,9 +116,9 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
                       type="radio"
                       name="order"
                       value="desc"
-                      checked={filters.order === "desc"}
+                      checked={filters.order === 'desc'}
                       onChange={() =>
-                        setFilters((f) => ({ ...f, order: "desc" }))
+                        setFilters((f) => ({ ...f, order: 'desc' }))
                       }
                       className="accent-[#8480C9]"
                     />
@@ -119,9 +129,9 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
                       type="radio"
                       name="order"
                       value="asc"
-                      checked={filters.order === "asc"}
+                      checked={filters.order === 'asc'}
                       onChange={() =>
-                        setFilters((f) => ({ ...f, order: "asc" }))
+                        setFilters((f) => ({ ...f, order: 'asc' }))
                       }
                       className="accent-[#8480C9]"
                     />
