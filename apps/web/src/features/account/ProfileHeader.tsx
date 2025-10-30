@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import profile from '@/mocks/profile.json';
 import Skeleton from '@/shared/ui/Skeleton';
@@ -13,26 +14,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 }) => {
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          gap: '24px',
-          marginBottom: '40px',
-          flexWrap: 'wrap',
-        }}
-      >
-        {/* Skeleton для аватара */}
+      <div className="profile-header">
         <Skeleton width="128px" height="128px" />
-
-        {/* Skeleton для текста */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            flex: 1,
-          }}
-        >
+        <div className="profile-header__text">
           <Skeleton width="200px" height="24px" />
           <Skeleton width="150px" height="18px" />
         </div>
@@ -41,34 +25,18 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: '24px',
-        marginBottom: '40px',
-        flexWrap: 'wrap',
-      }}
-    >
+    <div className="profile-header" onClick={onClick}>
       <img
         src={profile.avatarUrl}
         alt={`${profile.username} avatar`}
-        style={{
-          width: '128px',
-          height: '128px',
-          borderRadius: '50%',
-          objectFit: 'cover',
-        }}
+        className="profile-header__avatar"
       />
-      <div>
-        <p style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '18px' }}>
+      <div className="profile-header__text">
+        <p className="profile-header__username">
           Username:{' '}
-          <span style={{ color: 'rgba(255,255,255,0.9)' }}>
-            {profile.username}
-          </span>
+          <span className="profile-header__username">{profile.username}</span>
         </p>
-        <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-          Login: {profile.login}
-        </p>
+        <p className="profile-header__login">Login: {profile.login}</p>
       </div>
     </div>
   );

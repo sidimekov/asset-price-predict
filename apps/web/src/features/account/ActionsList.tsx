@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import { Button } from '@/shared/ui/Button';
 import Skeleton from '@/shared/ui/Skeleton';
@@ -29,18 +28,11 @@ export const ActionsList: React.FC<ActionsListProps> = ({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        width: '320px',
-      }}
-    >
+    <div className="actions-list">
       {loading
         ? actions.map((_, idx) => <Skeleton key={idx} height="48px" />)
         : actions.map((label) => (
-            <Button key={label} onClick={handleClick(label)} aria-busy={false}>
+            <Button key={label} onClick={handleClick(label)}>
               {label}
             </Button>
           ))}
@@ -48,11 +40,7 @@ export const ActionsList: React.FC<ActionsListProps> = ({
       {loading ? (
         <Skeleton height="48px" />
       ) : (
-        <Button
-          onClick={handleClick('Log out')}
-          variant="danger"
-          aria-busy={false}
-        >
+        <Button onClick={handleClick('Log out')} variant="danger">
           Log out
         </Button>
       )}
