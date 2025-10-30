@@ -407,7 +407,7 @@ body {
 }
 
 .profile-header-login {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 0.6);
   font-size: 0.9375rem;
 }
 
@@ -432,7 +432,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   padding: 1rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgb(255 255 255 / 0.1);
   transition: transform 0.3s ease;
   overflow: hidden;
   z-index: 1000;
@@ -477,7 +477,7 @@ body {
 }
 
 .sidebar-profile-login {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 0.6);
   font-size: 0.875rem;
 }
 
@@ -495,7 +495,7 @@ body {
   text-decoration: none;
   font-weight: 500;
   font-size: 0.9375rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgb(255 255 255 / 0.9);
   transition: all var(--transition-fast);
 }
 
@@ -532,7 +532,7 @@ body {
   width: 28px;
   height: 48px;
   background-color: #2b2459;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(255 255 255 / 0.1);
   border-radius: 8px 0 0 8px;
   color: var(--color-ink);
   display: flex;
