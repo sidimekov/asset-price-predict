@@ -222,7 +222,7 @@ body {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip-path: polygon(0px 0px, 0px 0px, 0px 0px, 0px 0px);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
