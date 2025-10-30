@@ -7,7 +7,6 @@ const AccountPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // имитация загрузки API
     const timer = setTimeout(() => setLoading(false), 150);
     return () => clearTimeout(timer);
   }, []);
@@ -15,17 +14,8 @@ const AccountPage: React.FC = () => {
   const handleProfileClick = () => alert('Go to Account Settings');
 
   return (
-    <main
-      style={{
-        padding: '40px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#17153B',
-      }}
-    >
-      <div style={{ width: '100%', maxWidth: '600px' }}>
+    <main className="account-page">
+      <div className="account-container">
         <ProfileHeader loading={loading} onClick={handleProfileClick} />
         <ActionsList
           loading={loading}
