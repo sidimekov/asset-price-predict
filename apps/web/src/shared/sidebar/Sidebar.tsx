@@ -24,36 +24,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-        <div className="sidebar__content">
+        <div className="sidebar-content">
           {!collapsed && (
-            <h1 className="sidebar__brand">
+            <h1 className="sidebar-brand">
               <span className="brand-gradient">Asset</span>
               <span className="text-ink">Predict</span>
             </h1>
           )}
 
           {!collapsed && (
-            <a href="/account" className="sidebar__profile">
+            <a href="/account" className="sidebar-profile">
               <img
                 src={profile.avatarUrl}
                 alt={`${profile.username} avatar`}
-                className="sidebar__profile-avatar"
+                className="sidebar-profile-avatar"
               />
               <div>
-                <p className="sidebar__profile-name">{profile.username}</p>
-                <p className="sidebar__profile-login">{profile.login}</p>
+                <p className="sidebar-profile-name">{profile.username}</p>
+                <p className="sidebar-profile-login">{profile.login}</p>
               </div>
             </a>
           )}
 
-          <nav className="sidebar__nav">
+          <nav className="sidebar-nav">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <a
                   key={item.href}
                   href={item.href}
-                  className={`sidebar__nav-link ${isActive ? 'active' : ''}`}
+                  className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
                 >
                   {item.label}
                 </a>

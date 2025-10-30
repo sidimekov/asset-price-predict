@@ -15,7 +15,7 @@ export const SidebarToggle: React.FC<SidebarToggleProps> = ({
     <button
       aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       onClick={() => setCollapsed(!collapsed)}
-      className="sidebar-toggle__button"
+      className="sidebar-toggle-button"
     >
       {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
     </button>
