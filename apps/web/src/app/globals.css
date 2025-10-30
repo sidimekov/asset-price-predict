@@ -439,52 +439,40 @@ body {
 /* ====================== */
 
 @media (width <= 390px) {
-  .mobile\:p-4 {
+  .mobile-padding-4 {
     padding: 1rem;
   }
-
-  .mobile\:p-6 {
+  .mobile-padding-6 {
     padding: 1.5rem;
   }
-
-  .mobile\:gap-4 {
+  .mobile-gap-4 {
     gap: 1rem;
   }
-
-  .mobile\:mb-6 {
+  .mobile-margin-bottom-6 {
     margin-bottom: 1.5rem;
   }
-
-  .mobile\:w-90 {
+  .mobile-width-90 {
     width: 90%;
   }
-
-  .mobile\:max-w-md {
+  .mobile-max-width-md {
     max-width: 420px;
   }
-
-  .mobile\:flex-col {
+  .mobile-flex-column {
     flex-direction: column;
   }
-
-  .mobile\:justify-start {
+  .mobile-justify-start {
     justify-content: flex-start;
   }
-
-  .mobile\:items-start {
+  .mobile-items-start {
     align-items: flex-start;
   }
-
-  /* Мобильные отступы header */
-  .mobile\:pt-5 {
+  .mobile-padding-top-5 {
     padding-top: 1.25rem;
   }
-
-  .mobile\:pb-3 {
+  .mobile-padding-bottom-3 {
     padding-bottom: 0.75rem;
   }
-
-  .mobile\:px-4 {
+  .mobile-padding-x-4 {
     padding-left: 1rem;
     padding-right: 1rem;
   }
