@@ -11,17 +11,17 @@
   --color-surface-dark: #1a1738;
   --color-accent: #ff409a;
   --color-accent-light: #c438ef;
-  --color-ink: #ffffff;
+  --color-ink: #fff;
   --color-ink-muted: #a0a0a0;
   --color-placeholder: #8480c9;
-  --color-error: #ff4444;
-  --color-danger: #ff0000;
+  --color-error: #f44;
+  --color-danger: #f00;
   --color-danger-light: #ff4d4d;
 
   /* Градиенты */
   --gradient-primary: linear-gradient(135deg, #ff409a, #c438ef);
   --gradient-accent: linear-gradient(to right, #ff409a, #c438ef);
-  --gradient-danger: linear-gradient(to right, #ff0000, #ff4d4d);
+  --gradient-danger: linear-gradient(to right, #f00, #ff4d4d);
   --gradient-card: linear-gradient(135deg, #ff409a, #c438ef, #201d47);
 
   /* Радиусы */
@@ -32,13 +32,13 @@
   --radius-3xl: 3rem; /* 48px */
 
   /* Тени */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --shadow-card: 0 4px 10px rgba(0, 0, 0, 0.2);
-  --shadow-glow: 0 0 0 3px rgba(255, 64, 154, 0.7);
-  --shadow-card-elevated: 0 20px 40px rgba(32, 29, 71, 0.2);
+  --shadow-soft: 0 2px 8px rgb(0 0 0 / 15%);
+  --shadow-card: 0 4px 10px rgb(0 0 0 / 20%);
+  --shadow-glow: 0 0 0 3px rgb(255 64 154 / 70%);
+  --shadow-card-elevated: 0 20px 40px rgb(32 29 71 / 20%);
 
   /* Шрифты */
-  --font-sans: 'Montserrat', Arial, Helvetica, sans-serif;
+  --font-sans: 'Montserrat', arial, helvetica, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
 
   /* Анимации */
@@ -55,7 +55,9 @@
 }
 
 /* ====================== */
+
 /* ГЛОБАЛЬНЫЕ СТИЛИ */
+
 /* ====================== */
 
 *,
@@ -68,7 +70,7 @@
 
 html {
   font-size: 100%;
-  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -82,31 +84,40 @@ body {
 }
 
 /* ====================== */
+
 /* ТОКЕНЫ (КЛАССЫ) */
+
 /* ====================== */
 
 /* Цвета */
 .bg-primary {
   background-color: var(--color-primary);
 }
+
 .bg-primary-light {
   background-color: var(--color-primary-light);
 }
+
 .bg-surface {
   background-color: var(--color-surface);
 }
+
 .bg-surface-dark {
   background-color: var(--color-surface-dark);
 }
+
 .text-ink {
   color: var(--color-ink);
 }
+
 .text-ink-muted {
   color: var(--color-ink-muted);
 }
+
 .text-placeholder {
   color: var(--color-placeholder);
 }
+
 .text-error {
   color: var(--color-error);
 }
@@ -115,12 +126,15 @@ body {
 .bg-gradient-primary {
   background: var(--gradient-primary);
 }
+
 .bg-gradient-accent {
   background: var(--gradient-accent);
 }
+
 .bg-gradient-danger {
   background: var(--gradient-danger);
 }
+
 .bg-gradient-card {
   background: var(--gradient-card);
 }
@@ -129,15 +143,19 @@ body {
 .rounded-sm {
   border-radius: var(--radius-sm);
 }
+
 .rounded-md {
   border-radius: var(--radius-md);
 }
+
 .rounded-lg {
   border-radius: var(--radius-lg);
 }
+
 .rounded-xl {
   border-radius: var(--radius-xl);
 }
+
 .rounded-3xl {
   border-radius: var(--radius-3xl);
 }
@@ -146,12 +164,15 @@ body {
 .shadow-soft {
   box-shadow: var(--shadow-soft);
 }
+
 .shadow-card {
   box-shadow: var(--shadow-card);
 }
+
 .shadow-glow {
   box-shadow: var(--shadow-glow);
 }
+
 .shadow-card-elevated {
   box-shadow: var(--shadow-card-elevated);
 }
@@ -166,6 +187,7 @@ body {
   outline: 2px solid #ff409a;
   outline-offset: 0;
 }
+
 .focus-ring:focus {
   outline: 2px solid #ff409a;
 }
@@ -174,12 +196,15 @@ body {
 .transition-fast {
   transition: all var(--transition-fast);
 }
+
 .transition-smooth {
   transition: all var(--transition-smooth);
 }
+
 .scale-on-press:active {
   transform: scale(0.97);
 }
+
 .opacity-on-hover:hover {
   opacity: 0.9;
 }
@@ -203,15 +228,19 @@ body {
 }
 
 /* ====================== */
+
 /* УТИЛИТЫ (отступы) */
+
 /* ====================== */
 
 .pt-6 {
   padding-top: 1.5rem;
 }
+
 .pb-4 {
   padding-bottom: 1rem;
 }
+
 .px-6 {
   padding-left: 1.5rem;
   padding-right: 1.5rem;
@@ -221,13 +250,16 @@ body {
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
 }
+
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
 }
 
 /* ====================== */
+
 /* КОМПОНЕНТЫ */
+
 /* ====================== */
 
 /* GradientCard */
@@ -269,9 +301,11 @@ body {
 .btn:focus {
   outline: 2px solid #ff409a;
 }
+
 .btn:active {
   transform: scale(0.97);
 }
+
 .btn:hover {
   opacity: 0.9;
 }
@@ -279,9 +313,11 @@ body {
 .btn-primary {
   background: var(--gradient-accent);
 }
+
 .btn-danger {
   background: var(--gradient-danger);
 }
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -294,7 +330,7 @@ body {
   padding: 0 0.75rem;
   border-radius: var(--radius-sm);
   background-color: var(--color-surface);
-  border: 1px solid #333333;
+  border: 1px solid #333;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 0.875rem;
@@ -349,6 +385,7 @@ body {
   100% {
     opacity: 0.5;
   }
+
   50% {
     opacity: 1;
   }
@@ -391,40 +428,49 @@ body {
 /* Auth Brand */
 .brand-gradient {
   background: linear-gradient(to right, #ff409a, #c438ef);
-  -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 /* ====================== */
+
 /* АДАПТИВНОСТЬ (мобильная) */
+
 /* ====================== */
 
-@media (max-width: 390px) {
+@media (width <= 390px) {
   .mobile\:p-4 {
     padding: 1rem;
   }
+
   .mobile\:p-6 {
     padding: 1.5rem;
   }
+
   .mobile\:gap-4 {
     gap: 1rem;
   }
+
   .mobile\:mb-6 {
     margin-bottom: 1.5rem;
   }
+
   .mobile\:w-90 {
     width: 90%;
   }
+
   .mobile\:max-w-md {
     max-width: 420px;
   }
+
   .mobile\:flex-col {
     flex-direction: column;
   }
+
   .mobile\:justify-start {
     justify-content: flex-start;
   }
+
   .mobile\:items-start {
     align-items: flex-start;
   }
@@ -433,9 +479,11 @@ body {
   .mobile\:pt-5 {
     padding-top: 1.25rem;
   }
+
   .mobile\:pb-3 {
     padding-bottom: 0.75rem;
   }
+
   .mobile\:px-4 {
     padding-left: 1rem;
     padding-right: 1rem;
