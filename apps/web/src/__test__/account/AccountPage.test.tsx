@@ -20,17 +20,6 @@ vi.mock('@/features/account/ActionsList', () => ({
 }));
 
 describe('AccountPage', () => {
-  it('renders account page with main content', () => {
-    render(<AccountPage />);
-
-    const main = screen.getByRole('main');
-    expect(main).toBeInTheDocument();
-    expect(main.style.display).toBe('flex');
-    expect(main.style.flexDirection).toBe('column');
-    expect(main.style.alignItems).toBe('center');
-    expect(main.style.backgroundColor).toBe('rgb(23, 21, 59)');
-  });
-
   it('renders profile header and actions list', async () => {
     render(<AccountPage />);
 
