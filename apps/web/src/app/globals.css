@@ -78,6 +78,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*                          ТОКЕНЫ                           */
+
 /* Цвета */
 .bg-primary {
   background-color: var(--color-primary);
@@ -355,6 +357,7 @@ body {
   100% {
     opacity: 0.5;
   }
+
   50% {
     opacity: 1;
   }
@@ -383,27 +386,27 @@ body {
   margin-bottom: 2.5rem;
 }
 
-.profile-header__avatar {
+.profile-header-avatar {
   width: 128px;
   height: 128px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.profile-header__text {
+.profile-header-text {
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 0.5rem;
 }
 
-.profile-header__username {
+.profile-header-username {
   color: var(--color-ink);
   font-weight: 600;
   font-size: 1.125rem;
 }
 
-.profile-header__login {
+.profile-header-login {
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.9375rem;
 }
@@ -439,7 +442,7 @@ body {
   transform: translateX(-280px);
 }
 
-.sidebar__brand {
+.sidebar-brand {
   font-weight: 800;
   font-size: 1.75rem;
   margin-bottom: 1.5rem;
@@ -452,7 +455,7 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
-.sidebar__profile {
+.sidebar-profile {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -460,32 +463,32 @@ body {
   text-decoration: none;
 }
 
-.sidebar__profile-avatar {
+.sidebar-profile-avatar {
   width: 64px;
   height: 64px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.sidebar__profile-name {
+.sidebar-profile-name {
   color: var(--color-ink);
   font-weight: 600;
   font-size: 1rem;
 }
 
-.sidebar__profile-login {
+.sidebar-profile-login {
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.875rem;
 }
 
-.sidebar__nav {
+.sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   width: 100%;
 }
 
-.sidebar__nav-link {
+.sidebar-nav-link {
   display: block;
   padding: 0.625rem 0.875rem;
   border-radius: 0.75rem;
@@ -496,11 +499,11 @@ body {
   transition: all var(--transition-fast);
 }
 
-.sidebar__nav-link:hover {
+.sidebar-nav-link:hover {
   opacity: 0.9;
 }
 
-.sidebar__nav-link.active {
+.sidebar-nav-link.active {
   background-image: linear-gradient(90deg, #ff409a, #c438ef);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -524,7 +527,7 @@ body {
   z-index: 1100;
 }
 
-.sidebar-toggle__button {
+.sidebar-toggle-button {
   transform: translateX(50%);
   width: 28px;
   height: 48px;
@@ -537,7 +540,8 @@ body {
   justify-content: center;
   transition: background var(--transition-fast);
 }
-.sidebar-toggle__button:hover {
+
+.sidebar-toggle-button:hover {
   background-color: #3a3170;
 }
 
