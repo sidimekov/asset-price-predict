@@ -29,14 +29,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       <img
         src={profile.avatarUrl}
         alt={`${profile.username} avatar`}
-        className="profile-header__avatar"
+        className="profile-header-avatar"
       />
-      <div className="profile-header__text">
-        <p className="profile-header__username">
+      <div className="profile-header-text">
+        <p className="profile-header-username">
           Username:{' '}
-          <span className="profile-header__username">{profile.username}</span>
+          <span className="profile-header-username">{profile.username}</span>
         </p>
-        <p className="profile-header__login">Login: {profile.login}</p>
+        <p className="profile-header-login">Login: {profile.login}</p>
       </div>
     </div>
   );
