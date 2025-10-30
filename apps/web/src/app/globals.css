@@ -505,8 +505,8 @@ body {
 
 .sidebar-nav-link.active {
   background-image: linear-gradient(90deg, #ff409a, #c438ef);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
 }
 
 /* Sidebar Toggle */
