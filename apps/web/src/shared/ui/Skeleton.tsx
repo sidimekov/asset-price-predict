@@ -7,29 +7,9 @@ interface SkeletonProps {
 
 const Skeleton: React.FC<SkeletonProps> = ({
   width = '100%',
-  height = '48px',
+  height = '3rem',
 }) => {
-  return (
-    <div
-      style={{
-        width,
-        height,
-        backgroundColor: '#2A265F',
-        borderRadius: '8px',
-        animation: 'pulse 1.5s ease-in-out infinite',
-      }}
-    >
-      <style>
-        {`
-          @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-          }
-        `}
-      </style>
-    </div>
-  );
+  return <div className="skeleton" style={{ width, height }} />;
 };
 
 export default Skeleton;
