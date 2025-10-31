@@ -13,7 +13,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'pnpm dev',             // ⬅️ скрипт dev из apps/web/package.json
+    command: 'pnpm dev', // ⬅️ скрипт dev из apps/web/package.json
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120_000,
