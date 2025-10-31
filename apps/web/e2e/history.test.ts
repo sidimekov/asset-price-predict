@@ -1,33 +1,34 @@
-// apps/web/e2e/history.test.ts
-import { test, expect } from '@playwright/test';
+import { describe } from 'vitest';
 
-test.describe('History Page', () => {
-  test('should load and show table header', async ({ page }) => {
-    await page.goto('/history');
+if ((globalThis as any).vi) {
+  describe.skip('e2e (playwright only)', () => {});
+}
 
-    // дождаться таблицы
-    const table = page.locator('table');
-    await expect(table).toBeVisible();
+(async () => {
+  if ((globalThis as any).vi) return; // под Vitest выходим
 
-    const headerRow = table.locator('thead tr').first();
-    await expect(headerRow).toBeVisible();
+  const { test, expect } = await import('@playwright/test');
 
-    // проверяем, что в первой строке хедера есть нужные заголовки
-    await expect(headerRow).toContainText('Asset');
-    await expect(headerRow).toContainText('Date');
-    await expect(headerRow).toContainText('Model');
-    await expect(headerRow).toContainText('Input');
-    await expect(headerRow).toContainText('Period');
-    await expect(headerRow).toContainText(/Factors \(TOP 5\):/i);
+  test.describe('History Page', () => {
+    test('should load and show table header', async ({ page }) => {
+      await page.goto('/history');
+      await expect(page.locator('table')).toBeVisible();
+      const headerRow = page.locator('thead tr').first();
+      await expect(headerRow).toContainText([
+        'Asset',
+        'Date',
+        'Model',
+        'Input',
+        'Period',
+      ]);
+      await expect(headerRow).toContainText(/Factors \(TOP 5\):/i);
+    });
+
+    test('should type into Search input', async ({ page }) => {
+      await page.goto('/history');
+      const input = page.getByPlaceholder('Search');
+      await input.fill('btc');
+      await expect(input).toHaveValue('btc');
+    });
   });
-
-  test('should type into Search input', async ({ page }) => {
-    await page.goto('/history');
-
-    const input = page.getByPlaceholder('Search');
-    await expect(input).toBeVisible();
-
-    await input.fill('btc');
-    await expect(input).toHaveValue('btc');
-  });
-});
+})();

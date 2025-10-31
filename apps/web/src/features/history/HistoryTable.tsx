@@ -1,4 +1,3 @@
-// apps/web/src/features/history/HistoryTable.tsx
 'use client';
 
 import Skeleton from '@/shared/ui/Skeleton';
