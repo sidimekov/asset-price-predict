@@ -19,12 +19,18 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
     order: 'desc',
   });
 
-  const ref = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef(null);
 
-  // закрытие окна при клике вне
+  // закрытие окна при клике вне — без DOM-типов
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+    function handleClickOutside(e: any) {
+      const el = popoverRef.current as any;
+      if (
+        el &&
+        typeof el.contains === 'function' &&
+        e?.target &&
+        !el.contains(e.target)
+      ) {
         setFilterClicked(false);
       }
     }
@@ -32,7 +38,7 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleFilter = () => setFilterClicked(!filterClicked);
+  const handleFilter = () => setFilterClicked((v) => !v);
 
   const applyFilters = () => {
     onApplyFilters?.(filters);
@@ -42,18 +48,19 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
   return (
     <div className="relative flex items-center gap-2 w-full">
       {/* Иконка поиска */}
-      <button className="p-2 bg-none">
-        <img src="/magnifier.svg" alt="Поиск" className="w-5 h-5" />
+      <button className="p-2 bg-none" aria-hidden>
+        <img src="/magnifier.svg" alt="" className="w-5 h-5" />
       </button>
 
-      {/* Поле ввода — немного уже */}
+      {/* Поле ввода — без HTMLInputElement */}
       <input
         type="text"
         placeholder="Search"
         value={query}
         onChange={(e) => {
-          setQuery(e.target.value);
-          onSearch(e.target.value);
+          const v = (e.currentTarget as any)['value'];
+          setQuery(v);
+          onSearch(v);
         }}
         className="bg-[#302E53] text-white border-none p-2 rounded-[90px] w-[220px] outline-none placeholder-white/60 focus:ring-2 focus:ring-white/20"
       />
@@ -67,11 +74,13 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
         {/* Попап фильтра */}
         {filterClicked && (
           <div
-            ref={ref}
+            ref={popoverRef}
+            role="dialog"
+            aria-label="Filters"
             className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#2E2B52] border border-white/10 text-white shadow-[0_10px_25px_rgba(0,0,0,0.4)] z-50"
           >
             {/* Треугольничек (стрелочка) */}
-            <div className="absolute  -top-1.5 right-3 w-3 h-3 rotate-45 bg-[#2E2B52] border-t border-l border-white/10"></div>
+            <div className="absolute -top-1.5 right-3 w-3 h-3 rotate-45 bg-[#2E2B52] border-t border-l border-white/10" />
 
             <div className="p-4 space-y-4">
               {/* Категории */}
@@ -81,24 +90,21 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
                   {['1', '2', '3'].map((num) => (
                     <label
                       key={num}
-                      className="flex items-center gap-2 text-sm "
+                      className="flex items-center gap-2 text-sm"
                     >
                       <input
                         type="checkbox"
-                        checked={
-                          filters.categories[
-                            `c${num}` as keyof typeof filters.categories
-                          ]
-                        }
-                        onChange={(e) =>
+                        checked={(filters.categories as any)[`c${num}`]}
+                        onChange={(e) => {
+                          const checked = (e.currentTarget as any)['checked'];
                           setFilters((f) => ({
                             ...f,
                             categories: {
                               ...f.categories,
-                              [`c${num}`]: e.target.checked,
-                            },
-                          }))
-                        }
+                              [`c${num}`]: checked,
+                            } as any,
+                          }));
+                        }}
                         className="accent-[#8480C9]"
                       />
                       <span className="text-[#8480C9]">Category {num}</span>
