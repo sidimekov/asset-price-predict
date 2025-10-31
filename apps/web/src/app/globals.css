@@ -1,57 +1,13 @@
 @import url('tailwindcss');
 
 :root {
-  --background: #fff;
-  --foreground: #171717;
-
-  /* Цвета */
-  --color-primary: #201d47;
-  --color-primary-light: #2a265f;
-  --color-surface: #2a265f;
-  --color-surface-dark: #1a1738;
-  --color-accent: #ff409a;
-  --color-accent-light: #c438ef;
-  --color-ink: #fff;
-  --color-ink-muted: #a0a0a0;
-  --color-placeholder: #8480c9;
-  --color-error: #f44;
-  --color-danger: #f00;
-  --color-danger-light: #ff4d4d;
-
-  /* Градиенты */
-  --gradient-primary: linear-gradient(135deg, #ff409a, #c438ef);
-  --gradient-accent: linear-gradient(to right, #ff409a, #c438ef);
-  --gradient-danger: linear-gradient(to right, #f00, #ff4d4d);
-  --gradient-card: linear-gradient(135deg, #ff409a, #c438ef, #201d47);
-
-  /* Радиусы */
-  --radius-sm: 0.5rem; /* 8px */
-  --radius-md: 1rem; /* 16px */
-  --radius-lg: 2rem; /* 32px */
-  --radius-xl: 2.5rem; /* 40px */
-  --radius-3xl: 3rem; /* 48px */
-
-  /* Тени */
-  --shadow-soft: 0 2px 8px rgb(0 0 0 / 15%);
-  --shadow-card: 0 4px 10px rgb(0 0 0 / 20%);
-  --shadow-glow: 0 0 0 3px rgb(255 64 154 / 70%);
-  --shadow-card-elevated: 0 20px 40px rgb(32 29 71 / 20%);
-
-  /* Шрифты */
-  --font-sans: 'Montserrat', arial, helvetica, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
-
-  /* Анимации */
-  --transition-fast: 0.2s ease;
-  --transition-smooth: 0.3s ease;
+  --background: #1a183e;
+  --foreground: #8480c9;
 }
 
-/* Темная тема */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
 }
 
 /* ====================== */
@@ -499,4 +455,29 @@ body {
     padding: 0.25rem 0.5rem;
     font-size: 0.8125rem;
   }
+}
+
+.table-row td:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 0.5px solid #1c1a41;
+}
+
+.table-row td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 0.5px solid #1c1a41;
+}
+
+.table-row td:nth-child(even) {
+  border-right: 0.5px solid #1c1a41;
+}
+
+.table-row:nth-child(even) {
+  background-color: #302e53;
+}
+
+.gradient-header {
+  background: radial-gradient(circle, #ff409a, #c438ef);
+  border-radius: 10px;
 }
