@@ -20,6 +20,6 @@ describe('Home', () => {
     // smoke: рендер не упал, контейнер есть
     expect(container).toBeTruthy();
     // не требуем конкретной разметки/текста — в jsdom страница может быть “пустой”
-    expect(container instanceof HTMLElement).toBe(true);
+    expect(container!.nodeType).toBe(1);
   });
 });
