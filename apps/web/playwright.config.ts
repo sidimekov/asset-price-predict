@@ -1,4 +1,3 @@
-// apps/web/playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
@@ -12,6 +11,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
   },
+
   webServer: {
     command: 'pnpm dev', // ⬅️ скрипт dev из apps/web/package.json
     url: 'http://localhost:3000',
@@ -23,5 +23,6 @@ export default defineConfig({
     // оставь только chromium, если хочешь быстрее:
     // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     // { name: 'webkit',  use: { ...devices['Desktop Safari'] } },
+
   ],
 });

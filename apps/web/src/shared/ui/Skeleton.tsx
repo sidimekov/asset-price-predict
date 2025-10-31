@@ -7,6 +7,7 @@ interface SkeletonProps {
 
 const Skeleton: React.FC<SkeletonProps> = ({
   width = '100%',
+
   height = '48px',
 }) => {
   return (
