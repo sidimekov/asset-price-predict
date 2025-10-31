@@ -23,6 +23,5 @@ export default defineConfig({
     // оставь только chromium, если хочешь быстрее:
     // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     // { name: 'webkit',  use: { ...devices['Desktop Safari'] } },
-
   ],
 });

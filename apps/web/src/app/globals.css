@@ -1,7 +1,6 @@
 @import url('tailwindcss');
 
 :root {
-
   --background: #1a183e;
   --foreground: #8480c9;
 }
@@ -9,7 +8,6 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
 }
 
 /* ====================== */
