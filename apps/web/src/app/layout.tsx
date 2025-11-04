@@ -2,7 +2,7 @@
 
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import React, { useState } from 'react';
+import React from 'react';
 import './globals.css';
 import { Sidebar } from '@/shared/sidebar/Sidebar';
 
@@ -21,9 +21,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Здесь должен быть реальный флаг авторизации
   const isAuthenticated = true;
 
   return (
@@ -39,15 +36,12 @@ export default function RootLayout({
           fontFamily: 'Montserrat, sans-serif',
         }}
       >
-        {isAuthenticated && (
-          <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-        )}
+        {isAuthenticated && <Sidebar />}
         <main
           style={{
             flex: 1,
             padding: '40px',
             overflowY: 'auto',
-            transition: 'margin 0.3s ease',
           }}
         >
           {children}
