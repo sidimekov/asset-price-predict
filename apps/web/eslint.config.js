@@ -22,6 +22,7 @@ export default [
         module: 'readonly',
         process: 'readonly',
         screen: 'readonly',
+        sessionStorage: 'readonly',
       },
     },
     rules: {
