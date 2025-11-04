@@ -10,22 +10,22 @@ interface ButtonProps {
 }
 
 export const Button: React.FC<ButtonProps> = ({
-  type = 'button',
-  disabled,
-  ariaBusy,
-  children,
-  variant = 'primary',
-  onClick,
-}) => {
+                                                type = 'button',
+                                                disabled,
+                                                ariaBusy,
+                                                children,
+                                                variant = 'primary',
+                                                onClick,
+                                              }) => {
   return (
-    <button
-      type={type}
-      disabled={disabled}
-      aria-busy={ariaBusy}
-      onClick={onClick}
-      className={`btn ${variant === 'danger' ? 'btn-danger' : 'btn-primary'}`}
-    >
-      {children}
-    </button>
+      <button
+          type={type}
+          disabled={disabled}
+          aria-busy={ariaBusy}
+          onClick={onClick}
+          className={`btn ${variant === 'danger' ? 'btn-danger' : 'btn-primary'}`}
+      >
+        {children}
+      </button>
   );
 };
