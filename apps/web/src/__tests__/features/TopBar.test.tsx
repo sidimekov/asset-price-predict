@@ -7,17 +7,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-const mockSessionStorage = {
-  setItem: vi.fn(),
-  getItem: vi.fn(),
-  removeItem: vi.fn(),
-};
-Object.defineProperty(window, 'sessionStorage', { value: mockSessionStorage });
-
 describe('TopBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSessionStorage.getItem.mockReturnValue(null);
   });
 
   it('renders logo with gradient and white text', () => {
@@ -34,23 +26,15 @@ describe('TopBar', () => {
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
-  it('navigates to signin with sessionStorage on "Sign in"', () => {
+  it('navigates to signin with ?mode=signin on "Sign in"', () => {
     render(<TopBar />);
     fireEvent.click(screen.getByText('Sign in'));
-    expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
-      'authMode',
-      'signin',
-    );
-    expect(mockPush).toHaveBeenCalledWith('/auth');
+    expect(mockPush).toHaveBeenCalledWith('/auth?mode=signin');
   });
 
-  it('navigates to signup with sessionStorage on "Sign up"', () => {
+  it('navigates to signup with ?mode=signup on "Sign up"', () => {
     render(<TopBar />);
     fireEvent.click(screen.getByText('Sign up'));
-    expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
-      'authMode',
-      'signup',
-    );
-    expect(mockPush).toHaveBeenCalledWith('/auth');
+    expect(mockPush).toHaveBeenCalledWith('/auth?mode=signup');
   });
 });
