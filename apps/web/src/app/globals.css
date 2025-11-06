@@ -505,3 +505,13 @@ body {
     font-size: 0.8125rem;
   }
 }
+
+.min-h-60vh {
+  min-height: 60vh;
+}
+.max-w-xl {
+  max-width: 42rem;
+}
+.leading-snug {
+  line-height: 1.2;
+}
