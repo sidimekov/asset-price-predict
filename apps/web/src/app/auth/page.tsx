@@ -20,6 +20,7 @@ const AuthPageContent: React.FC = () => {
     }
   }, [urlMode]);
 
+
   const toggleMode = (e: React.MouseEvent<any>) => {
     e.preventDefault();
     setMode((prev) => (prev === 'signup' ? 'signin' : 'signup'));
