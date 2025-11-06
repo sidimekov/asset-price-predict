@@ -10,11 +10,11 @@ export const MoreInfo: React.FC = () => {
 
       <div className="text-sm md:text-base leading-relaxed text-gray-200">
         <br />
-        <p className={'text-xl'}>
+        <p className="text-xl">
           Веб-приложение для прогноза временных рядов цен активов.
         </p>
         <br />
-        <p className={'text-xl'}>
+        <p className="text-xl">
           Интерактивный дашборд прогнозирует цены активов (акции/FX/крипто),
           показывает интервальные оценки и объясняет прогноз, показывая как
           влияли различные факторы (тренд, моментум, календарь, сезонность и
@@ -22,13 +22,13 @@ export const MoreInfo: React.FC = () => {
           тяжёлый инференс на сервере.
         </p>
         <br />
-        <p className={'text-xl'}>
+        <p className="text-xl">
           Ценность для пользователя: быстрый прогноз с обоснованием, сохранение
           истории прогнозов пользователя и оценка их точности.
         </p>
         <br />
         <div className="mt-8">
-          <p className={'text-xl'}>Целевая аудитория:</p>
+          <p className="text-xl">Целевая аудитория:</p>
           <ul className="text-xl list-disc list-inside space-y-2 ml-4 px-6">
             <li>
               Ретейл-инвесторы и аналитики, которым нужно «быстро оценить»
@@ -41,7 +41,7 @@ export const MoreInfo: React.FC = () => {
           </ul>
         </div>
         <br />
-        <p className={'text-xl'}>
+        <p className="text-xl">
           Проект не ориентирован на профессиональные терминалы, а создаётся как
           инструмент, чтобы «за пару кликов» понять базовую динамику рынка.
         </p>
