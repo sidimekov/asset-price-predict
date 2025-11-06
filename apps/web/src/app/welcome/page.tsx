@@ -11,7 +11,7 @@ export default function WelcomePage() {
 
   return (
     <div className="bg-primary min-h-screen flex flex-col text-white">
-      <header className="pt-6 pb-4 px-6 mobile:pt-5 mobile:pb-3 mobile:px-4">
+      <header className="pt-6 pb-4 px-6">
         <TopBar />
       </header>
 
