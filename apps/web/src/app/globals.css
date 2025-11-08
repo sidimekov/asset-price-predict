@@ -212,7 +212,6 @@ body {
 }
 
 /* УТИЛИТЫ (отступы) */
-
 .pt-6 {
   padding-top: 1.5rem;
 }
@@ -367,7 +366,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.1),
+    rgb(255 255 255 / 0.1),
     transparent
   );
   animation: shimmer 1.5s infinite;
@@ -425,8 +424,7 @@ body {
   color: transparent;
 }
 
-/* SIDEBAR — ТОЧНО КАК В ТВОЁМ КОДЕ */
-
+/* SIDEBAR */
 .sidebar {
   position: fixed;
   top: 0;
@@ -439,7 +437,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   padding: 1rem;
-  border-right: 1px solid rgb(255 255 255 / 10%);
+  border-right: 1px solid rgb(255 255 255 / 0.1);
   transition: transform 0.3s ease;
   overflow: hidden;
   z-index: 1000;
@@ -510,9 +508,7 @@ body {
   color: transparent;
 }
 
-/* АДАПТИВНОСТЬ — СВОРАЧИВАНИЕ САЙДБАРА */
-
-/* На десктопе — сайдбар всегда открыт */
+/* АДАПТИВНОСТЬ */
 @media (min-width: 769px) {
   .sidebar {
     position: relative;
@@ -520,19 +516,17 @@ body {
   }
 }
 
-/* На мобильных — сворачивание через класс .collapsed */
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(0);
   }
-
   .sidebar.collapsed {
     transform: translateX(-280px);
   }
 }
 
-/* Мобильные утилиты (из твоего исходника) */
-@media (width <= 390px) {
+/* Мобильные утилиты */
+@media (max-width: 390px) {
   .mobile-padding-4 {
     padding: 1rem;
   }
