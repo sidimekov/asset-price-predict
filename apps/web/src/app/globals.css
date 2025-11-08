@@ -1,6 +1,5 @@
 @import url('tailwindcss');
 
-
 :root {
   --background: #fff;
   --foreground: #171717;
@@ -212,9 +211,7 @@ body {
   border: 0;
 }
 
-
 /* УТИЛИТЫ (отступы) */
-
 
 .pt-6 {
   padding-top: 1.5rem;
@@ -238,7 +235,6 @@ body {
   padding-top: 2rem;
   padding-bottom: 2rem;
 }
-
 
 /* КОМПОНЕНТЫ */
 
@@ -428,7 +424,6 @@ body {
   background-clip: text;
   color: transparent;
 }
-
 
 /* SIDEBAR — ТОЧНО КАК В ТВОЁМ КОДЕ */
 
