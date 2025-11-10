@@ -2,7 +2,7 @@
  * Zod-схемы для общих типов
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Схема для ISO-даты (строка в формате ISO 8601)

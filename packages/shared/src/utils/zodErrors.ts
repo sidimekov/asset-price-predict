@@ -2,7 +2,7 @@
  * Утилиты для форматирования ошибок валидации Zod
  */
 
-import { ZodError } from "zod";
+import { ZodError } from 'zod';
 
 /**
  * Форматирует ошибки Zod в читаемый формат
@@ -11,7 +11,7 @@ import { ZodError } from "zod";
  */
 export function formatZodErrors(error: ZodError): string[] {
   return error.errors.map((err) => {
-    const path = err.path.length > 0 ? err.path.join(".") : "root";
+    const path = err.path.length > 0 ? err.path.join('.') : 'root';
     return `${path}: ${err.message}`;
   });
 }
@@ -22,7 +22,7 @@ export function formatZodErrors(error: ZodError): string[] {
  * @returns строка с описанием всех ошибок
  */
 export function formatZodErrorsAsString(error: ZodError): string {
-  return formatZodErrors(error).join("; ");
+  return formatZodErrors(error).join('; ');
 }
 
 /**

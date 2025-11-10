@@ -2,18 +2,18 @@
  * Zod-схемы для рыночных типов
  */
 
-import { z } from "zod";
-import { MAX_BARS } from "../types/common.js";
+import { z } from 'zod';
+import { MAX_BARS } from '../types/common.js';
 
 /**
  * Схема для таймфрейма
  */
-export const zTimeframe = z.enum(["1h", "8h", "1d", "7d", "1mo"] as const);
+export const zTimeframe = z.enum(['1h', '8h', '1d', '7d', '1mo'] as const);
 
 /**
  * Схема для провайдера
  */
-export const zProvider = z.enum(["MOEX", "BINANCE", "CUSTOM"] as const);
+export const zProvider = z.enum(['MOEX', 'BINANCE', 'CUSTOM'] as const);
 
 /**
  * Схема для символа (тикера)
@@ -52,7 +52,7 @@ export const zBar = z
     },
     {
       message:
-        "Invalid OHLC values: high must be >= max(open,close) and low must be <= min(open,close)",
+        'Invalid OHLC values: high must be >= max(open,close) and low must be <= min(open,close)',
     },
   );
 
@@ -76,7 +76,7 @@ export const zBars = z
     },
     {
       message:
-        "Bars must be sorted by timestamp in ascending order (oldest to newest)",
+        'Bars must be sorted by timestamp in ascending order (oldest to newest)',
     },
   );
 

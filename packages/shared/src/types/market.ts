@@ -5,12 +5,12 @@
 /**
  * Поддерживаемые таймфреймы
  */
-export type Timeframe = "1h" | "8h" | "1d" | "7d" | "1mo";
+export type Timeframe = '1h' | '8h' | '1d' | '7d' | '1mo';
 
 /**
  * Поддерживаемые провайдеры данных
  */
-export type Provider = "MOEX" | "BINANCE" | "CUSTOM";
+export type Provider = 'MOEX' | 'BINANCE' | 'CUSTOM';
 
 /**
  * Символ инструмента (тикер)
@@ -41,18 +41,18 @@ export type Bars = Bar[];
  * Константы поддерживаемых таймфреймов
  */
 export const SUPPORTED_TIMEFRAMES: readonly Timeframe[] = [
-  "1h",
-  "8h",
-  "1d",
-  "7d",
-  "1mo",
+  '1h',
+  '8h',
+  '1d',
+  '7d',
+  '1mo',
 ] as const;
 
 /**
  * Константы поддерживаемых провайдеров
  */
 export const SUPPORTED_PROVIDERS: readonly Provider[] = [
-  "MOEX",
-  "BINANCE",
-  "CUSTOM",
+  'MOEX',
+  'BINANCE',
+  'CUSTOM',
 ] as const;

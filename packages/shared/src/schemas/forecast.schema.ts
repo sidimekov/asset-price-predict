@@ -2,10 +2,10 @@
  * Zod-схемы для DTO прогнозов
  */
 
-import { z } from "zod";
-import { zTimeframe, zSymbol } from "./market.schema.js";
-import { zISODate, zPagination } from "./common.schema.js";
-import { MAX_HORIZON } from "../types/common.js";
+import { z } from 'zod';
+import { zTimeframe, zSymbol } from './market.schema.js';
+import { zISODate, zPagination } from './common.schema.js';
+import { MAX_HORIZON } from '../types/common.js';
 
 /**
  * Схема для идентификатора прогноза
@@ -30,7 +30,7 @@ export const zForecastSeries = z
       return p10.length === len && p50.length === len && p90.length === len;
     },
     {
-      message: "All series arrays (p10, p50, p90, t) must have the same length",
+      message: 'All series arrays (p10, p50, p90, t) must have the same length',
     },
   )
   .refine(
@@ -39,7 +39,7 @@ export const zForecastSeries = z
       // Проверка логики перцентилей: p10 <= p50 <= p90
       return p10.every((val, i) => val <= p50[i] && p50[i] <= p90[i]);
     },
-    { message: "Percentiles must satisfy: p10 <= p50 <= p90 for all points" },
+    { message: 'Percentiles must satisfy: p10 <= p50 <= p90 for all points' },
   );
 
 /**

@@ -31,21 +31,21 @@ import {
 
   // Утилиты
   formatZodErrors,
-} from "@assetpredict/shared";
+} from '@assetpredict/shared';
 ```
 
 ### Пример: валидация запроса
 
 ```typescript
-import { zForecastCreateReq, formatZodErrors } from "@assetpredict/shared";
+import { zForecastCreateReq, formatZodErrors } from '@assetpredict/shared';
 
 // В API endpoint
-app.post("/forecasts", (req, res) => {
+app.post('/forecasts', (req, res) => {
   const result = zForecastCreateReq.safeParse(req.body);
 
   if (!result.success) {
     return res.status(400).json({
-      error: "Validation failed",
+      error: 'Validation failed',
       details: formatZodErrors(result.error),
     });
   }
@@ -59,18 +59,18 @@ app.post("/forecasts", (req, res) => {
 ### Пример: валидация ответа
 
 ```typescript
-import { zForecastDetailRes } from "@assetpredict/shared";
+import { zForecastDetailRes } from '@assetpredict/shared';
 
 // В API endpoint
-app.get("/forecasts/:id", async (req, res) => {
+app.get('/forecasts/:id', async (req, res) => {
   const forecast = await getForecastById(req.params.id);
 
   // Валидация перед отправкой
   const result = zForecastDetailRes.safeParse(forecast);
 
   if (!result.success) {
-    console.error("Invalid forecast data:", result.error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error('Invalid forecast data:', result.error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
   res.json(result.data);
 });
@@ -83,12 +83,12 @@ import type {
   ForecastCreateReq,
   ForecastItem,
   Timeframe,
-} from "@assetpredict/shared";
+} from '@assetpredict/shared';
 
 function createForecast(req: ForecastCreateReq): Promise<ForecastItem> {
   // TypeScript проверяет типы на этапе компиляции
   if (!SUPPORTED_TIMEFRAMES.includes(req.timeframe)) {
-    throw new Error("Unsupported timeframe");
+    throw new Error('Unsupported timeframe');
   }
 
   // ...
