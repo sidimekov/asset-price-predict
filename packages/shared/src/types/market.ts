@@ -5,12 +5,12 @@
 /**
  * Поддерживаемые таймфреймы
  */
-export type Timeframe = '1h' | '8h' | '1d' | '7d' | '1mo';
+export type Timeframe = "1h" | "8h" | "1d" | "7d" | "1mo";
 
 /**
  * Поддерживаемые провайдеры данных
  */
-export type Provider = 'MOEX' | 'BINANCE' | 'CUSTOM';
+export type Provider = "MOEX" | "BINANCE" | "CUSTOM";
 
 /**
  * Символ инструмента (тикер)
@@ -23,7 +23,14 @@ export type Symbol = string;
  * open, high, low, close - цены открытия, максимум, минимум, закрытия
  * volume - объем (опционально)
  */
-export type Bar = [ts: number, open: number, high: number, low: number, close: number, volume?: number];
+export type Bar = [
+  ts: number,
+  open: number,
+  high: number,
+  low: number,
+  close: number,
+  volume?: number,
+];
 
 /**
  * Массив баров, отсортированный от старых к новым (по возрастанию timestamp)
@@ -33,10 +40,19 @@ export type Bars = Bar[];
 /**
  * Константы поддерживаемых таймфреймов
  */
-export const SUPPORTED_TIMEFRAMES: readonly Timeframe[] = ['1h', '8h', '1d', '7d', '1mo'] as const;
+export const SUPPORTED_TIMEFRAMES: readonly Timeframe[] = [
+  "1h",
+  "8h",
+  "1d",
+  "7d",
+  "1mo",
+] as const;
 
 /**
  * Константы поддерживаемых провайдеров
  */
-export const SUPPORTED_PROVIDERS: readonly Provider[] = ['MOEX', 'BINANCE', 'CUSTOM'] as const;
-
+export const SUPPORTED_PROVIDERS: readonly Provider[] = [
+  "MOEX",
+  "BINANCE",
+  "CUSTOM",
+] as const;

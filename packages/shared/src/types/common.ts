@@ -46,4 +46,3 @@ export const MAX_HORIZON = 500;
  * Максимальное количество баров в временном ряде
  */
 export const MAX_BARS = 50_000;
-

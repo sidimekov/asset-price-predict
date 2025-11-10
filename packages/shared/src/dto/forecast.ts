@@ -2,13 +2,13 @@
  * DTO для работы с прогнозами цен
  */
 
-import type { BrandedId, ISODate, Pagination } from '../types/common.js';
-import type { Symbol, Timeframe } from '../types/market.js';
+import type { BrandedId, ISODate, Pagination } from "../types/common.js";
+import type { Symbol, Timeframe } from "../types/market.js";
 
 /**
  * Идентификатор прогноза
  */
-export type ForecastId = BrandedId<'forecast'> & string;
+export type ForecastId = BrandedId<"forecast"> & string;
 
 /**
  * Прогнозные ряды с доверительными интервалами
@@ -136,4 +136,3 @@ export interface ForecastDetailRes extends ForecastItem {
   /** Метрики качества (опционально) */
   metrics?: ForecastMetrics;
 }
-

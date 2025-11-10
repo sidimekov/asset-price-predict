@@ -2,10 +2,10 @@
  * Zod-схемы для DTO прогнозов
  */
 
-import { z } from 'zod';
-import { zTimeframe, zSymbol } from './market.schema.js';
-import { zISODate, zPagination } from './common.schema.js';
-import { MAX_HORIZON } from '../types/common.js';
+import { z } from "zod";
+import { zTimeframe, zSymbol } from "./market.schema.js";
+import { zISODate, zPagination } from "./common.schema.js";
+import { MAX_HORIZON } from "../types/common.js";
 
 /**
  * Схема для идентификатора прогноза
@@ -15,27 +15,32 @@ export const zForecastId = z.string();
 /**
  * Схема для прогнозных рядов
  */
-export const zForecastSeries = z.object({
-  p10: z.array(z.number()),
-  p50: z.array(z.number()),
-  p90: z.array(z.number()),
-  t: z.array(z.number()),
-}).refine(
-  (series) => {
-    const { p10, p50, p90, t } = series;
-    const len = t.length;
-    // Проверка, что все массивы имеют одинаковую длину
-    return p10.length === len && p50.length === len && p90.length === len;
-  },
-  { message: 'All series arrays (p10, p50, p90, t) must have the same length' }
-).refine(
-  (series) => {
-    const { p10, p50, p90 } = series;
-    // Проверка логики перцентилей: p10 <= p50 <= p90
-    return p10.every((val, i) => val <= p50[i] && p50[i] <= p90[i]);
-  },
-  { message: 'Percentiles must satisfy: p10 <= p50 <= p90 for all points' }
-);
+export const zForecastSeries = z
+  .object({
+    p10: z.array(z.number()),
+    p50: z.array(z.number()),
+    p90: z.array(z.number()),
+    t: z.array(z.number()),
+  })
+  .refine(
+    (series) => {
+      const { p10, p50, p90, t } = series;
+      const len = t.length;
+      // Проверка, что все массивы имеют одинаковую длину
+      return p10.length === len && p50.length === len && p90.length === len;
+    },
+    {
+      message: "All series arrays (p10, p50, p90, t) must have the same length",
+    },
+  )
+  .refine(
+    (series) => {
+      const { p10, p50, p90 } = series;
+      // Проверка логики перцентилей: p10 <= p50 <= p90
+      return p10.every((val, i) => val <= p50[i] && p50[i] <= p90[i]);
+    },
+    { message: "Percentiles must satisfy: p10 <= p50 <= p90 for all points" },
+  );
 
 /**
  * Схема для запроса на создание прогноза
@@ -43,9 +48,13 @@ export const zForecastSeries = z.object({
 export const zForecastCreateReq = z.object({
   symbol: zSymbol,
   timeframe: zTimeframe,
-  horizon: z.number().int().positive().max(MAX_HORIZON, {
-    message: `Horizon must not exceed ${MAX_HORIZON}`,
-  }),
+  horizon: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_HORIZON, {
+      message: `Horizon must not exceed ${MAX_HORIZON}`,
+    }),
   inputUntil: zISODate.optional(),
   model: z.string().optional(),
 });
@@ -136,4 +145,3 @@ export type ForecastListResSchema = z.infer<typeof zForecastListRes>;
 export type ForecastFactorSchema = z.infer<typeof zForecastFactor>;
 export type ForecastMetricsSchema = z.infer<typeof zForecastMetrics>;
 export type ForecastDetailResSchema = z.infer<typeof zForecastDetailRes>;
-
