@@ -502,37 +502,36 @@ body {
 }
 
 .background {
-  background: #1C1A41;
+  background: #1c1a41;
 }
 
 .gradient-header {
-  background: radial-gradient(circle, #FF409A, #C438EF);
+  background: radial-gradient(circle, #ff409a, #c438ef);
   border-radius: 16px;
   overflow: hidden;
   padding: 8px 8px;
 }
 
-.gradient-header th:nth-child(3){
+.gradient-header th:nth-child(3) {
   padding-left: 8px;
 }
 .gradient-header th:first-child {
   border-top-left-radius: 16px;
   border-bottom-left-radius: 16px;
-  border-right: 2px solid #1C1A41;
+  border-right: 2px solid #1c1a41;
   padding-left: 8px;
 }
 
 .gradient-header th:nth-child(2) {
-  border-right: 2px solid #1C1A41;
-  border-left: 2px solid #1C1A41;
+  border-right: 2px solid #1c1a41;
+  border-left: 2px solid #1c1a41;
   padding-left: 8px;
-
 }
 
 .gradient-header th:last-child {
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
-  border-left: 2px solid #1C1A41;
+  border-left: 2px solid #1c1a41;
   padding-left: 8px;
 }
 .table-row td {
@@ -543,37 +542,36 @@ body {
 .table-row td:first-child {
   border-top-left-radius: 16px;
   border-bottom-left-radius: 16px;
-  border-right: 2px solid #1C1A41;
+  border-right: 2px solid #1c1a41;
 }
 
 .table-row td:last-child {
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
-  border-left: 2px solid #1C1A41;
+  border-left: 2px solid #1c1a41;
 }
 .table-row td:nth-child(even) {
-  border-right: 2px solid #1C1A41;
+  border-right: 2px solid #1c1a41;
 }
 .table-row:nth-child(even) {
-  background-color: #302E53;
+  background-color: #302e53;
 }
 
 .chart-container {
-  background: linear-gradient(to right, #5650C6, #403B93, #1C1A41);
+  background: linear-gradient(to right, #5650c6, #403b93, #1c1a41);
   border-radius: 16px;
 }
 
-
 .gradient-button {
-  background: radial-gradient(circle, #FF409A, #C438EF);
+  background: radial-gradient(circle, #ff409a, #c438ef);
   border-radius: 16px;
   text-align: center;
 }
 
-.param-panel-item{
-  color: #8480C9;
+.param-panel-item {
+  color: #8480c9;
   border-radius: 16px;
-  background-color: #302E53;
+  background-color: #302e53;
 }
 
 .pill {
@@ -582,20 +580,20 @@ body {
   border-radius: 16px;
   text-align: center;
   padding: 24px;
-  color: #FFBFF6;
+  color: #ffbff6;
 }
 
 .selected-pill {
-  background: radial-gradient(circle, #FF409A, #C438EF);
+  background: radial-gradient(circle, #ff409a, #c438ef);
   color: white;
   border: none;
 }
 
 .unselected-pill {
   background: none;
-  border: 1px solid #8480C9;
+  border: 1px solid #8480c9;
 }
 
 .add-asset-pill {
-  border: 2px dashed #8480C9;
+  border: 2px dashed #8480c9;
 }
