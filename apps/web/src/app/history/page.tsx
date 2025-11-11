@@ -8,10 +8,15 @@ export default function HistoryPage() {
   const handleSearch = (query: string) => {
     console.log('Поиск по:', query);
   };
+
   return (
-    <main className="fixed min-h-screen flex-col p-8 top-2 left-70">
-      <SearchBar onSearch={handleSearch} />
-      <HistoryTable loading={loading} />
+    <main className="history-page">
+      <div className="search-bar-wrapper">
+        <SearchBar onSearch={handleSearch} />
+      </div>
+      <div className="history-page-content">
+        <HistoryTable loading={loading} />
+      </div>
     </main>
   );
 }
