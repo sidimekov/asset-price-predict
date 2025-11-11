@@ -1,7 +1,7 @@
 // apps/web/src/__tests__/features/market-adapter/providers/MoexProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchMoexTimeseries } from '@/features/market-adapter/providers/MoexProvider';
-
+import type { ProviderRequestBase } from '@/features/market-adapter/providers/types';
 // hoisted-мок для initiate
 const { mockMoexInitiate } = vi.hoisted(() => ({
   mockMoexInitiate: vi.fn(),
@@ -26,9 +26,9 @@ describe('fetchMoexTimeseries', () => {
   it('вызывает getMoexTimeseries и возвращает данные', async () => {
     const mockDispatch = vi.fn((action: any) => action);
 
-    const params = {
+    const params: ProviderRequestBase = {
       symbol: 'SBER',
-      timeframe: '1d',
+      timeframe: '1d' as ProviderRequestBase['timeframe'],
       limit: 20,
     };
 

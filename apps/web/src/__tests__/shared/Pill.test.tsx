@@ -4,49 +4,45 @@ import { describe, it, expect, vi } from 'vitest';
 import Pill from '@/shared/ui/Pill';
 
 describe('Pill component', () => {
-  it('renders label text', () => {
+  it('renders label text for default (asset) variant', () => {
     render(<Pill label="BTC 17,878" />);
     expect(
-      screen.getByRole('button', { name: /BTC 17,878/i }),
+        screen.getByRole('button', { name: /BTC 17,878/i }),
     ).toBeInTheDocument();
   });
 
-  it('renders skeleton when isSkeleton=true', () => {
-    const { container } = render(<Pill isSkeleton />);
-    const skeleton = container.querySelector('.bg-gray-700');
-    expect(skeleton).toBeInTheDocument();
-    // кнопка при этом не рендерится
-    expect(screen.queryByRole('button')).toBeNull();
-  });
+  it('applies selected / unselected classes based on selected prop', () => {
+    const { rerender } = render(<Pill label="ETH 23.234" selected />);
 
-  it('toggles between selected and unselected on click', () => {
-    render(<Pill label="ETH 23.234" variant="selected" />);
-    const button = screen.getByRole('button');
-
-    // изначально — selected
+    const button = screen.getByRole('button', { name: /ETH 23.234/i });
     expect(button.className).toContain('selected-pill');
 
-    // клик — станет unselected
-    fireEvent.click(button);
+    rerender(<Pill label="ETH 23.234" selected={false} />);
     expect(button.className).toContain('unselected-pill');
-
-    // ещё один клик — снова selected
-    fireEvent.click(button);
-    expect(button.className).toContain('selected-pill');
   });
 
   it('calls onClick handler when provided', () => {
     const onClick = vi.fn();
-    render(<Pill label="LTC" variant="unselected" onClick={onClick} />);
-    const button = screen.getByRole('button');
+    render(<Pill label="LTC" onClick={onClick} />);
+    const button = screen.getByRole('button', { name: /LTC/i });
 
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it('renders add-asset variant correctly', () => {
-    render(<Pill label="Add Asset" variant="add-asset" />);
-    const button = screen.getByRole('button', { name: /Add Asset/i });
+    render(<Pill label="ignored" variant="add-asset" />);
+    const button = screen.getByRole('button', { name: /\+ Add Asset/i });
     expect(button.className).toContain('add-asset-pill');
+  });
+
+  it('calls onRemove when close icon is clicked', () => {
+    const onRemove = vi.fn();
+    render(<Pill label="XRP" selected onRemove={onRemove} />);
+
+    const closeButton = screen.getByRole('button', { name: /remove/i });
+    fireEvent.click(closeButton);
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
   });
 });

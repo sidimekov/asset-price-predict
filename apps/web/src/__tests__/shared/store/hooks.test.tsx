@@ -49,7 +49,7 @@ describe('store hooks', () => {
     const testStore = createTestStore();
 
     const SelectorTest: React.FC = () => {
-      const value = useAppSelector((state) => state.counter.value);
+      const value = useAppSelector((state: any) => state.counter.value);
       return <div>Value: {value}</div>;
     };
 
@@ -67,7 +67,7 @@ describe('store hooks', () => {
 
     const DispatchTest: React.FC = () => {
       const dispatch = useAppDispatch();
-      const value = useAppSelector((state) => state.counter.value);
+      const value = useAppSelector((state: any) => state.counter.value);
 
       useEffect(() => {
         dispatch({ type: 'increment' });
