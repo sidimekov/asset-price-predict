@@ -1,52 +1,85 @@
 'use client';
 
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import React from 'react';
 import './globals.css';
 import { Sidebar } from '@/shared/ui/Sidebar';
+import { Container } from '@/shared/ui/Container';
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { Menu } from 'lucide-react';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
+const useAuth = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+    useEffect(() => {
+        const mockAuth = true; // или false для теста
+        setIsAuthenticated(mockAuth);
+    }, []);
+
+    return { isAuthenticated };
+};
 
 export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
+                                       children,
+                                   }: {
+    children: React.ReactNode;
 }) {
-  const isAuthenticated = true;
+    const pathname = usePathname();
+    const { isAuthenticated } = useAuth();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        style={{
-          display: 'flex',
-          minHeight: '100vh',
-          overflow: 'hidden',
-          backgroundColor: '#17153B',
-          color: '#FFFFFF',
-          fontFamily: 'Montserrat, sans-serif',
-        }}
-      >
-        {isAuthenticated && <Sidebar />}
-        <main
-          style={{
-            flex: 1,
-            padding: '40px',
-            overflowY: 'auto',
-          }}
-        >
-          {children}
-        </main>
-      </body>
-    </html>
-  );
+    const publicPaths = ['/auth', '/welcome'];
+    const isPublicPage = publicPaths.includes(pathname);
+
+    const showAppLayout = isAuthenticated && !isPublicPage;
+
+    if (isAuthenticated === null) {
+        return (
+            <html lang="ru">
+            <body className="bg-primary min-h-screen flex items-center justify-center">
+            <div className="text-ink text-lg">Загрузка...</div>
+            </body>
+            </html>
+        );
+    }
+
+    return (
+        <html lang="ru">
+        <body className="bg-primary text-ink font-sans antialiased min-h-screen">
+        {showAppLayout ? (
+            <div className="flex h-screen overflow-hidden">
+                <div className={sidebarOpen ? 'sidebar' : 'sidebar collapsed'}>
+                    <Sidebar />
+                </div>
+
+                {sidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                )}
+
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <header className="lg:hidden bg-surface-dark border-b border-white/10 px-4 py-3">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="text-ink focus-visible:ring-2 focus-visible:ring-accent rounded p-1"
+                            aria-label="Открыть меню"
+                        >
+                            <Menu size={24} />
+                        </button>
+                    </header>
+
+                    <main className="flex-1 overflow-y-auto">
+                        <Container>
+                            <div className="py-8">{children}</div>
+                        </Container>
+                    </main>
+                </div>
+            </div>
+        ) : (
+            <>{children}</>
+        )}
+        </body>
+        </html>
+    );
 }
