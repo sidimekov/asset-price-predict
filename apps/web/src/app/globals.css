@@ -8,7 +8,7 @@
   --color-primary-light: #302e53;
   --color-surface: #2e2b52;
   --color-surface-dark: #201d47;
-  --color-ink: #ffffff;
+  --color-ink: #fff;
   --color-ink-muted: #8480c9;
   --color-placeholder: #8480c9;
   --color-error: #ff4757;
@@ -28,10 +28,10 @@
   --radius-xl: 16px;
   --radius-3xl: 24px;
 
-  --shadow-soft: 0 2px 10px rgba(0, 0, 0, 0.1);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.15);
-  --shadow-glow: 0 0 20px rgba(255, 64, 154, 0.3);
-  --shadow-card-elevated: 0 8px 30px rgba(0, 0, 0, 0.2);
+  --shadow-soft: 0 2px 10px rgb(0 0 0 / 10%);
+  --shadow-card: 0 4px 20px rgb(0 0 0 / 15%);
+  --shadow-glow: 0 0 20px rgb(255 64 154 / 30%);
+  --shadow-card-elevated: 0 8px 30px rgb(0 0 0 / 20%);
 
   --transition-fast: 0.15s ease;
   --transition-smooth: 0.25s ease;
@@ -53,9 +53,7 @@
   --color-placeholder: #8480c9;
 }
 
-/* ====================== */
 /* CSS RESET */
-/* ====================== */
 
 *,
 *::before,
@@ -82,9 +80,7 @@ body {
   padding: 0;
 }
 
-/* ====================== */
 /* ТОКЕНЫ (КЛАССЫ) ИЗ MAIN */
-/* ====================== */
 
 /* Цвета */
 .bg-primary {
@@ -224,9 +220,7 @@ body {
   border: 0;
 }
 
-/* ====================== */
 /* УТИЛИТЫ (отступы) ИЗ MAIN */
-/* ====================== */
 
 .pt-6 {
   padding-top: 1.5rem;
@@ -251,9 +245,7 @@ body {
   padding-bottom: 2rem;
 }
 
-/* ====================== */
 /* КОМПОНЕНТЫ ИЗ MAIN */
-/* ====================== */
 
 /* GradientCard */
 .gradient-card {
@@ -425,9 +417,7 @@ body {
   color: transparent;
 }
 
-/* ====================== */
 /* АДАПТИВНОСТЬ (мобильная) ИЗ MAIN */
-/* ====================== */
 
 @media (width <= 390px) {
   .mobile-padding-4 {
@@ -492,9 +482,7 @@ body {
   }
 }
 
-/* ====================== */
 /* ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ СТРАНИЦЫ ИСТОРИИ */
-/* ====================== */
 
 /* HistoryPage Component */
 .history-page {
@@ -548,11 +536,11 @@ body {
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 60%);
 }
 
 .search-input:focus {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 20%);
 }
 
 .search-button {
@@ -592,7 +580,7 @@ body {
   width: 16rem;
   border-radius: 1rem;
   background-color: var(--color-surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(255 255 255 / 10%);
   color: var(--color-ink);
   box-shadow: var(--shadow-card-elevated);
   z-index: 50;
@@ -606,8 +594,8 @@ body {
   height: 0.75rem;
   transform: rotate(45deg);
   background-color: var(--color-surface);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  border-left: 1px solid rgb(255 255 255 / 10%);
 }
 
 .filter-popover-content {
@@ -685,7 +673,6 @@ body {
 }
 
 /* СТИЛИ ЗАГОЛОВКА ТАБЛИЦЫ */
-/* Было в оригинале: */
 .history-table thead tr {
   background: radial-gradient(circle, #ff409a, #c438ef);
   border-radius: 10px;
@@ -775,7 +762,7 @@ body {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(255 255 255 / 60%);
   font-size: 1rem;
 }
 
@@ -795,7 +782,7 @@ body {
 }
 
 /* Адаптивность для History */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .history-page {
     left: 1rem;
     right: 1rem;
