@@ -379,6 +379,31 @@ body {
   border-radius: var(--radius-sm);
   animation: pulse 1.5s ease-in-out infinite;
 }
+/* Обёртка для «карточного» скелетона (фон/рамка/радиус) */
+.skeleton-card {
+  background-color: #302e53; /* как у .param-panel-item */
+  border: 1px solid #333;
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+/* Вариант без внутренних отступов — например для графика */
+.skeleton-card--flush {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Обёртка под размер pill, чтобы скелет совпал по габаритам */
+.skeleton-pill-wrapper {
+  width: 190px;
+  height: 74px;
+}
+
+/* В таблице добавим чуть воздуха вокруг линий */
+.skeleton-cell {
+  padding: 4px 8px;
+}
 
 @keyframes pulse {
   0%,
@@ -585,6 +610,31 @@ body {
   text-align: center;
   padding: 24px;
   color: #ffbff6;
+  position: relative; /* для крестика */
+}
+
+.pill-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 999px;
+  border: 1px solid #8480c9;
+  color: #dcdaf8;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(28, 26, 65, 0.6);
+  transition:
+    transform var(--transition-fast),
+    opacity var(--transition-fast);
+}
+.pill-close:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
 }
 
 .selected-pill {
