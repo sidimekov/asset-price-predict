@@ -1,37 +1,35 @@
 import { render } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import RootLayout from '@/app/layout';
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+
+// Мокаем next/font/google
+vi.mock('next/font/google', () => ({
+  Geist: vi.fn(() => ({ variable: '--font-geist-sans' })),
+  Geist_Mono: vi.fn(() => ({ variable: '--font-geist-mono' })),
+}));
+
+// Мокаем CSS импорт
+vi.mock('@/app/globals.css', () => ({}));
 
 describe('RootLayout', () => {
-  let spy: ReturnType<typeof vi.spyOn>;
+  it('renders html, body and children', () => {
+    render(
+      <RootLayout>
+        <div data-testid="child">Child Content</div>
+      </RootLayout>,
+    );
 
-  // подавляем ворнинги jsdom про <html> внутри <div>
-  beforeAll(() => {
-    spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
+    expect(document.documentElement.tagName).toBe('HTML');
+    expect(document.documentElement.lang).toBe('en');
 
-  afterAll(() => {
-    spy.mockRestore();
-  });
+    const body = document.body;
+    expect(body).toBeInTheDocument();
+    expect(body.className).toContain('--font-geist-sans');
+    expect(body.className).toContain('--font-geist-mono');
+    expect(body.className).toContain('antialiased');
 
-  it('renders html, body and children (jsdom-robust)', () => {
-    // Вкладываем напрямую в <html>, чтобы не было некорректной вложенности
-    render(<RootLayout>{<div data-testid="child">child</div>}</RootLayout>, {
-      container: document.documentElement,
-    });
-
-    // html/body существуют
-    expect(document.documentElement).toBeInTheDocument();
-    expect(document.body).toBeInTheDocument();
-
-    // ребёнок отрисован
-    expect(document.querySelector('[data-testid="child"]')).toBeInTheDocument();
-
-    // В jsdom классы из next/font и utility-класс могут отсутствовать — не падаем
-    const bodyClass = document.body.className || '';
-    if (bodyClass) {
-      // Если уже есть какие-то классы — можно мягко проверить часть
-      expect(typeof bodyClass).toBe('string');
-    }
+    const child = document.querySelector('[data-testid="child"]');
+    expect(child).toBeInTheDocument();
+    expect(child?.textContent).toBe('Child Content');
   });
 });
