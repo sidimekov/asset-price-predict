@@ -379,6 +379,7 @@ body {
   border-radius: var(--radius-sm);
   animation: pulse 1.5s ease-in-out infinite;
 }
+
 /* Обёртка для «карточного» скелетона (фон/рамка/радиус) */
 .skeleton-card {
   background-color: #302e53; /* как у .param-panel-item */
@@ -389,7 +390,7 @@ body {
 }
 
 /* Вариант без внутренних отступов — например для графика */
-.skeleton-card--flush {
+.skeleton-card-flush {
   border-radius: 16px;
   overflow: hidden;
 }
@@ -627,11 +628,12 @@ body {
   cursor: pointer;
   font-weight: 700;
   font-size: 14px;
-  background: rgba(28, 26, 65, 0.6);
+  background: rgb(28 26 65 / 60%);
   transition:
     transform var(--transition-fast),
     opacity var(--transition-fast);
 }
+
 .pill-close:hover {
   transform: scale(1.05);
   opacity: 0.9;
