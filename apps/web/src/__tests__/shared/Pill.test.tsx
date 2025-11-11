@@ -11,42 +11,40 @@ describe('Pill component', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders skeleton when isSkeleton=true', () => {
-    const { container } = render(<Pill isSkeleton />);
-    const skeleton = container.querySelector('.bg-gray-700');
-    expect(skeleton).toBeInTheDocument();
-    // кнопка при этом не рендерится
-    expect(screen.queryByRole('button')).toBeNull();
-  });
-
-  it('toggles between selected and unselected on click', () => {
-    render(<Pill label="ETH 23.234" variant="selected" />);
+  it('applies selected/unselected classes based on props', () => {
+    const { rerender } = render(<Pill label="ETH 23.234" selected />);
     const button = screen.getByRole('button');
 
-    // изначально — selected
     expect(button.className).toContain('selected-pill');
 
-    // клик — станет unselected
-    fireEvent.click(button);
+    rerender(<Pill label="ETH 23.234" selected={false} />);
     expect(button.className).toContain('unselected-pill');
-
-    // ещё один клик — снова selected
-    fireEvent.click(button);
-    expect(button.className).toContain('selected-pill');
   });
 
-  it('calls onClick handler when provided', () => {
+  it('calls onClick when clicked', () => {
     const onClick = vi.fn();
-    render(<Pill label="LTC" variant="unselected" onClick={onClick} />);
-    const button = screen.getByRole('button');
-
-    fireEvent.click(button);
+    render(<Pill label="LTC" onClick={onClick} />);
+    fireEvent.click(screen.getByRole('button'));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('renders add-asset variant correctly', () => {
-    render(<Pill label="Add Asset" variant="add-asset" />);
-    const button = screen.getByRole('button', { name: /Add Asset/i });
-    expect(button.className).toContain('add-asset-pill');
+  it('renders add-asset variant', () => {
+    render(<Pill label="+ Add Asset" variant="add-asset" />);
+    const btn = screen.getByRole('button', { name: /\+ Add Asset/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn.className).toContain('add-asset-pill');
+  });
+
+  it('shows remove cross and calls onRemove without triggering onClick', () => {
+    const onRemove = vi.fn();
+    const onClick = vi.fn();
+    render(<Pill label="BTC 10.00" onRemove={onRemove} onClick={onClick} />);
+
+    // крестик — это элемент с aria-label="remove"
+    const cross = screen.getByRole('button', { name: /remove/i });
+    fireEvent.click(cross);
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled(); // благодаря stopPropagation
   });
 });
