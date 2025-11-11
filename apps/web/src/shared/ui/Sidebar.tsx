@@ -18,7 +18,6 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="sidebar" aria-label="Боковая панель">
       <div className="sidebar-content">
-        {/* Логотип */}
         <h1 className="sidebar-brand">
           <span className="brand-gradient">Asset</span>
           <span className="text-ink">Predict</span>
