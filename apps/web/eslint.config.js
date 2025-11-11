@@ -22,6 +22,8 @@ export default [
         module: 'readonly',
         process: 'readonly',
         screen: 'readonly',
+        MouseEvent: 'readonly',
+        Node: 'readonly',
       },
     },
     rules: {
