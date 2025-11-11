@@ -509,12 +509,13 @@ body {
   background: radial-gradient(circle, #ff409a, #c438ef);
   border-radius: 16px;
   overflow: hidden;
-  padding: 8px 8px;
+  padding: 8px;
 }
 
 .gradient-header th:nth-child(3) {
   padding-left: 8px;
 }
+
 .gradient-header th:first-child {
   border-top-left-radius: 16px;
   border-bottom-left-radius: 16px;
@@ -534,6 +535,7 @@ body {
   border-left: 2px solid #1c1a41;
   padding-left: 8px;
 }
+
 .table-row td {
   height: 16px;
   padding: 4px 8px; /* Минимальный отступ для читаемости */
@@ -550,9 +552,11 @@ body {
   border-bottom-right-radius: 16px;
   border-left: 2px solid #1c1a41;
 }
+
 .table-row td:nth-child(even) {
   border-right: 2px solid #1c1a41;
 }
+
 .table-row:nth-child(even) {
   background-color: #302e53;
 }
