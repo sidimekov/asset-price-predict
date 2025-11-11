@@ -1,5 +1,5 @@
 'use client';
-import '../../app/globals.css';
+import '../../app/history.css';
 import { useState, useRef, useEffect } from 'react';
 
 type Filters = {
