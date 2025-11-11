@@ -14,8 +14,8 @@ const AccountPage: React.FC = () => {
   const handleProfileClick = () => alert('Go to Account Settings');
 
   return (
-    <main className="account-page">
-      <div className="account-container">
+    <main className="account-content">
+      <div className="max-w-md mx-auto space-y-8">
         <ProfileHeader loading={loading} onClick={handleProfileClick} />
         <ActionsList
           loading={loading}
