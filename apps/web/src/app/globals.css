@@ -366,7 +366,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgb(255 255 255 / 0.1),
+    rgb(255 255 255 / 10%),
     transparent
   );
   animation: shimmer 1.5s infinite;
@@ -437,7 +437,7 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   padding: 1rem;
-  border-right: 1px solid rgb(255 255 255 / 0.1);
+  border-right: 1px solid rgb(255 255 255 / 10%);
   transition: transform 0.3s ease;
   overflow: hidden;
   z-index: 1000;
@@ -509,24 +509,25 @@ body {
 }
 
 /* АДАПТИВНОСТЬ */
-@media (min-width: 769px) {
+@media (width >= 769px) {
   .sidebar {
     position: relative;
     transform: translateX(0) !important;
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .sidebar {
     transform: translateX(0);
   }
+
   .sidebar.collapsed {
     transform: translateX(-280px);
   }
 }
 
 /* Мобильные утилиты */
-@media (max-width: 390px) {
+@media (width <= 390px) {
   .mobile-padding-4 {
     padding: 1rem;
   }
