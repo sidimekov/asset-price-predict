@@ -1,39 +1,56 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 
 interface PillProps {
-  label?: string; // Сделали label опциональным
-  variant?: 'selected' | 'unselected' | 'add-asset';
-  isSkeleton?: boolean;
-  onClick?: () => void; // Оставляем для совместимости
+  label: string;
+  selected?: boolean;
+  variant?: 'asset' | 'add-asset';
+  isSkeleton?: boolean; // оставлено на будущее, сейчас Skeleton отдельным компонентом
+  onClick?: () => void;
+  onRemove?: () => void; // крестик удаления
 }
 
 export default function Pill({
   label,
-  variant = 'selected',
-  isSkeleton = false,
+  selected = false,
+  variant = 'asset',
+  isSkeleton = false, // не используем, но не ломаем API
   onClick,
+  onRemove,
 }: PillProps) {
-  const [localVariant, setLocalVariant] = useState(variant); // Локальное состояние для variant
+  if (variant === 'add-asset') {
+    return (
+      <button
+        className="pill add-asset-pill hover:opacity-90 transition-smooth"
+        onClick={onClick}
+      >
+        + Add Asset
+      </button>
+    );
+  }
 
-  const handleClick = () => {
-    if (localVariant === 'unselected') {
-      setLocalVariant('selected'); // Переключаем только с unselected на selected
-    }
-    if (localVariant === 'selected') {
-      setLocalVariant('unselected');
-    }
-    if (onClick) onClick(); // Вызываем внешний onClick, если есть
-  };
-
-  if (isSkeleton)
-    return <div className="w-24 h-8 bg-gray-700 rounded-full animate-pulse" />;
   return (
     <button
-      className={`pill ${localVariant === 'selected' ? 'selected-pill' : localVariant === 'unselected' ? 'unselected-pill' : 'add-asset-pill'}`}
-      onClick={handleClick}
+      className={`pill relative transition-smooth ${
+        selected ? 'selected-pill' : 'unselected-pill'
+      }`}
+      onClick={onClick}
     >
       {label}
+
+      {onRemove && (
+        <span
+          role="button"
+          aria-label="remove"
+          className="pill-close"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        >
+          ×
+        </span>
+      )}
     </button>
   );
 }
