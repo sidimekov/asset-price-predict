@@ -577,7 +577,6 @@ body {
 }
 
 .pill {
-  border: 1px solid #8480C9;
   height: 74px;
   width: 190px;
   border-radius: 16px;
@@ -594,4 +593,9 @@ body {
 
 .unselected-pill {
   background: none;
+  border: 1px solid #8480C9;
+}
+
+.add-asset-pill {
+  border: 2px dashed #8480C9;
 }
