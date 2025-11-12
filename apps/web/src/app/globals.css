@@ -1,57 +1,61 @@
 @import url('tailwindcss');
 
 :root {
-  --background: #fff;
-  --foreground: #171717;
-
-  /* Цвета */
-  --color-primary: #201d47;
-  --color-primary-light: #2a265f;
-  --color-surface: #2a265f;
-  --color-surface-dark: #1a1738;
+  /* Общие переменные для обеих веток */
+  --background: #1a183e;
+  --foreground: #8480c9;
+  --color-primary: #1a183e;
+  --color-primary-light: #302e53;
+  --color-surface: #2e2b52;
+  --color-surface-dark: #201d47;
+  --color-ink: #fff;
+  --color-ink-muted: #8480c9;
+  --color-placeholder: #8480c9;
+  --color-error: #ff4757;
   --color-accent: #ff409a;
   --color-accent-light: #c438ef;
-  --color-ink: #fff;
-  --color-ink-muted: #a0a0a0;
-  --color-placeholder: #8480c9;
-  --color-error: #f44;
   --color-danger: #f00;
   --color-danger-light: #ff4d4d;
 
   /* Градиенты */
   --gradient-primary: linear-gradient(135deg, #ff409a, #c438ef);
-  --gradient-accent: linear-gradient(to right, #ff409a, #c438ef);
-  --gradient-danger: linear-gradient(to right, #f00, #ff4d4d);
-  --gradient-card: linear-gradient(135deg, #ff409a, #c438ef, #201d47);
+  --gradient-accent: linear-gradient(135deg, #ff409a, #c438ef);
+  --gradient-danger: linear-gradient(135deg, #ff4757, #ff3742);
+  --gradient-card: linear-gradient(135deg, #2e2b52, #201d47);
 
   /* Радиусы */
-  --radius-sm: 0.5rem; /* 8px */
-  --radius-md: 1rem; /* 16px */
-  --radius-lg: 2rem; /* 32px */
-  --radius-xl: 2.5rem; /* 40px */
-  --radius-3xl: 3rem; /* 48px */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-3xl: 24px;
 
   /* Тени */
-  --shadow-soft: 0 2px 8px rgb(0 0 0 / 15%);
-  --shadow-card: 0 4px 10px rgb(0 0 0 / 20%);
-  --shadow-glow: 0 0 0 3px rgb(255 64 154 / 70%);
-  --shadow-card-elevated: 0 20px 40px rgb(32 29 71 / 20%);
-
-  /* Шрифты */
-  --font-sans: 'Montserrat', arial, helvetica, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --shadow-soft: 0 2px 10px rgb(0 0 0 / 10%);
+  --shadow-card: 0 4px 20px rgb(0 0 0 / 15%);
+  --shadow-glow: 0 0 20px rgb(255 64 154 / 30%);
+  --shadow-card-elevated: 0 8px 30px rgb(0 0 0 / 20%);
 
   /* Анимации */
-  --transition-fast: 0.2s ease;
-  --transition-smooth: 0.3s ease;
+  --transition-fast: 0.15s ease;
+  --transition-smooth: 0.25s ease;
+
+  /* Шрифты */
+  --font-sans: 'Montserrat', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
 }
 
-/* Темная тема */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Light theme variables for main branch */
+.light-theme {
+  --background: #fff;
+  --foreground: #171717;
+  --color-primary: #201d47;
+  --color-primary-light: #2a265f;
+  --color-surface: #2a265f;
+  --color-surface-dark: #1a1738;
+  --color-ink: #fff;
+  --color-ink-muted: #a0a0a0;
+  --color-placeholder: #8480c9;
 }
 
 /* ГЛОБАЛЬНЫЕ СТИЛИ */
@@ -77,9 +81,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
 }
-
-/* ТОКЕНЫ (КЛАССЫ) */
 
 /* Цвета */
 .bg-primary {
@@ -211,7 +215,6 @@ body {
   border: 0;
 }
 
-/* УТИЛИТЫ (отступы) */
 .pt-6 {
   padding-top: 1.5rem;
 }
@@ -234,8 +237,6 @@ body {
   padding-top: 2rem;
   padding-bottom: 2rem;
 }
-
-/* КОМПОНЕНТЫ */
 
 /* GradientCard */
 .gradient-card {
@@ -646,5 +647,330 @@ body {
   .auth-tabs .tab-button {
     padding: 0.25rem 0.5rem;
     font-size: 0.8125rem;
+  }
+}
+
+/* ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ СТРАНИЦЫ ИСТОРИИ */
+
+/* HistoryPage Component */
+.history-page {
+  position: fixed;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  inset: 0.5rem 0 0 17.5rem;
+  margin: 0;
+}
+
+.history-page-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-bar-wrapper {
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+}
+
+/* SearchBar Component */
+.search-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.search-input {
+  width: 220px;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border-radius: 90px;
+  background-color: var(--color-primary-light);
+  border: none;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  outline: none;
+  margin: 0;
+  transition: all var(--transition-fast);
+}
+
+.search-input::placeholder {
+  color: rgb(255 255 255 / 60%);
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 20%);
+}
+
+.search-button {
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-button img {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.filter-button {
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-button img {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.search-filter-popover {
+  position: absolute;
+  right: 0;
+  margin-top: 0.75rem;
+  width: 16rem;
+  border-radius: 1rem;
+  background-color: var(--color-surface);
+  border: 1px solid rgb(255 255 255 / 10%);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card-elevated);
+  z-index: 50;
+}
+
+.search-filter-arrow {
+  position: absolute;
+  top: -0.375rem;
+  right: 0.75rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  transform: rotate(45deg);
+  background-color: var(--color-surface);
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  border-left: 1px solid rgb(255 255 255 / 10%);
+}
+
+.filter-popover-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-section-title {
+  color: var(--color-ink-muted);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.filter-categories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.apply-filter-button {
+  width: 100%;
+  border-radius: 9999px;
+  background-color: var(--color-surface-dark);
+  color: var(--color-ink);
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.apply-filter-button:hover {
+  background-color: var(--color-primary);
+}
+
+/* HistoryTable Component */
+.history-table-container {
+  margin-top: 4rem;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.history-table {
+  min-width: 1000px;
+  backdrop-filter: blur(10px);
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.25rem;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.5rem 1rem;
+  text-align: center;
+  border: none;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.875rem;
+  height: 2.5rem;
+  transition: all var(--transition-fast);
+}
+
+/* СТИЛИ ЗАГОЛОВКА ТАБЛИЦЫ */
+.history-table thead tr {
+  background: radial-gradient(circle, #ff409a, #c438ef);
+  border-radius: 10px;
+}
+
+.history-table th {
+  font-weight: 600;
+  color: var(--color-ink);
+  background: transparent;
+  font-size: 0.875rem;
+  height: 3rem;
+  border: 1px solid var(--color-primary);
+}
+
+.history-table th:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 1px solid var(--color-primary);
+}
+
+.history-table th:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid var(--color-primary);
+}
+
+/* Границы между ячейками в заголовке */
+.history-table th:not(:last-child) {
+  border-right: 1px solid var(--color-primary);
+}
+
+/* ЧЕРЕДОВАНИЕ ЦВЕТОВ СТРОК И HOVER ЭФФЕКТ */
+.history-table tbody tr:nth-child(odd) td {
+  background-color: var(--color-primary);
+  border: 1px solid #1c1a41;
+}
+
+.history-table tbody tr:nth-child(even) td {
+  background-color: var(--color-primary-light);
+  border: 1px solid #1c1a41;
+}
+
+/* Эффект при наведении на строку */
+.history-table tbody tr:hover td {
+  background-color: #3a3763;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+
+/* Скругления для первой и последней ячейки в строке */
+.history-table tbody tr td:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 1px solid #1c1a41;
+}
+
+.history-table tbody tr td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid #1c1a41;
+}
+
+/* Границы между ячейками */
+.history-table tbody tr td:not(:last-child) {
+  border-right: 1px solid #1c1a41;
+}
+
+/* Дополнительные утилиты для History */
+.skeleton-loader {
+  background-color: var(--color-surface-dark);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.5s ease-in-out infinite;
+  margin: 0.25rem 0;
+  height: 2.5rem;
+}
+
+.loading-container {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.no-history {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgb(255 255 255 / 60%);
+  font-size: 1rem;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  margin: 0;
+  cursor: pointer;
+}
+
+.filter-checkbox {
+  accent-color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+/* Адаптивность для History */
+@media (width <= 768px) {
+  .history-page {
+    left: 1rem;
+    right: 1rem;
+    padding: 1rem;
+  }
+
+  .search-input {
+    width: 180px;
+    height: 2.25rem;
+  }
+
+  .history-table-container {
+    margin-top: 2rem;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 0.375rem 0.75rem;
+    height: 2rem;
+    font-size: 0.75rem;
+  }
+
+  .history-table th {
+    height: 2.5rem;
   }
 }
