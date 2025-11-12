@@ -214,6 +214,7 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
 .pt-6 {
   padding-top: 1.5rem;
 }
@@ -567,6 +568,7 @@ body {
   background-clip: text;
   color: transparent;
 }
+
 /* АДАПТИВНОСТЬ */
 @media (width >= 769px) {
   .sidebar {
