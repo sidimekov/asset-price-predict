@@ -22,6 +22,8 @@ export default [
         module: 'readonly',
         process: 'readonly',
         screen: 'readonly',
+        sessionStorage: 'readonly',
+        URL: 'readonly',
         MouseEvent: 'readonly',
         Node: 'readonly',
         clearTimeout: 'readonly',

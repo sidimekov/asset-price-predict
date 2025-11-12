@@ -228,6 +228,11 @@ body {
   padding-right: 1.5rem;
 }
 
+.px-8 {
+  padding-left: 3rem;
+  padding-right: 3rem;
+}
+
 .py-10 {
   padding-top: 2.5rem;
   padding-bottom: 2.5rem;
@@ -648,6 +653,18 @@ body {
     padding: 0.25rem 0.5rem;
     font-size: 0.8125rem;
   }
+}
+
+.min-h-60vh {
+  min-height: 60vh;
+}
+
+.max-w-xl {
+  max-width: 42rem;
+}
+
+.leading-snug {
+  line-height: 1.2;
 }
 
 /* ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ СТРАНИЦЫ ИСТОРИИ */
