@@ -22,7 +22,9 @@ describe('TopBar', () => {
 
   it('navigates to home on logo click', () => {
     render(<TopBar />);
-    fireEvent.click(screen.getByRole('heading', { name: /AssetPredict/i }));
+    fireEvent.click(
+      screen.getByRole('heading', { name: /Asset\s*Predict/i }),
+    );
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
