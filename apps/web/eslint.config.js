@@ -24,6 +24,7 @@ export default [
         screen: 'readonly',
         MouseEvent: 'readonly',
         Node: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
     rules: {
