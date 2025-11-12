@@ -1,16 +1,29 @@
-import Skeleton from '@/shared/ui/Skeleton';
+'use client';
+import React, { useState, useEffect } from 'react';
+import { ProfileHeader } from '@/features/account/ProfileHeader';
+import { ActionsList } from '@/features/account/ActionsList';
 
-export default function AccountPage() {
+const AccountPage: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleProfileClick = () => alert('Go to Account Settings');
+
   return (
-    <div className="space-y-8 max-w-2xl">
-      <h1 className="text-3xl font-bold text-ink">Настройки аккаунта</h1>
-      <div className="bg-surface rounded-xl p-6 shadow-card space-y-6">
-        <div>
-          <Skeleton height="1rem" width="30%" />
-          <Skeleton height="3rem" />
-        </div>
-        <Skeleton height="3rem" width="150px" />
+    <main className="account-content">
+      <div className="max-w-md mx-auto space-y-8">
+        <ProfileHeader loading={loading} onClick={handleProfileClick} />
+        <ActionsList
+          loading={loading}
+          onClick={(label) => console.log(label)}
+        />
       </div>
-    </div>
+    </main>
   );
-}
+};
+
+export default AccountPage;

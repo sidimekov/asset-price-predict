@@ -1,0 +1,86 @@
+[
+  {
+    "asset": "BTC",
+    "date": "2025-10-28",
+    "model": "Some model 1",
+    "input": "Some input",
+    "period": "from 2025-10-03 to 2025-10-28 ",
+    "factors_top5": [
+      "someFactor1 0.00; 0%",
+      "someFactor2 0.00; 0%",
+      "someFactor3 0.00; 0%",
+      "someFactor4 0.00; 0%",
+      "someFactor5 0.00; 0%"
+    ]
+  },
+  {
+    "asset": "ETH",
+    "date": "2025-10-24",
+    "model": "Some model 2",
+    "input": "Some input",
+    "period": "from 2025-10-03 to 2025-10-24 ",
+    "factors_top5": [
+      "someFactor1 0.00; 0%",
+      "someFactor2 0.00; 0%",
+      "someFactor3 0.00; 0%",
+      "someFactor4 0.00; 0%",
+      "someFactor5 0.00; 0%"
+    ]
+  },
+  {
+    "asset": "LTC",
+    "date": "2025-10-25",
+    "model": "Some model 1",
+    "input": "Some input",
+    "period": "from 2025-10-02 to 2025-10-25 ",
+    "factors_top5": [
+      "someFactor1 0.00; 0%",
+      "someFactor2 0.00; 0%",
+      "someFactor3 0.00; 0%",
+      "someFactor4 0.00; 0%",
+      "someFactor5 0.00; 0%"
+    ]
+  },
+  {
+    "asset": "BTC",
+    "date": "2025-10-27",
+    "model": "Some model 3",
+    "input": "Some input",
+    "period": "from 2025-10-03 to 2025-10-27",
+    "factors_top5": [
+      "someFactor1 0.00; 0%",
+      "someFactor2 0.00; 0%",
+      "someFactor3 0.00; 0%",
+      "someFactor4 0.00; 0%",
+      "someFactor5 0.00; 0%"
+    ]
+  },
+  {
+    "asset": "BTC",
+    "date": "2025-09-22",
+    "model": "Some model 2",
+    "input": "Some input",
+    "period": "from 2025-09-03 to 2025-09-24 ",
+    "factors_top5": [
+      "someFactor1 0.00; 0%",
+      "someFactor2 0.00; 0%",
+      "someFactor3 0.00; 0%",
+      "someFactor4 0.00; 0%",
+      "someFactor5 0.00; 0%"
+    ]
+  },
+  {
+    "asset": "LTC",
+    "date": "2025-10-28",
+    "model": "Some model 2",
+    "input": "Some input",
+    "period": "from 2025-10-03 to 2025-10-28 ",
+    "factors_top5": [
+      "someFactor1 0.00; 0%",
+      "someFactor2 0.00; 0%",
+      "someFactor3 0.00; 0%",
+      "someFactor4 0.00; 0%",
+      "someFactor5 0.00; 0%"
+    ]
+  }
+]

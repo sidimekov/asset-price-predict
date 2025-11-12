@@ -1,17 +1,22 @@
-import Skeleton from '@/shared/ui/Skeleton';
+'use client';
+import { useState } from 'react';
+import SearchBar from '@/features/history/HistorySearch';
+import HistoryTable from '@/features/history/HistoryTable';
 
 export default function HistoryPage() {
+  const [loading, setLoading] = useState(false);
+  const handleSearch = (query: string) => {
+    console.log('Поиск по:', query);
+  };
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-ink">История</h1>
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="bg-surface rounded-lg p-4 shadow-soft">
-            <Skeleton height="1rem" width="70%" />
-            <Skeleton height="0.875rem" width="40%" />
-          </div>
-        ))}
+    <main className="history-page">
+      <div className="search-bar-wrapper">
+        <SearchBar onSearch={handleSearch} />
       </div>
-    </div>
+      <div className="history-page-content">
+        <HistoryTable loading={loading} />
+      </div>
+    </main>
   );
 }

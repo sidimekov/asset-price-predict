@@ -1,6 +1,14 @@
-export default [
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ['**/*.{js,ts}'],
+    ignores: ['node_modules/**', 'dist/**', 'build/**'],
+  },
+  {
+    files: ['**/*.{js,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -9,11 +17,7 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': 'warn',
-      'no-undef': 'error',
+      'no-undef': 'off',
     },
   },
-  {
-    ignores: ['node_modules/', 'dist/', 'build/'],
-  },
-];
+);

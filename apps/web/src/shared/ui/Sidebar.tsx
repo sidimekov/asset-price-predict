@@ -18,13 +18,11 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="sidebar" aria-label="Боковая панель">
       <div className="sidebar-content">
-        {/* Логотип */}
         <h1 className="sidebar-brand">
           <span className="brand-gradient">Asset</span>
           <span className="text-ink">Predict</span>
         </h1>
 
-        {/* Профиль */}
         <Link
           href="/account"
           className="sidebar-profile"
@@ -43,7 +41,6 @@ export const Sidebar: React.FC = () => {
           </div>
         </Link>
 
-        {/* Навигация */}
         <nav className="sidebar-nav" aria-label="Основная навигация">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
