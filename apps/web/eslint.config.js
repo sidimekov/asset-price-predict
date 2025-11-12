@@ -24,6 +24,7 @@ export default [
         screen: 'readonly',
         sessionStorage: 'readonly',
         URL: 'readonly',
+        clearTimeout: 'readonly',
       },
     },
     rules: {
