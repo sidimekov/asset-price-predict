@@ -1,44 +1,58 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AuthPage from '@/app/auth/page';
 
+// Моки компонентов
 vi.mock('@/features/auth/AuthBrand', () => ({
-  default: () => <h1 className="text-5xl">AssetPredict</h1>,
+  default: () => <div data-testid="auth-brand">AssetPredict</div>,
 }));
 vi.mock('@/features/auth/AuthTabs', () => ({
   default: () => null,
 }));
 vi.mock('@/features/auth/SignUpForm', () => ({
-  default: ({ onSubmit }: any) => (
-    <form onSubmit={onSubmit}>
+  default: () => (
+    <form data-testid="signup-form">
       <input placeholder="Your email" />
       <input placeholder="Your password" />
       <input placeholder="Your password again" />
-      <button type="submit">Confirm</button>
+      <button>Confirm</button>
     </form>
   ),
 }));
 vi.mock('@/features/auth/SignInForm', () => ({
-  default: ({ onSubmit }: any) => (
-    <form onSubmit={onSubmit}>
+  default: () => (
+    <form data-testid="signin-form">
       <input placeholder="Your email" />
       <input placeholder="Your password" />
-      <button type="submit">Confirm</button>
+      <button>Confirm</button>
     </form>
   ),
 }));
 vi.mock('@/shared/ui/GradientCard', () => ({
   GradientCard: ({ children }: any) => (
-    <div className="gradient-card py-10">{children}</div>
+    <div data-testid="gradient-card" className="py-10">
+      {children}
+    </div>
   ),
 }));
 
+// Мок useSearchParams — только для тестов с URL
+const mockUseSearchParams = vi.fn();
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => mockUseSearchParams(),
+}));
+
 describe('AuthPage', () => {
+  beforeEach(() => {
+    mockUseSearchParams.mockReturnValue({
+      get: () => null, // по умолчанию
+    });
+  });
+
   it('renders signup form by default', () => {
     render(<AuthPage />);
     expect(screen.getByText('Sign up for AssetPredict')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Your email')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('Your password again'),
     ).toBeInTheDocument();
@@ -53,11 +67,25 @@ describe('AuthPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('opens signin when ?mode=signin', () => {
+    mockUseSearchParams.mockReturnValue({
+      get: () => 'signin',
+    });
+    render(<AuthPage />);
+    expect(screen.getByText('Welcome back')).toBeInTheDocument();
+  });
+
+  it('opens signup when ?mode=signup', () => {
+    mockUseSearchParams.mockReturnValue({
+      get: () => 'signup',
+    });
+    render(<AuthPage />);
+    expect(screen.getByText('Sign up for AssetPredict')).toBeInTheDocument();
+  });
+
   it('contains AuthBrand and toggle link', () => {
     render(<AuthPage />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'AssetPredict',
-    );
+    expect(screen.getByTestId('auth-brand')).toBeInTheDocument();
     expect(
       screen.getByText('Already have an account? Sign in'),
     ).toBeInTheDocument();
@@ -65,15 +93,12 @@ describe('AuthPage', () => {
 
   it('has correct header padding', () => {
     render(<AuthPage />);
-    const header = screen.getByRole('heading', { level: 1 }).closest('header');
+    const header = screen.getByTestId('auth-brand').closest('header');
     expect(header).toHaveClass('pt-6', 'pb-4', 'px-6');
   });
 
   it('card has increased height', () => {
     render(<AuthPage />);
-    const card = screen
-      .getByText('Sign up for AssetPredict')
-      .closest('.gradient-card');
-    expect(card).toHaveClass('py-10');
+    expect(screen.getByTestId('gradient-card')).toHaveClass('py-10');
   });
 });

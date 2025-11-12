@@ -1,19 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import AuthBrand from '@/features/auth/AuthBrand';
 import AuthTabs from '@/features/auth/AuthTabs';
 import { GradientCard } from '@/shared/ui/GradientCard';
 import SignUpForm from '@/features/auth/SignUpForm';
 import SignInForm from '@/features/auth/SignInForm';
 
-const AuthPage: React.FC = () => {
+const AuthPageContent = () => {
+  const searchParams = useSearchParams();
+  const urlMode = searchParams.get('mode');
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const [isLoading, setIsLoading] = useState(false);
 
-  const toggleMode = (e: React.MouseEvent) => {
+  useEffect(() => {
+    if (urlMode === 'signin' || urlMode === 'signup') {
+      setMode(urlMode);
+    }
+  }, [urlMode]);
+
+  const toggleMode = (e: React.MouseEvent<any>) => {
     e.preventDefault();
-    setMode(mode === 'signup' ? 'signin' : 'signup');
+    setMode((prev) => (prev === 'signup' ? 'signin' : 'signup'));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,7 +43,12 @@ const AuthPage: React.FC = () => {
         <a
           href="#"
           onClick={toggleMode}
-          className="text-ink text-sm font-normal underline-hover font-montserrat whitespace-nowrap"
+          className="text-ink text-sm font-normal underline-hover font-montserrat whitespace-nowrap focus-ring transition-fast"
+          aria-label={
+            mode === 'signup'
+              ? 'Уже есть аккаунт? Войти'
+              : 'Нет аккаунта? Зарегистрироваться'
+          }
         >
           {mode === 'signup'
             ? 'Already have an account? Sign in'
@@ -58,6 +72,20 @@ const AuthPage: React.FC = () => {
         </div>
       </main>
     </div>
+  );
+};
+
+const AuthPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-primary min-h-screen flex items-center justify-center text-white text-lg">
+          Loading...
+        </div>
+      }
+    >
+      <AuthPageContent />
+    </Suspense>
   );
 };
 
