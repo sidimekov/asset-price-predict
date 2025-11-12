@@ -24,6 +24,8 @@ export default [
         screen: 'readonly',
         sessionStorage: 'readonly',
         URL: 'readonly',
+        MouseEvent: 'readonly',
+        Node: 'readonly',
         clearTimeout: 'readonly',
       },
     },

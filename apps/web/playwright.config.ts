@@ -12,26 +12,16 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  // КЛЮЧЕВОЕ: используем уже запущенный сервер
   webServer: {
-    command: 'pnpm dev', // команда запуска dev-сервера
+    command: 'pnpm dev', // ⬅️ скрипт dev из apps/web/package.json
     url: 'http://localhost:3000',
-    reuseExistingServer: true, // ← ЭТО РЕШАЕТ ПРОБЛЕМУ
-    timeout: 120 * 1000,
+    reuseExistingServer: true,
+    timeout: 120_000,
   },
-
   projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // оставь только chromium, если хочешь быстрее:
+    // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    // { name: 'webkit',  use: { ...devices['Desktop Safari'] } },
   ],
 });
