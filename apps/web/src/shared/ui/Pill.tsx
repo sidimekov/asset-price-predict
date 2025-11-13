@@ -5,7 +5,7 @@ interface PillProps {
   label: string;
   selected?: boolean;
   variant?: 'asset' | 'add-asset';
-  isSkeleton?: boolean; // оставлено на будущее, сейчас Skeleton отдельным компонентом
+  isSkeleton?: boolean;
   onClick?: () => void;
   onRemove?: () => void; // крестик удаления
 }
@@ -14,7 +14,7 @@ export default function Pill({
   label,
   selected = false,
   variant = 'asset',
-  isSkeleton = false, // не используем, но не ломаем API
+  isSkeleton = false,
   onClick,
   onRemove,
 }: PillProps) {
