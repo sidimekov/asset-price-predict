@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import Skeleton from '@/shared/ui/Skeleton';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 
