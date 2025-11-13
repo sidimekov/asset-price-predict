@@ -1,46 +1,42 @@
 'use client';
-
 import React from 'react';
-import RecentAssetsBar from '../../widgets/recent-assets/RecentAssetsBar';
-import CandlesChartPlaceholder from '../../widgets/Chart/CandlesChartPlaceholder';
-import ParamsPanel from '../../features/params/ParamsPanel';
-import FactorsTable from '../../features/factors/FactorsTable';
-import mockAssets from '../../mocks/recentAssets.json';
+import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
+import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
+import ParamsPanel from '@/features/params/ParamsPanel';
+import FactorsTable from '@/features/factors/FactorsTable';
+import XAxis from '@/widgets/chart/coordinates/XAxis';
+import YAxis from '@/widgets/chart/coordinates/YAxis';
+import mockAssets from '@/mocks/recentAssets.json';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
-
 type Asset = { symbol: string; price: string };
 
 export default function Dashboard() {
   const [assets, setAssets] = React.useState<Asset[]>(mockAssets as Asset[]);
   const [selected, setSelected] = React.useState<string | null>(null);
-
   const [assetState, setAssetState] = React.useState<State>('idle');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
   const [factorsState, setFactorsState] = React.useState<State>('idle');
 
-  // имитируем загрузку API при старте, чтобы увидеть Skeleton
   React.useEffect(() => {
     setAssetState('loading');
     setParamsState('loading');
     setFactorsState('loading');
-
     const t = setTimeout(() => {
       setAssetState('ready');
       setParamsState('success');
       setFactorsState('ready');
     }, 1200);
-
     return () => clearTimeout(t);
   }, []);
 
-  // по умолчанию выбираем первый актив
   React.useEffect(() => {
-    if (!selected && assets.length > 0) setSelected(assets[0].symbol);
+    if (!selected && assets.length > 0) {
+      setSelected(assets[0].symbol);
+    }
   }, [assets, selected]);
 
-  // если удалили выбранный — выбираем первый оставшийся
   React.useEffect(() => {
     if (selected && !assets.find((a) => a.symbol === selected)) {
       setSelected(assets[0]?.symbol ?? null);
@@ -50,41 +46,71 @@ export default function Dashboard() {
   const derivedAssetState: State =
     assetState === 'loading' ? 'loading' : assets.length ? 'ready' : 'empty';
 
+  const handleAddAsset = () => {
+    const id = `ASSET${Math.floor(Math.random() * 1000)}`;
+    setAssets((prev) => {
+      const updated = [{ symbol: id, price: '0.00' }, ...prev];
+      return updated.slice(0, 10);
+    });
+  };
+
+  const handleRemoveAsset = (symbol: string) => {
+    setAssets((prev) => prev.filter((a) => a.symbol !== symbol));
+  };
+
+  const visibleAssets = assets.slice(0, 10);
+
   return (
-    <div className="absolute h-300 w-370 background text-white p-4">
-      <div className="grid grid-cols-12 gap-4">
-        {/* Recent Assets */}
+    <div className="min-h-screen bg-primary">
+      <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
+        {/* Recent Assets — 12 колонок */}
         <div className="col-span-12">
           <RecentAssetsBar
             state={derivedAssetState}
-            assets={assets}
+            assets={visibleAssets}
             selected={selected}
             onSelect={setSelected}
-            onRemove={(symbol) =>
-              setAssets((prev) => prev.filter((a) => a.symbol !== symbol))
-            }
-            onAdd={() => {
-              // заглушка добавления
-              const id = `ASSET${Math.floor(Math.random() * 1000)}`;
-              setAssets((prev) => [...prev, { symbol: id, price: '0.00' }]);
-            }}
+            onRemove={handleRemoveAsset}
+            onAdd={handleAddAsset}
           />
         </div>
 
-        {/* Chart placeholder (график не рисуем) */}
-        <div className="col-span-12">
-          <CandlesChartPlaceholder state={derivedAssetState} />
+        <div className="col-span-12 lg:col-span-8">
+          <div className="bg-surface-dark rounded-3xl shadow-card-elevated p-6">
+            <div className="flex items-start">
+              <YAxis className="h-96 w-full px-6" />
+
+              <div className="flex-1 flex flex-col">
+                <div className="flex-1 relative">
+                  <CandlesChartPlaceholder state={derivedAssetState} />
+                </div>
+
+                <XAxis className="ml-12 h-96 w-full" />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-8" />
         </div>
 
-        {/* Parameters + Factors */}
+        <div className="hidden lg:block col-span-4" />
+
         <div className="col-span-12 lg:col-span-4">
           <ParamsPanel state={paramsState} />
         </div>
 
-        <div className="col-span-12 lg:col-span-8">
-          <FactorsTable state={factorsState} />
+        <div className="hidden lg:block col-span-1" />
+
+        <div className="col-span-12 lg:col-span-7">
+          <div className="overflow-x-auto">
+            <div className="min-w-[600px] lg:min-w-0">
+              <FactorsTable state={factorsState} />
+            </div>
+          </div>
         </div>
       </div>
+
+      <div className="h-10" />
     </div>
   );
 }

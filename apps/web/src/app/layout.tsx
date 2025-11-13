@@ -27,7 +27,7 @@ export default function RootLayout({
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const publicPaths = ['/auth', '/welcome'];
+  const publicPaths = ['/auth', '/'];
   const isPublicPage = publicPaths.includes(pathname);
 
   const showAppLayout = isAuthenticated && !isPublicPage;
