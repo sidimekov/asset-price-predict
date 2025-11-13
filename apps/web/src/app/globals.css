@@ -2,9 +2,9 @@
 
 :root {
   /* Общие переменные для обеих веток */
-  --background: #1a183e;
+  --background: #201d47;
   --foreground: #8480c9;
-  --color-primary: #1a183e;
+  --color-primary: #201d47;
   --color-primary-light: #302e53;
   --color-surface: #2e2b52;
   --color-surface-dark: #201d47;
@@ -21,7 +21,7 @@
   --gradient-primary: linear-gradient(135deg, #ff409a, #c438ef);
   --gradient-accent: linear-gradient(135deg, #ff409a, #c438ef);
   --gradient-danger: linear-gradient(135deg, #ff4757, #ff3742);
-  --gradient-card: linear-gradient(135deg, #2e2b52, #201d47);
+  --gradient-card: linear-gradient(135deg, #ff409a, #c438ef, #201d47);
 
   /* Радиусы */
   --radius-sm: 4px;
@@ -263,6 +263,7 @@ body {
   z-index: -1;
 }
 
+
 /* Button */
 .btn {
   width: 100%;
@@ -352,6 +353,51 @@ body {
   font-family: var(--font-sans);
   font-size: 0.75rem;
   margin-top: 0.25rem;
+}
+
+/* Actions */
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 320px;
+}
+
+.account-content {
+  padding-left: 2rem;
+}
+
+/* Profile Header */
+.profile-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.profile-header-avatar {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-header-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.profile-header-username {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.profile-header-login {
+  color: rgb(255 255 255 / 60%);
+  font-size: 0.9375rem;
 }
 
 /* Skeleton */
