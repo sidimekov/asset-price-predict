@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 import Pill from '../../shared/ui/Pill';
-import Skeleton from '../../shared/ui/Skeleton';
 
 type Asset = { symbol: string; price: string };
 type State = 'idle' | 'loading' | 'empty' | 'ready';
@@ -25,39 +24,52 @@ export default function RecentAssetsBar({
 }: RecentAssetsBarProps) {
   const renderContent = () => {
     if (state === 'loading') {
-      // карточки-скелетоны той же формы и размера, что и реальные pill
       return Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="skeleton-card skeleton-pill-wrapper">
-          <Skeleton width="100%" height="100%" />
+        <div key={i} className="flex-shrink-0">
+          <div className="w-32 h-10 bg-gradient-to-r skeleton-card rounded-full animate-pulse" />
         </div>
       ));
     }
 
-    if (state === 'empty')
-      return <p className="text-gray-500">No assets available</p>;
+    const assetPills = assets.map((asset) => (
+      <Pill
+        key={asset.symbol}
+        label={`${asset.symbol} ${asset.price}`}
+        selected={asset.symbol === selected}
+        onClick={() => onSelect(asset.symbol)}
+        onRemove={() => onRemove(asset.symbol)}
+      />
+    ));
 
-    return (
-      <>
-        {assets.map((asset) => (
-          <Pill
-            key={asset.symbol}
-            label={`${asset.symbol} ${asset.price}`}
-            selected={asset.symbol === selected}
-            onClick={() => onSelect(asset.symbol)}
-            onRemove={() => onRemove(asset.symbol)}
-          />
-        ))}
-        <Pill label="+ Add Asset" variant="add-asset" onClick={onAdd} />
-      </>
+    const addButton = (
+      <Pill
+        key="add-asset"
+        label="+ Add Asset"
+        variant="add-asset"
+        onClick={onAdd}
+      />
     );
+
+    if (assets.length === 0) {
+      return (
+        <>
+          {addButton}
+          <span className="text-gray-500 text-sm self-center ml-3">
+            No assets
+          </span>
+        </>
+      );
+    }
+    return [addButton, ...assetPills];
   };
 
   return (
-    <div className="absolute left-92 overflow-x-auto mb-4 w-full">
-      {/* вертикальный зазор между заголовком и пиллами */}
-      <div className="flex flex-col gap-3">
-        <p className="text-[#8480C9]">Recent Assets</p>
-        <div className="flex gap-3 pr-2">{renderContent()}</div>
+    <div className="mb-6">
+      <p className="text-[#8480C9] text-sm font-medium mb-2">Recent Assets</p>
+      <br></br>
+
+      <div className="overflow-x-auto -mx-4 px-4">
+        <div className="flex gap-3 pb-4 min-w-max pl-4">{renderContent()}</div>
       </div>
     </div>
   );
