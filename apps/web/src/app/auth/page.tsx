@@ -43,7 +43,7 @@ const AuthPageContent = () => {
         <a
           href="#"
           onClick={toggleMode}
-          className="text-ink text-sm font-normal underline-hover font-montserrat whitespace-nowrap focus-ring transition-fast"
+          className="text-ink text-sm font-normal underline-hover font-montserrat whitespace-nowrap transition-fast"
           aria-label={
             mode === 'signup'
               ? 'Уже есть аккаунт? Войти'
