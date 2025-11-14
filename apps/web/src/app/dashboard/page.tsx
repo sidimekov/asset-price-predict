@@ -7,6 +7,7 @@ import FactorsTable from '@/features/factors/FactorsTable';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import mockAssets from '@/mocks/recentAssets.json';
+import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -59,6 +60,8 @@ export default function Dashboard() {
   };
 
   const visibleAssets = assets.slice(0, 10);
+
+  useOrchestrator();
 
   return (
     <div className="min-h-screen bg-primary">

@@ -9,16 +9,30 @@ export const orchestratorState: { status: OrchestratorStatus } = {
   status: 'idle',
 };
 
+// временный локальный кэш ts, пока нет timeseriesSlice из pr market adapter
+const localTimeseriesCache = new Map<string, { bars: Bar[]; fetchedAt: number }>();
+
+export function getLocalTimeseries(key: string) {
+  return localTimeseriesCache.get(key);
+}
+
+export function setLocalTimeseries(key: string, bars: Bar[]) {
+  localTimeseriesCache.set(key, { bars, fetchedAt: Date.now() });
+}
+
+export function isLocalTimeseriesStale(key: string, ttlMs = TIMESERIES_TTL_MS): boolean {
+  const entry = localTimeseriesCache.get(key);
+  if (!entry) return true;
+  return Date.now() - entry.fetchedAt > ttlMs;
+}
+
 /**
  * Выбранный актив из catalogSlice
  * state.catalog.selected = { symbol: string; provider: string }
  */
 export const selectSelectedAsset = (state: RootState) =>
   (state as any).catalog?.selected as
-    | {
-    symbol: string
-    provider: string
-  }
+    | { symbol: string; provider: string }
     | undefined;
 
 /**
@@ -28,12 +42,7 @@ export const selectSelectedAsset = (state: RootState) =>
  */
 export const selectForecastParams = (state: RootState) =>
   (state as any).forecast?.params as
-    | {
-    tf: string
-    window: string | number
-    horizon: number
-    model?: string | null
-  }
+    | { tf: string; window: string | number; horizon: number; model?: string | null }
     | undefined;
 
 /**
@@ -67,3 +76,8 @@ export const selectIsTimeseriesStale = (
   if (Number.isNaN(fetchedAtMs)) return true;
   return Date.now() - fetchedAtMs > ttlMs;
 };
+
+
+// TODO, когда появится timeseriesSlice:
+//  - удалить localTimeseriesCache и функции его
+//  - заменить на селекторы timeseriesSlice
