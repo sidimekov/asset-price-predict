@@ -10,18 +10,18 @@ export interface BinanceTimeseriesRequest {
 }
 
 export type BinanceKline = [
-  number,   // openTime
-  string,   // open
-  string,   // high
-  string,   // low
-  string,   // close
-  string,   // volume
-  number,   // closeTime
-  string,   // quoteAssetVolume
-  number,   // numberOfTrades
-  string,   // takerBuyBaseAssetVolume
-  string,   // takerBuyQuoteAssetVolume
-  string    // ignore
+  number, // openTime
+  string, // open
+  string, // high
+  string, // low
+  string, // close
+  string, // volume
+  number, // closeTime
+  string, // quoteAssetVolume
+  number, // numberOfTrades
+  string, // takerBuyBaseAssetVolume
+  string, // takerBuyQuoteAssetVolume
+  string, // ignore
 ];
 
 export interface MockTimeseriesRequest {
@@ -43,7 +43,10 @@ export const marketApi = createApi({
   }),
   endpoints: (builder) => ({
     // GET /api/market/binance/timeseries
-    getBinanceTimeseries: builder.query<BinanceKline[], BinanceTimeseriesRequest>({
+    getBinanceTimeseries: builder.query<
+      BinanceKline[],
+      BinanceTimeseriesRequest
+    >({
       query: ({ symbol, interval, limit }) => ({
         url: 'binance/timeseries',
         params: { symbol, interval, limit },

@@ -5,7 +5,7 @@ import type { ProviderRequestBase } from './BinanceProvider';
 
 export async function fetchMoexTimeseries(
   dispatch: AppDispatch,
-  params: ProviderRequestBase
+  params: ProviderRequestBase,
 ): Promise<unknown> {
   // Пока заглушка, но структура готова
   const { symbol, timeframe, limit } = params;
@@ -15,7 +15,7 @@ export async function fetchMoexTimeseries(
       symbol,
       timeframe,
       limit,
-    })
+    }),
   );
 
   try {

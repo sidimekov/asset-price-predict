@@ -9,7 +9,7 @@ export type TimeseriesKey = string; // "provider:symbol:timeframe"
 export const buildTimeseriesKey = (
   provider: MarketDataProvider,
   symbol: string,
-  timeframe: MarketTimeframe
+  timeframe: MarketTimeframe,
 ): TimeseriesKey => `${provider}:${symbol}:${timeframe}`;
 
 interface TimeseriesState {
@@ -42,12 +42,18 @@ const timeseriesSlice = createSlice({
   name: 'timeseries',
   initialState,
   reducers: {
-    timeseriesRequested(state, action: PayloadAction<TimeseriesRequestedPayload>) {
+    timeseriesRequested(
+      state,
+      action: PayloadAction<TimeseriesRequestedPayload>,
+    ) {
       const { key } = action.payload;
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
     },
-    timeseriesReceived(state, action: PayloadAction<TimeseriesReceivedPayload>) {
+    timeseriesReceived(
+      state,
+      action: PayloadAction<TimeseriesReceivedPayload>,
+    ) {
       const { key, bars } = action.payload;
       state.byKey[key] = bars;
       state.loadingByKey[key] = false;
@@ -61,11 +67,8 @@ const timeseriesSlice = createSlice({
   },
 });
 
-export const {
-  timeseriesRequested,
-  timeseriesReceived,
-  timeseriesFailed,
-} = timeseriesSlice.actions;
+export const { timeseriesRequested, timeseriesReceived, timeseriesFailed } =
+  timeseriesSlice.actions;
 
 export const timeseriesReducer = timeseriesSlice.reducer;
 
@@ -73,8 +76,12 @@ export const timeseriesReducer = timeseriesSlice.reducer;
 export const selectTimeseriesByKey = (state: RootState, key: TimeseriesKey) =>
   state.timeseries.byKey[key] ?? null;
 
-export const selectTimeseriesLoadingByKey = (state: RootState, key: TimeseriesKey) =>
-  state.timeseries.loadingByKey[key] ?? false;
+export const selectTimeseriesLoadingByKey = (
+  state: RootState,
+  key: TimeseriesKey,
+) => state.timeseries.loadingByKey[key] ?? false;
 
-export const selectTimeseriesErrorByKey = (state: RootState, key: TimeseriesKey) =>
-  state.timeseries.errorByKey[key] ?? null;
+export const selectTimeseriesErrorByKey = (
+  state: RootState,
+  key: TimeseriesKey,
+) => state.timeseries.errorByKey[key] ?? null;

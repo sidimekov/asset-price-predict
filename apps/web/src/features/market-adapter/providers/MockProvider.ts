@@ -1,5 +1,5 @@
 // apps/web/src/features/market-adapter/providers/MockProvider.ts
-import type { AppDispatch } from '@/app/store'; // TODO путь
+import type { AppDispatch } from '@/shared/store'; //
 import { marketApi } from '@/shared/api/marketApi';
 import type { ProviderRequestBase } from './BinanceProvider';
 
@@ -8,7 +8,7 @@ import type { ProviderRequestBase } from './BinanceProvider';
 
 export async function fetchMockTimeseries(
   dispatch: AppDispatch,
-  params: ProviderRequestBase
+  params: ProviderRequestBase,
 ): Promise<unknown> {
   const { symbol, timeframe, limit } = params;
 
@@ -17,7 +17,7 @@ export async function fetchMockTimeseries(
       symbol,
       timeframe,
       limit,
-    })
+    }),
   );
 
   try {
@@ -29,7 +29,9 @@ export async function fetchMockTimeseries(
 }
 
 // Если хочется синтетические бары вообще без сети — можно сделать генератор (опционально):
-export function generateMockBarsRaw(params: ProviderRequestBase): [number, number, number, number, number, number][] {
+export function generateMockBarsRaw(
+  params: ProviderRequestBase,
+): [number, number, number, number, number, number][] {
   const { limit } = params;
   const now = Date.now();
   const res: [number, number, number, number, number, number][] = [];

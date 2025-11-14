@@ -15,7 +15,10 @@ import {
   type Bar,
 } from './cache/ClientTimeseriesCache';
 import { fetchBinanceTimeseries } from './providers/BinanceProvider';
-import { fetchMockTimeseries, generateMockBarsRaw } from './providers/MockProvider';
+import {
+  fetchMockTimeseries,
+  generateMockBarsRaw,
+} from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
 import type { BinanceKline } from '@/shared/api/marketApi';
 
@@ -79,7 +82,14 @@ function normalizeRawBars(raw: any): Bar[] {
     if (!Array.isArray(raw)) return [];
     return raw.map((b) => {
       const [ts, o, h, l, c, v] = b;
-      return [Number(ts), Number(o), Number(h), Number(l), Number(c), v != null ? Number(v) : undefined];
+      return [
+        Number(ts),
+        Number(o),
+        Number(h),
+        Number(l),
+        Number(c),
+        v != null ? Number(v) : undefined,
+      ];
     });
   } catch (e) {
     console.error('[MarketAdapter] Failed to normalize raw bars', e);
@@ -90,7 +100,7 @@ function normalizeRawBars(raw: any): Bar[] {
 async function resolveProviderData(
   dispatch: AppDispatch,
   provider: MarketDataProvider,
-  params: { symbol: string; timeframe: MarketTimeframe; limit: number }
+  params: { symbol: string; timeframe: MarketTimeframe; limit: number },
 ): Promise<{ raw: any; normalized: Bar[] }> {
   switch (provider) {
     case 'BINANCE': {
@@ -129,7 +139,7 @@ async function resolveProviderData(
  */
 export async function getMarketTimeseries(
   dispatch: AppDispatch,
-  rawRequest: MarketAdapterRequest
+  rawRequest: MarketAdapterRequest,
 ): Promise<MarketAdapterSuccess | MarketAdapterError> {
   // 1. Валидация входных параметров через Zod
   const parseResult = marketAdapterRequestSchema.safeParse(rawRequest);

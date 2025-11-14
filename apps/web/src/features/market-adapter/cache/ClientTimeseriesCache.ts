@@ -48,5 +48,5 @@ export const makeTimeseriesCacheKey = (
   provider: string,
   symbol: string,
   timeframe: string,
-  limit: number
+  limit: number,
 ) => `market:${provider}:${symbol}:${timeframe}:${limit}`;

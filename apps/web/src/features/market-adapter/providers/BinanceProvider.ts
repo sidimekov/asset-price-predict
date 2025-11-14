@@ -1,5 +1,5 @@
 // apps/web/src/features/market-adapter/providers/BinanceProvider.ts
-import type { AppDispatch } from '@/shared/store';//
+import type { AppDispatch } from '@/shared/store'; //
 import { marketApi, BinanceKline } from '@/shared/api/marketApi';
 
 export interface ProviderRequestBase {
@@ -10,7 +10,7 @@ export interface ProviderRequestBase {
 
 export async function fetchBinanceTimeseries(
   dispatch: AppDispatch,
-  params: ProviderRequestBase
+  params: ProviderRequestBase,
 ): Promise<BinanceKline[]> {
   const { symbol, timeframe, limit } = params;
 
@@ -20,7 +20,7 @@ export async function fetchBinanceTimeseries(
       symbol,
       interval: timeframe,
       limit,
-    })
+    }),
   );
 
   try {
