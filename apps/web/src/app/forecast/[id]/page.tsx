@@ -1,26 +1,25 @@
-import Skeleton from '@/shared/ui/Skeleton';
-import { notFound } from 'next/navigation';
+'use client'
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+import React from 'react';
 
-export default async function ForecastDetail({ params }: PageProps) {
-  const { id } = await params;
 
-  if (!id) {
-    notFound();
-  }
 
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-ink">Прогноз #{id}</h1>
-      <div className="bg-surface rounded-xl p-8 shadow-card space-y-3">
-        <Skeleton height="2rem" />
-        <Skeleton height="1rem" />
-        <Skeleton height="1rem" />
-        <Skeleton height="1rem" />
-      </div>
-    </div>
-  );
+
+
+type ForecastPageProps = {
+    params: {
+        id: string;
+    };
+};
+
+export default function ForecastPage({ params }: ForecastPageProps) {
+    const { id } = params;
+
+    return (
+        <div className="min-h-screen bg-primary text-white px-8 pt-8 pb-32">
+            <h1 className="text-2xl font-semibold">
+                {id}
+            </h1>
+        </div>
+    );
 }

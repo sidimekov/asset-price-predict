@@ -7,12 +7,14 @@ import FactorsTable from '@/features/factors/FactorsTable';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import mockAssets from '@/mocks/recentAssets.json';
+import { useRouter } from 'next/navigation';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
 type Asset = { symbol: string; price: string };
 
 export default function Dashboard() {
+  const router = useRouter();
   const [assets, setAssets] = React.useState<Asset[]>(mockAssets as Asset[]);
   const [selected, setSelected] = React.useState<string | null>(null);
   const [assetState, setAssetState] = React.useState<State>('idle');
@@ -52,6 +54,10 @@ export default function Dashboard() {
       const updated = [{ symbol: id, price: '0.00' }, ...prev];
       return updated.slice(0, 10);
     });
+  };
+  const handlePredict = () => {
+    if (!selected) return;
+    router.push(`/forecast/${encodeURIComponent(selected)}`);
   };
 
   const handleRemoveAsset = (symbol: string) => {
@@ -96,7 +102,7 @@ export default function Dashboard() {
         <div className="hidden lg:block col-span-4" />
 
         <div className="col-span-12 lg:col-span-4">
-          <ParamsPanel state={paramsState} />
+          <ParamsPanel state={paramsState} onPredict={handlePredict} />
         </div>
 
         <div className="hidden lg:block col-span-1" />

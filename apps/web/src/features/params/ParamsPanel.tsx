@@ -5,10 +5,11 @@ import Skeleton from '@/shared/ui/Skeleton';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
 
 interface ParamsPanelProps {
-  state: ParamsState;
+    state: ParamsState;
+    onPredict?: () => void;
 }
 
-export default function ParamsPanel({ state }: ParamsPanelProps) {
+export default function ParamsPanel({ state, onPredict }: ParamsPanelProps) {
   const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -63,9 +64,14 @@ export default function ParamsPanel({ state }: ParamsPanelProps) {
       />
       <br />
       <br />
-      <button className="relative left-10 gradient-button w-60 h-12 rounded text-ink font-medium transition-smooth scale-on-press">
-        Predict
-      </button>
+        <button
+            className="relative left-10 gradient-button w-60 h-12 rounded text-ink font-medium transition-smooth scale-on-press"
+            onClick={onPredict}
+            aria-busy={false}          // здесь точно не loading
+            disabled={!onPredict}      // блокируем только если хендлера нет
+        >
+            Predict
+        </button>
     </div>
   );
 }
