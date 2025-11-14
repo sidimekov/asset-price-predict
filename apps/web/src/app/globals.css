@@ -393,10 +393,6 @@ body {
   100% {
     opacity: 0.5;
   }
-
-  100% {
-    transform: translateX(100%);
-  }
 }
 
 /* AuthTabs */
@@ -584,6 +580,254 @@ body {
   color: transparent;
 }
 
+/* HistoryTable Component */
+.history-table-container {
+  margin-top: 4rem;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.history-table {
+  min-width: 1000px;
+  backdrop-filter: blur(10px);
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.25rem;
+}
+
+.history-table th,
+.history-table td {
+  padding: 0.5rem 1rem;
+  text-align: center;
+  border: none;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.875rem;
+  height: 2.5rem;
+  transition: all var(--transition-fast);
+}
+
+/* СТИЛИ ЗАГОЛОВКА ТАБЛИЦЫ */
+.history-table thead tr {
+  background: radial-gradient(circle, #ff409a, #c438ef);
+  border-radius: 10px;
+}
+
+.table-row td {
+  height: 16px;
+  padding: 4px 8px; /* Минимальный отступ для читаемости */
+}
+
+.factors-table th,
+.factors-table td {
+  padding: 0.5rem 1rem;
+  text-align: center;
+  border: none;
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: 0.875rem;
+  height: 2.5rem;
+  transition: all var(--transition-fast);
+}
+
+.table-row td:first-child {
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  border-right: 2px solid #1c1a41;
+}
+
+.table-row td:last-child {
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  border-left: 2px solid #1c1a41;
+}
+
+.table-row td:nth-child(even) {
+  border-right: 2px solid #1c1a41;
+}
+
+/* Границы между ячейками */
+.history-table tbody tr td:not(:last-child) {
+  border-right: 1px solid #1c1a41;
+}
+
+/* Эффект при наведении на строку - ДОЛЖЕН БЫТЬ ПОСЛЕДНИМ */
+.history-table tbody tr:hover td {
+  background-color: #3a3763;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+
+/* FactorsTable Component */
+.factors-table-container {
+  margin-top: 2rem;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.factors-table {
+  min-width: 600px;
+  backdrop-filter: blur(10px);
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.25rem;
+}
+
+/* СТИЛИ ЗАГОЛОВКА ТАБЛИЦЫ */
+.factors-table thead tr {
+  background: radial-gradient(circle, #ff409a, #c438ef);
+  border-radius: 10px;
+}
+
+.factors-table th {
+  font-weight: 600;
+  color: var(--color-ink);
+  background: transparent;
+  font-size: 0.875rem;
+  height: 3rem;
+  border: 1px solid var(--color-primary);
+}
+
+.history-table th {
+  font-weight: 600;
+  color: var(--color-ink);
+  background: transparent;
+  font-size: 0.875rem;
+  height: 3rem;
+  border: 1px solid var(--color-primary);
+}
+
+.factors-table th:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 1px solid var(--color-primary);
+}
+
+.factors-table th:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid var(--color-primary);
+}
+
+/* Границы между ячейками в заголовке */
+.factors-table th:not(:last-child) {
+  border-right: 1px solid var(--color-primary);
+}
+
+/* ЧЕРЕДОВАНИЕ ЦВЕТОВ СТРОК И HOVER ЭФФЕКТ */
+.factors-table tbody tr:nth-child(odd) td {
+  background-color: var(--color-primary);
+  border: 1px solid #1c1a41;
+}
+
+.factors-table tbody tr:nth-child(even) td {
+  background-color: var(--color-primary-light);
+  border: 1px solid #1c1a41;
+}
+
+/* Скругления для первой и последней ячейки в строке */
+.factors-table tbody tr td:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 1px solid #1c1a41;
+}
+
+.factors-table tbody tr td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid #1c1a41;
+}
+
+/* Границы между ячейками */
+.factors-table tbody tr td:not(:last-child) {
+  border-right: 1px solid #1c1a41;
+}
+
+/* Эффект при наведении на строку - ДОЛЖЕН БЫТЬ ПОСЛЕДНИМ */
+.factors-table tbody tr:hover td {
+  background-color: #3a3763;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+}
+
+.history-table th:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 1px solid var(--color-primary);
+}
+
+.history-table th:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid var(--color-primary);
+}
+
+/* Границы между ячейками в заголовке */
+.history-table th:not(:last-child) {
+  border-right: 1px solid var(--color-primary);
+}
+
+/* ЧЕРЕДОВАНИЕ ЦВЕТОВ СТРОК И HOVER ЭФФЕКТ */
+.history-table tbody tr:nth-child(odd) td {
+  background-color: var(--color-primary);
+  border: 1px solid #1c1a41;
+}
+
+.history-table tbody tr:nth-child(even) td {
+  background-color: var(--color-primary-light);
+  border: 1px solid #1c1a41;
+}
+
+/* Скругления для первой и последней ячейки в строке */
+.history-table tbody tr td:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  border-right: 1px solid #1c1a41;
+}
+
+.history-table tbody tr td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-left: 1px solid #1c1a41;
+}
+
+.gradient-header {
+  background: radial-gradient(circle, #ff409a, #c438ef);
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.table-row:nth-child(even) {
+  background-color: #302e53;
+}
+
+.gradient-header th:nth-child(3) {
+  padding-left: 8px;
+}
+
+.gradient-header th:first-child {
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  border-right: 2px solid #1c1a41;
+  padding-left: 8px;
+}
+
+.gradient-header th:nth-child(2) {
+  border-right: 2px solid #1c1a41;
+  border-left: 2px solid #1c1a41;
+  padding-left: 8px;
+}
+
+.gradient-header th:last-child {
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  border-left: 2px solid #1c1a41;
+  padding-left: 8px;
+}
+
 /* АДАПТИВНОСТЬ */
 @media (width >= 769px) {
   .sidebar {
@@ -667,62 +911,6 @@ body {
 
 .background {
   background: #1c1a41;
-}
-
-.gradient-header {
-  background: radial-gradient(circle, #ff409a, #c438ef);
-  border-radius: 16px;
-  overflow: hidden;
-  padding: 8px;
-}
-
-.gradient-header th:nth-child(3) {
-  padding-left: 8px;
-}
-
-.gradient-header th:first-child {
-  border-top-left-radius: 16px;
-  border-bottom-left-radius: 16px;
-  border-right: 2px solid #1c1a41;
-  padding-left: 8px;
-}
-
-.gradient-header th:nth-child(2) {
-  border-right: 2px solid #1c1a41;
-  border-left: 2px solid #1c1a41;
-  padding-left: 8px;
-}
-
-.gradient-header th:last-child {
-  border-top-right-radius: 16px;
-  border-bottom-right-radius: 16px;
-  border-left: 2px solid #1c1a41;
-  padding-left: 8px;
-}
-
-.table-row td {
-  height: 16px;
-  padding: 4px 8px; /* Минимальный отступ для читаемости */
-}
-
-.table-row td:first-child {
-  border-top-left-radius: 16px;
-  border-bottom-left-radius: 16px;
-  border-right: 2px solid #1c1a41;
-}
-
-.table-row td:last-child {
-  border-top-right-radius: 16px;
-  border-bottom-right-radius: 16px;
-  border-left: 2px solid #1c1a41;
-}
-
-.table-row td:nth-child(even) {
-  border-right: 2px solid #1c1a41;
-}
-
-.table-row:nth-child(even) {
-  background-color: #302e53;
 }
 
 .chart-container {
@@ -950,102 +1138,6 @@ body {
   background-color: var(--color-primary);
 }
 
-/* HistoryTable Component */
-.history-table-container {
-  margin-top: 4rem;
-  width: 100%;
-  overflow-x: auto;
-}
-
-.history-table {
-  min-width: 1000px;
-  backdrop-filter: blur(10px);
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 0.25rem;
-}
-
-.history-table th,
-.history-table td {
-  padding: 0.5rem 1rem;
-  text-align: center;
-  border: none;
-  margin: 0;
-  color: var(--color-ink-muted);
-  font-size: 0.875rem;
-  height: 2.5rem;
-  transition: all var(--transition-fast);
-}
-
-/* СТИЛИ ЗАГОЛОВКА ТАБЛИЦЫ */
-.history-table thead tr {
-  background: radial-gradient(circle, #ff409a, #c438ef);
-  border-radius: 10px;
-}
-
-.history-table th {
-  font-weight: 600;
-  color: var(--color-ink);
-  background: transparent;
-  font-size: 0.875rem;
-  height: 3rem;
-  border: 1px solid var(--color-primary);
-}
-
-.history-table th:first-child {
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  border-right: 1px solid var(--color-primary);
-}
-
-.history-table th:last-child {
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  border-left: 1px solid var(--color-primary);
-}
-
-/* Границы между ячейками в заголовке */
-.history-table th:not(:last-child) {
-  border-right: 1px solid var(--color-primary);
-}
-
-/* ЧЕРЕДОВАНИЕ ЦВЕТОВ СТРОК И HOVER ЭФФЕКТ */
-.history-table tbody tr:nth-child(odd) td {
-  background-color: var(--color-primary);
-  border: 1px solid #1c1a41;
-}
-
-.history-table tbody tr:nth-child(even) td {
-  background-color: var(--color-primary-light);
-  border: 1px solid #1c1a41;
-}
-
-/* Эффект при наведении на строку */
-.history-table tbody tr:hover td {
-  background-color: #3a3763;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-}
-
-/* Скругления для первой и последней ячейки в строке */
-.history-table tbody tr td:first-child {
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  border-right: 1px solid #1c1a41;
-}
-
-.history-table tbody tr td:last-child {
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  border-left: 1px solid #1c1a41;
-}
-
-/* Границы между ячейками */
-.history-table tbody tr td:not(:last-child) {
-  border-right: 1px solid #1c1a41;
-}
-
 /* Дополнительные утилиты для History */
 .skeleton-loader {
   background-color: var(--color-surface-dark);
@@ -1066,119 +1158,28 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 
-@screen md {
+@media (width >= 768px) {
   .scrollbar-thin::-webkit-scrollbar {
     height: 2px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(132, 128, 201, 0.3);
+    background: rgb(132 128 201 / 30%);
     border-radius: 2px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(132, 128, 201, 0.5);
+    background: rgb(132 128 201 / 50%);
   }
-}
-/* FactorsTable Component */
-.factors-table-container {
-  margin-top: 2rem;
-  width: 100%;
-  overflow-x: auto;
-}
-
-.factors-table {
-  min-width: 600px;
-  backdrop-filter: blur(10px);
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 0.25rem;
-}
-
-.factors-table th,
-.factors-table td {
-  padding: 0.5rem 1rem;
-  text-align: center;
-  border: none;
-  margin: 0;
-  color: var(--color-ink-muted);
-  font-size: 0.875rem;
-  height: 2.5rem;
-  transition: all var(--transition-fast);
-}
-
-/* СТИЛИ ЗАГОЛОВКА ТАБЛИЦЫ */
-.factors-table thead tr {
-  background: radial-gradient(circle, #ff409a, #c438ef);
-  border-radius: 10px;
-}
-
-.factors-table th {
-  font-weight: 600;
-  color: var(--color-ink);
-  background: transparent;
-  font-size: 0.875rem;
-  height: 3rem;
-  border: 1px solid var(--color-primary);
-}
-
-.factors-table th:first-child {
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  border-right: 1px solid var(--color-primary);
-}
-
-.factors-table th:last-child {
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  border-left: 1px solid var(--color-primary);
-}
-
-/* Границы между ячейками в заголовке */
-.factors-table th:not(:last-child) {
-  border-right: 1px solid var(--color-primary);
-}
-
-/* ЧЕРЕДОВАНИЕ ЦВЕТОВ СТРОК И HOVER ЭФФЕКТ */
-.factors-table tbody tr:nth-child(odd) td {
-  background-color: var(--color-primary);
-  border: 1px solid #1c1a41;
-}
-
-.factors-table tbody tr:nth-child(even) td {
-  background-color: var(--color-primary-light);
-  border: 1px solid #1c1a41;
-}
-
-/* Эффект при наведении на строку */
-.factors-table tbody tr:hover td {
-  background-color: #3a3763;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-}
-
-/* Скругления для первой и последней ячейки в строке */
-.factors-table tbody tr td:first-child {
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
-  border-right: 1px solid #1c1a41;
-}
-
-.factors-table tbody tr td:last-child {
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  border-left: 1px solid #1c1a41;
-}
-
-/* Границы между ячейками */
-.factors-table tbody tr td:not(:last-child) {
-  border-right: 1px solid #1c1a41;
 }
 
 .no-factors {

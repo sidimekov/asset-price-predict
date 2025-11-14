@@ -76,7 +76,7 @@ export default function Dashboard() {
         </div>
 
         <div className="col-span-12 lg:col-span-8">
-          <div className="bg-surface-dark rounded-3xl shadow-card-elevated p-6">
+          <div className="bg-surface-dark rounded-3xl p-6">
             <div className="flex items-start">
               <YAxis className="h-96 w-full px-6" />
 

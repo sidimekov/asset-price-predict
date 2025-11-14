@@ -19,7 +19,7 @@ export default function ParamsPanel({ state }: ParamsPanelProps) {
 
   if (state === 'loading') {
     return (
-      <div className="mt-8 bg-surface-dark rounded-3xl p-6 shadow-card">
+      <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
         <p className="text-[#8480C9]">Parameters</p>
         <br />
         <div className="param-panel-item w-full h-12 pl-4 rounded overflow-hidden relative -mt-2">
@@ -41,14 +41,14 @@ export default function ParamsPanel({ state }: ParamsPanelProps) {
 
   if (state === 'error') {
     return (
-      <div className="mt-8 bg-surface-dark rounded-3xl p-6 shadow-card">
+      <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
         <p className="text-error">Error loading parameters</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-8 bg-surface-dark rounded-3xl p-6 shadow-card">
+    <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
       <p className="text-[#8480C9]">Parameters</p>
       <br />
       <select className="appearance-none text-center param-panel-item w-full h-12 pl-4 rounded">
