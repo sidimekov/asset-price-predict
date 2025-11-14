@@ -1,0 +1,71 @@
+'use client';
+import React from 'react';
+import Skeleton from '@/shared/ui/Skeleton';
+
+type ParamsState = 'idle' | 'loading' | 'error' | 'success';
+
+interface ParamsPanelProps {
+  state: ParamsState;
+}
+
+export default function ParamsPanel({ state }: ParamsPanelProps) {
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  if (state === 'loading') {
+    return (
+      <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
+        <p className="text-[#8480C9]">Parameters</p>
+        <br />
+        <div className="param-panel-item w-full h-12 pl-4 rounded overflow-hidden relative -mt-2">
+          <Skeleton width="100%" height="100%" />
+        </div>
+        <br />
+        <br />
+        <div className="param-panel-item w-full h-12 pl-4 rounded overflow-hidden relative -mt-2">
+          <Skeleton width="100%" height="100%" />
+        </div>
+        <br />
+        <br />
+        <div className="relative left-10 gradient-button w-60 h-12 rounded overflow-hidden -mt-2">
+          <Skeleton width="100%" height="100%" />
+        </div>
+      </div>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
+        <p className="text-error">Error loading parameters</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
+      <p className="text-[#8480C9]">Parameters</p>
+      <br />
+      <select className="appearance-none text-center param-panel-item w-full h-12 pl-4 rounded">
+        <option className="text-center">Select predict model</option>
+      </select>
+      <br />
+      <br />
+      <input
+        type="date"
+        className="text-center param-panel-item w-full h-12 pl-4 rounded"
+        defaultValue={getTodayDate()}
+      />
+      <br />
+      <br />
+      <button className="relative left-10 gradient-button w-60 h-12 rounded text-ink font-medium transition-smooth scale-on-press">
+        Predict
+      </button>
+    </div>
+  );
+}
