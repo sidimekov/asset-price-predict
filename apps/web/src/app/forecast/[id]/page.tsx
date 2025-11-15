@@ -8,6 +8,8 @@ import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import FactorsTable from '@/features/factors/FactorsTable';
+import mockAssets from '@/mocks/recentAssets.json';
+
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -17,9 +19,13 @@ type ForecastPageProps = {
         id: string;
     };
 };
+type Asset = { symbol: string; price: string };
 
 export default function ForecastPage({ params }: ForecastPageProps) {
     const { id } = params;
+    const assets = mockAssets as Asset[];
+    const selectedAsset = assets.find((a) => a.symbol === id);
+    const selectedPrice = selectedAsset?.price ?? '—';
     const router = useRouter();
 
     const [chartState, setChartState] = React.useState<State>('idle');
@@ -63,8 +69,23 @@ export default function ForecastPage({ params }: ForecastPageProps) {
     return (
         <div className="min-h-screen bg-primary">
             <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
-                <div className="col-span-12">
-                    <h1 className="text-2xl font-semibold text-white">{id}</h1>
+                <div className="col-span-12 gradient-border ">
+                    <div className="rounded-3xl bg-gradient-to-r from-[#201d47] via-[#2b265f] to-[#3c2c80] p-[1px]">
+                        <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
+                            <div className="text-sm text-ink-tertiary">
+                                Selected asset:
+                            </div>
+
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-xl font-semibold text-white">
+                                    {id}
+                                 </span>
+                                <span className="text-lg font-medium text-[#8480C9]">
+                                     {selectedPrice}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="col-span-12 lg:col-span-8">

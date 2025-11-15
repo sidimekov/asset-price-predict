@@ -1177,3 +1177,10 @@ body {
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
 }
+
+.gradient-border {
+  position: relative;
+  border-radius: 1.5rem;
+  padding: 1px; /* толщина рамки */
+  background: linear-gradient(90deg, #ff409a, #c438ef);
+}
