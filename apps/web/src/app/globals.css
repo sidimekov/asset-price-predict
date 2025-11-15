@@ -1172,3 +1172,8 @@ body {
   color: var(--color-ink-muted);
   padding: 2rem;
 }
+
+.forecast-shape-panel {
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+}

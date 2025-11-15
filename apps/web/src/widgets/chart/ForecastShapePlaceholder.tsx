@@ -9,7 +9,7 @@ type ForecastShapePlaceholderProps = {
 export default function ForecastShapePlaceholder({ className }: ForecastShapePlaceholderProps) {
     return (
         <div className={className}>
-            <div className="h-full w-full flex items-center justify-center">
+            <div className="h-96 w-full flex items-center justify-center">
                 <span className="text-xs text-ink-muted">Forecast shape</span>
             </div>
         </div>
