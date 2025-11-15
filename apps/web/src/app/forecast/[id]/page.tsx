@@ -73,7 +73,7 @@ export default function ForecastPage({ params }: ForecastPageProps) {
                             <div className="flex items-start">
 
                                 <div className="flex items-start relative left-0">
-                                    <YAxis className="h-96 w-full px-6" />
+                                    <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
 
                                     <div className="flex flex-col">
                                         <div className="flex">
@@ -88,7 +88,7 @@ export default function ForecastPage({ params }: ForecastPageProps) {
 
                                         <XAxis
                                             width={1130}
-                                            className="ml-12 h-96"
+                                            className="ml-12 h-96 text-[#8480C9]"
                                             labels={forecastTimeLabels}
                                         />
                                     </div>

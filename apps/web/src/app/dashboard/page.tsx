@@ -84,14 +84,14 @@ export default function Dashboard() {
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-dark rounded-3xl p-6">
             <div className="flex items-start">
-              <YAxis className="h-96 w-full px-6" />
+              <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
 
               <div className="flex-1 flex flex-col">
                 <div className="flex-1 relative">
                   <CandlesChartPlaceholder state={derivedAssetState} />
                 </div>
 
-                <XAxis className="ml-12 h-96 w-full" />
+                <XAxis className="ml-12 h-96 w-full text-[#8480C9]" />
               </div>
             </div>
           </div>
