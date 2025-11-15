@@ -1,53 +1,63 @@
 // apps/web/src/__tests__/features/market-adapter/providers/BinanceProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchBinanceTimeseries } from '@/features/market-adapter/providers/BinanceProvider';
 
-const mockBinanceInitiate = vi.fn();
+// хостим мок до vi.mock
+const { mockBinanceInitiate } = vi.hoisted(() => ({
+  mockBinanceInitiate: vi.fn(),
+}));
 
 vi.mock('@/shared/api/marketApi', () => ({
+  __esModule: true,
   marketApi: {
     endpoints: {
-      getBinanceTimeseries: { initiate: mockBinanceInitiate },
+      getBinanceTimeseries: {
+        initiate: (...args: any[]) => mockBinanceInitiate(...args),
+      },
     },
   },
+  // тип нам тут не важен, просто чтобы импорт не падал
   BinanceKline: {} as any,
 }));
 
-import { fetchBinanceTimeseries } from '@/features/market-adapter/providers/BinanceProvider';
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 describe('fetchBinanceTimeseries', () => {
-  it('вызывает RTK Query эндпоинт с корректными параметрами и возвращает данные', async () => {
-    const dispatch = vi.fn();
+  beforeEach(() => {
+    mockBinanceInitiate.mockReset();
+  });
 
-    const unwrap = vi.fn().mockResolvedValue(['kline-1'] as any);
-    const unsubscribe = vi.fn();
+  it('вызывает getBinanceTimeseries с корректными параметрами и возвращает данные', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
 
-    mockBinanceInitiate.mockReturnValueOnce({ unwrap, unsubscribe });
-
-    const result = await fetchBinanceTimeseries(dispatch as any, {
+    const params = {
       symbol: 'BTCUSDT',
       timeframe: '1h',
-      limit: 10,
-    });
+      limit: 100,
+    };
 
-    // эндпоинт дергается с нужными аргументами
+    const mockData = [[1, 2, 3, 4, 5, 6]] as any;
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockResolvedValue(mockData),
+      unsubscribe: vi.fn(),
+    };
+
+    // initiate вернёт наш объект c unwrap/unsubscribe
+    mockBinanceInitiate.mockReturnValue(mockQueryResult);
+
+    const result = await fetchBinanceTimeseries(mockDispatch as any, params);
+
+    expect(mockBinanceInitiate).toHaveBeenCalledTimes(1);
     expect(mockBinanceInitiate).toHaveBeenCalledWith({
       symbol: 'BTCUSDT',
       interval: '1h',
-      limit: 10,
+      limit: 100,
     });
 
     // dispatch получает то, что вернул initiate
-    expect(dispatch).toHaveBeenCalledWith({ unwrap, unsubscribe });
+    expect(mockDispatch).toHaveBeenCalledWith(mockQueryResult);
 
-    // unwrap и unsubscribe были вызваны
-    expect(unwrap).toHaveBeenCalledTimes(1);
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
-
-    // а наружу возвращается распакованный результат
-    expect(result).toEqual(['kline-1']);
+    expect(mockQueryResult.unwrap).toHaveBeenCalledTimes(1);
+    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
+    expect(result).toBe(mockData);
   });
 });

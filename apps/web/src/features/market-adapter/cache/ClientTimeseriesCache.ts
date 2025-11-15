@@ -1,4 +1,4 @@
-// apps/web/src/features/market-adapter/cache/ClientTimeseriesCache.ts
+// apps/web/src/features/market-adapter/cache/ClientTimeseriesCache.test.ts
 import { CACHE_TTL_MS } from '@/config/market';
 
 export type Bar = [number, number, number, number, number, number?];
