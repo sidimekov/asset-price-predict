@@ -1,5 +1,8 @@
 import { CACHE_TTL_MS } from '@/config/market';
-import type { Bar } from '@assetpredict/shared';
+import type { Bar } from '@assetpredict/shared'; // тип из shared
+
+// re-export, чтобы удобно было импортировать Bar из кэша
+export type { Bar };
 
 interface CacheEntry<T> {
   data: T;

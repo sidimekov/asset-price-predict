@@ -1,30 +1,45 @@
-import {
-  SUPPORTED_TIMEFRAMES as SHARED_TIMEFRAMES,
-  SUPPORTED_PROVIDERS as SHARED_PROVIDERS,
-  type Timeframe,
-  type Provider,
-} from '@assetpredict/shared';
+// apps/web/src/config/market.ts
 
-// --- Timeframes ---
-// Берём список таймфреймов и тип из shared
-export const SUPPORTED_TIMEFRAMES = SHARED_TIMEFRAMES;
-export type MarketTimeframe = Timeframe;
+// Берём ТОЛЬКО типы из shared — на рантайме этот импорт не нужен.
+import type { Timeframe, Provider } from '@assetpredict/shared';
 
-// --- Providers ---
-// В shared нет 'MOCK', но он нужен для мок-провайдера в вебе.
-// Поэтому расширяем список провайдеров локально.
-export const SUPPORTED_PROVIDERS = ['MOCK', ...SHARED_PROVIDERS] as const;
+// ---- TIMEFRAMES ----
 
-// Тип провайдера в веб-приложении:
-// - 'MOCK' для локального мок-провайдера
-// - все реальные из @assetpredict/shared (MOEX, BINANCE, CUSTOM, и т.д.)
+// Литеральный список таймфреймов, при этом TS проверяет,
+// что каждый из них совместим с общим типом Timeframe.
+export const SUPPORTED_TIMEFRAMES = [
+  '1h',
+  '8h',
+  '1d',
+  '7d',
+  '1mo',
+] as const satisfies Timeframe[];
+
+// Тип для фронта — просто union из элементов кортежа
+export type MarketTimeframe = (typeof SUPPORTED_TIMEFRAMES)[number];
+
+export const DEFAULT_TIMEFRAME: MarketTimeframe = '1h';
+
+// ---- PROVIDERS ----
+
+// Базовые провайдеры из бекенда
+const CORE_PROVIDERS = [
+  'BINANCE',
+  'MOEX',
+  'CUSTOM',
+] as const satisfies Provider[];
+
+// Плюс наш фронтовый MOCK
+export const SUPPORTED_PROVIDERS = ['MOCK', ...CORE_PROVIDERS] as const;
+
+// Union-типа из кортежа
 export type MarketDataProvider = (typeof SUPPORTED_PROVIDERS)[number];
 
-// Провайдер по умолчанию
 export const DEFAULT_PROVIDER: MarketDataProvider = 'MOCK';
 
-// Остальные настройки рынка
-export const DEFAULT_LIMIT = 200;
+// ---- ПРОЧЕЕ ----
 
-// TTL кэша таймсерий в миллисекундах
-export const CACHE_TTL_MS = 60_000;
+export const DEFAULT_LIMIT = 500;
+
+// TTL клиентского кэша таймсерий, мс
+export const CACHE_TTL_MS = 30_000;

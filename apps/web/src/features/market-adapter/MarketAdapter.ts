@@ -12,6 +12,7 @@ import {
 import {
   clientTimeseriesCache,
   makeTimeseriesCacheKey,
+  type Bar,
 } from './cache/ClientTimeseriesCache';
 import { fetchBinanceTimeseries } from './providers/BinanceProvider';
 import {
@@ -20,20 +21,15 @@ import {
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
 import type { BinanceKline } from '@/shared/api/marketApi';
-import { zProvider, zTimeframe, zSymbol, type Bar } from '@assetpredict/shared';
 
-// --- Zod-схемы на базе shared ---
-
-// в shared провайдеры: 'MOEX' | 'BINANCE' | 'CUSTOM'
-// на фронте есть ещё 'MOCK' → расширяем схему
-const providerSchema = zProvider.or(z.literal('MOCK'));
-
-const timeframeSchema = zTimeframe;
-
+// В будущем можно заменить на zod-схемы из @assetpredict/shared,
+// но сейчас оставляем простую локальную валидацию
+const providerSchema = z.enum(SUPPORTED_PROVIDERS);
+const timeframeSchema = z.enum(SUPPORTED_TIMEFRAMES);
 const limitSchema = z.number().int().positive().max(2000);
 
 export const marketAdapterRequestSchema = z.object({
-  symbol: zSymbol, // общая схема для Symbol
+  symbol: z.string().min(1),
   provider: providerSchema.optional(),
   timeframe: timeframeSchema.optional(),
   limit: limitSchema.optional(),
@@ -78,19 +74,11 @@ function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
   }
 }
 
-// Для Mock и Moex можно сделать нормализацию отдельно, когда появится точный формат
 function normalizeRawBars(raw: unknown): Bar[] {
   try {
     if (!Array.isArray(raw)) return [];
-    return (raw as unknown[]).map((b) => {
-      const [ts, o, h, l, c, v] = b as [
-        number,
-        number,
-        number,
-        number,
-        number,
-        number?,
-      ];
+    return raw.map((b: any) => {
+      const [ts, o, h, l, c, v] = b;
       return [
         Number(ts),
         Number(o),
@@ -118,15 +106,9 @@ async function resolveProviderData(
       return { raw: klines, normalized };
     }
     case 'MOCK': {
-      // Вариант 1 – запрос к API
       const raw = await fetchMockTimeseries(dispatch, params);
       const normalized = normalizeRawBars(raw);
       return { raw, normalized };
-
-      // Вариант 2 – полностью локальный генератор
-      // const raw = generateMockBarsRaw(params);
-      // const normalized = normalizeRawBars(raw);
-      // return { raw, normalized };
     }
     case 'MOEX': {
       const raw = await fetchMoexTimeseries(dispatch, params);
@@ -138,14 +120,10 @@ async function resolveProviderData(
   }
 }
 
-/**
- * Главная точка входа: Market Adapter
- */
 export async function getMarketTimeseries(
   dispatch: AppDispatch,
   rawRequest: MarketAdapterRequest,
 ): Promise<MarketAdapterSuccess | MarketAdapterError> {
-  // 1. Валидация входных параметров через Zod
   const parseResult = marketAdapterRequestSchema.safeParse(rawRequest);
   if (!parseResult.success) {
     console.error('[MarketAdapter] Invalid params', parseResult.error);
@@ -170,11 +148,9 @@ export async function getMarketTimeseries(
     };
   }
 
-  // 2. Ключ кэша
   const cacheKey = makeTimeseriesCacheKey(provider, symbol, timeframe, limit);
-
-  // 3. Попытка взять из кэша
   const cachedBars = clientTimeseriesCache.get(cacheKey);
+
   if (cachedBars) {
     return {
       bars: cachedBars,
@@ -185,7 +161,6 @@ export async function getMarketTimeseries(
     };
   }
 
-  // 4. Запрос к провайдеру
   try {
     const { normalized } = await resolveProviderData(dispatch, provider, {
       symbol,
@@ -193,7 +168,6 @@ export async function getMarketTimeseries(
       limit,
     });
 
-    // 5. Сохранить в кэш
     clientTimeseriesCache.set(cacheKey, normalized);
 
     return {
