@@ -22,21 +22,21 @@ const defaultTimeLabels = [
 ];
 
 export default function XAxis({
-                                width = 800,
-                                height = 40,
-                                className = '',
-                                labels = defaultTimeLabels,
-                              }: XAxisProps) {
+  width = 800,
+  height = 40,
+  className = '',
+  labels = defaultTimeLabels,
+}: XAxisProps) {
   return (
-      <div
-          className={`flex items-center justify-between px-12 ${className}`}
-          style={{ width, height }}
-      >
-        {labels.map((label, index) => (
-            <span key={index} className="text-xs text-ink-tertiary">
+    <div
+      className={`flex items-center justify-between px-12 ${className}`}
+      style={{ width, height }}
+    >
+      {labels.map((label, index) => (
+        <span key={index} className="text-xs text-ink-tertiary">
           {label}
         </span>
-        ))}
-      </div>
+      ))}
+    </div>
   );
 }
