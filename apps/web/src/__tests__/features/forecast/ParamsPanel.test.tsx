@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { describe, it, expect} from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { store } from '@/shared/store';
 import ParamsPanel from '@/features/forecast/ParamsPanel';
 import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
