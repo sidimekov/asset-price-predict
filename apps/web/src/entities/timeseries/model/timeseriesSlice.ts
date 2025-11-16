@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/shared/store';
-import type { Bar } from '@assetpredict/shared';
+import type { Bar } from '@shared/types/market';
 import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 export type TimeseriesKey = string; // "provider:symbol:timeframe"
