@@ -1,10 +1,10 @@
-import type { AppDispatch } from '@/shared/store'; //
+import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { ProviderRequestBase } from './BinanceProvider';
 
-// Можно дергать моковый эндпоинт ИЛИ генерить данные локально.
-// Здесь – вариант через RTK Query эндпоинт.
-
+/**
+ * Вариант 1 – берём моковые данные с API через RTK Query.
+ */
 export async function fetchMockTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
@@ -27,7 +27,10 @@ export async function fetchMockTimeseries(
   }
 }
 
-// Если хочется синтетические бары вообще без сети — можно сделать генератор (опционально):
+/**
+ * Вариант 2 – полностью локальный генератор свечей без сети.
+ * Используется тем же контрактом ProviderRequestBase.
+ */
 export function generateMockBarsRaw(
   params: ProviderRequestBase,
 ): [number, number, number, number, number, number][] {

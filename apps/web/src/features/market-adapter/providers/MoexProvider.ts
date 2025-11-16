@@ -1,13 +1,15 @@
-
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { ProviderRequestBase } from './BinanceProvider';
 
+/**
+ * Провайдер MOEX. Пока реализация через RTK Query-эндпоинт.
+ * Контракт запроса переиспользует общий ProviderRequestBase.
+ */
 export async function fetchMoexTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
 ): Promise<unknown> {
-  // Пока заглушка, но структура готова
   const { symbol, timeframe, limit } = params;
 
   const queryResult = dispatch(
