@@ -1,4 +1,3 @@
-// apps/web/src/features/market-adapter/providers/BinanceProvider.ts
 import type { AppDispatch } from '@/shared/store'; //
 import { marketApi, BinanceKline } from '@/shared/api/marketApi';
 

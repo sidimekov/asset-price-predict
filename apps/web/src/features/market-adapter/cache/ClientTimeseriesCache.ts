@@ -1,14 +1,15 @@
-// apps/web/src/features/market-adapter/cache/ClientTimeseriesCache.test.ts
 import { CACHE_TTL_MS } from '@/config/market';
-
-export type Bar = [number, number, number, number, number, number?];
-// [ts, open, high, low, close, volume?]
+import type { Bar } from '@assetpredict/shared';
 
 interface CacheEntry<T> {
   data: T;
   cachedAt: number;
 }
 
+/**
+ * Универсальный in-memory кэш с TTL для таймсерий.
+ * На клиенте живёт в памяти, на сервере по сути отключён.
+ */
 export class ClientTimeseriesCache<T> {
   private store = new Map<string, CacheEntry<T>>();
   private ttlMs: number;
@@ -18,6 +19,8 @@ export class ClientTimeseriesCache<T> {
   }
 
   get(key: string): T | null {
+    if (!this.store.size) return null;
+
     const entry = this.store.get(key);
     if (!entry) return null;
 
@@ -31,17 +34,18 @@ export class ClientTimeseriesCache<T> {
     return entry.data;
   }
 
-  set(key: string, data: T) {
+  set(key: string, data: T): void {
     this.store.set(key, { data, cachedAt: Date.now() });
     console.info(`[MarketAdapter][Cache] SET key=${key}`);
   }
 
-  clear() {
+  clear(): void {
     this.store.clear();
     console.info('[MarketAdapter][Cache] CLEAR ALL');
   }
 }
 
+// Кэш конкретно для баров рынка
 export const clientTimeseriesCache = new ClientTimeseriesCache<Bar[]>();
 
 export const makeTimeseriesCacheKey = (

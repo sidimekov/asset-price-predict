@@ -1,6 +1,5 @@
-// apps/web/src/features/market-adapter/MarketAdapter.ts
 import { z } from 'zod';
-import type { AppDispatch } from '@/shared/store'; // TODO: путь
+import type { AppDispatch } from '@/shared/store';
 import {
   SUPPORTED_PROVIDERS,
   SUPPORTED_TIMEFRAMES,
@@ -12,22 +11,20 @@ import {
 import {
   clientTimeseriesCache,
   makeTimeseriesCacheKey,
-  type Bar,
 } from './cache/ClientTimeseriesCache';
 import { fetchBinanceTimeseries } from './providers/BinanceProvider';
 import {
   fetchMockTimeseries,
-  generateMockBarsRaw,
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
 import type { BinanceKline } from '@/shared/api/marketApi';
+import { zTimeframe, type Symbol, type Bar } from '@assetpredict/shared';
 
-// TODO: подключить реальные схемы из @assetpredict/shared, если они уже есть
-// import { marketAdapterRequestSchema } from '@assetpredict/shared';
+// ---------------- Zod-схемы запроса ----------------
 
 const providerSchema = z.enum(SUPPORTED_PROVIDERS);
-const timeframeSchema = z.enum(SUPPORTED_TIMEFRAMES);
-const limitSchema = z.number().int().positive().max(2000); // пример
+const timeframeSchema = zTimeframe;
+const limitSchema = z.number().int().positive().max(2000);
 
 export const marketAdapterRequestSchema = z.object({
   symbol: z.string().min(1),
@@ -42,7 +39,7 @@ export type MarketAdapterSource = 'CACHE' | 'NETWORK' | 'LOCAL';
 
 export interface MarketAdapterSuccess {
   bars: Bar[];
-  symbol: string;
+  symbol: Symbol;
   provider: MarketDataProvider;
   timeframe: MarketTimeframe;
   source: MarketAdapterSource;
@@ -57,6 +54,8 @@ export interface MarketAdapterError {
   message: string;
   provider?: MarketDataProvider;
 }
+
+// ---------------- Нормализация данных ----------------
 
 function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
   try {
@@ -75,12 +74,11 @@ function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
   }
 }
 
-// Для Mock и Moex можно сделать нормализацию отдельно, когда появится точный формат
-function normalizeRawBars(raw: any): Bar[] {
-  // Предполагаем, что raw уже в формате [ts, o, h, l, c, v]
+// Для Mock/Moex предполагаем формат [ts, o, h, l, c, v]
+function normalizeRawBars(raw: unknown): Bar[] {
   try {
     if (!Array.isArray(raw)) return [];
-    return raw.map((b) => {
+    return (raw as any[]).map((b) => {
       const [ts, o, h, l, c, v] = b;
       return [
         Number(ts),
@@ -100,8 +98,8 @@ function normalizeRawBars(raw: any): Bar[] {
 async function resolveProviderData(
   dispatch: AppDispatch,
   provider: MarketDataProvider,
-  params: { symbol: string; timeframe: MarketTimeframe; limit: number },
-): Promise<{ raw: any; normalized: Bar[] }> {
+  params: { symbol: Symbol; timeframe: MarketTimeframe; limit: number },
+): Promise<{ raw: unknown; normalized: Bar[] }> {
   switch (provider) {
     case 'BINANCE': {
       const klines = await fetchBinanceTimeseries(dispatch, params);
@@ -109,15 +107,9 @@ async function resolveProviderData(
       return { raw: klines, normalized };
     }
     case 'MOCK': {
-      // Вариант 1 – запрос к API
       const raw = await fetchMockTimeseries(dispatch, params);
       const normalized = normalizeRawBars(raw);
       return { raw, normalized };
-
-      // Вариант 2 – полностью локальный генератор
-      // const raw = generateMockBarsRaw(params);
-      // const normalized = normalizeRawBars(raw);
-      // return { raw, normalized };
     }
     case 'MOEX': {
       const raw = await fetchMoexTimeseries(dispatch, params);
@@ -129,14 +121,8 @@ async function resolveProviderData(
   }
 }
 
-/**
- * Главная точка входа: Market Adapter
- * Data Orchestrator / компоненты вызывают её, передавая dispatch и запрос.
- *
- * Пример:
- * const dispatch = useAppDispatch();
- * const result = await getMarketTimeseries(dispatch, { symbol: 'BTCUSDT', provider: 'BINANCE', timeframe: '1h' });
- */
+// ---------------- Главная функция адаптера ----------------
+
 export async function getMarketTimeseries(
   dispatch: AppDispatch,
   rawRequest: MarketAdapterRequest,
@@ -154,9 +140,9 @@ export async function getMarketTimeseries(
   const parsed = parseResult.data;
   const provider: MarketDataProvider = parsed.provider ?? DEFAULT_PROVIDER;
   const timeframe: MarketTimeframe =
-    (parsed.timeframe as MarketTimeframe) ?? SUPPORTED_TIMEFRAMES[0];
+    parsed.timeframe ?? SUPPORTED_TIMEFRAMES[0];
   const limit = parsed.limit ?? DEFAULT_LIMIT;
-  const symbol = parsed.symbol;
+  const symbol: Symbol = parsed.symbol;
 
   if (!SUPPORTED_PROVIDERS.includes(provider)) {
     return {
@@ -169,7 +155,7 @@ export async function getMarketTimeseries(
   // 2. Ключ кэша
   const cacheKey = makeTimeseriesCacheKey(provider, symbol, timeframe, limit);
 
-  // 3. Попытка взять из кэша
+  // 3. Попробовать кэш
   const cachedBars = clientTimeseriesCache.get(cacheKey);
   if (cachedBars) {
     return {
@@ -181,7 +167,7 @@ export async function getMarketTimeseries(
     };
   }
 
-  // 4. Запрос к провайдеру
+  // 4. Запрос к провайдеру и нормализация
   try {
     const { normalized } = await resolveProviderData(dispatch, provider, {
       symbol,
@@ -189,7 +175,7 @@ export async function getMarketTimeseries(
       limit,
     });
 
-    // 5. Сохранить в кэш
+    // 5. Сохраняем в кэш
     clientTimeseriesCache.set(cacheKey, normalized);
 
     return {

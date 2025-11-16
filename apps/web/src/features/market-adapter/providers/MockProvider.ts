@@ -1,4 +1,3 @@
-// apps/web/src/features/market-adapter/providers/MockProvider.ts
 import type { AppDispatch } from '@/shared/store'; //
 import { marketApi } from '@/shared/api/marketApi';
 import type { ProviderRequestBase } from './BinanceProvider';
