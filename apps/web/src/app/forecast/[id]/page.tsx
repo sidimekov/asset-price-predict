@@ -69,8 +69,8 @@ export default function ForecastPage({ params }: ForecastPageProps) {
     return (
         <div className="min-h-screen bg-primary">
             <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
-                <div className="col-span-12 gradient-border ">
-                    <div className="rounded-3xl bg-gradient-to-r from-[#201d47] via-[#2b265f] to-[#3c2c80] p-[1px]">
+                <div className="col-span-12">
+                    <div className="gradient-border rounded-3xl bg-gradient-to-r from-[#201d47] via-[#2b265f] to-[#3c2c80] p-[1px]">
                         <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
                             <div className="text-sm text-ink-tertiary">
                                 Selected asset:
@@ -86,7 +86,10 @@ export default function ForecastPage({ params }: ForecastPageProps) {
                             </div>
                         </div>
                     </div>
+                    <br/>
+                    <br/>
                 </div>
+
 
                 <div className="col-span-12 lg:col-span-8">
                     <div className="bg-surface-dark rounded-3xl p-6">
