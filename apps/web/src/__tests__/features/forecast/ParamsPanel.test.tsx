@@ -1,68 +1,97 @@
-/* eslint-env browser */
-
-import React from 'react';
+// apps/web/src/__tests__/features/forecast/ParamsPanel.test.tsx
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { describe, it, expect } from 'vitest';
-import { store } from '@/shared/store';
-import ParamsPanel from '@/features/forecast/ParamsPanel';
-import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import { configureStore } from '@reduxjs/toolkit';
 
-function renderWithStore() {
-  return render(
-    <Provider store={store}>
-      <ParamsPanel />
-    </Provider>,
+import ParamsPanel from '@/features/forecast/ParamsPanel';
+import {
+  forecastReducer,
+  setForecastParams,
+} from '@/entities/forecast/model/forecastSlice';
+
+// Минимальный тестовый store только с forecast-слайсом
+function createTestStore() {
+  const store = configureStore({
+    reducer: {
+      forecast: forecastReducer,
+    },
+  });
+
+  // Инициализируем удобными стартовыми параметрами
+  store.dispatch(
+    setForecastParams({
+      symbol: 'BTCUSDT',
+      timeframe: '1h',
+      horizon: 42,
+      model: 'baseline',
+    }),
   );
+
+  return store;
 }
 
 describe('ParamsPanel', () => {
-  it('рендерит текущие параметры из стора', () => {
-    // Задаём нестандартные значения, чтобы явно проверить биндинг из стора
-    store.dispatch(
-      setForecastParams({
-        timeframe: '8h',
-        horizon: 42,
-        model: 'baseline',
-      }),
+  it('рендерит заголовок и контролы', () => {
+    const store = createTestStore();
+
+    const { container } = render(
+      <Provider store={store}>
+        <ParamsPanel />
+      </Provider>,
     );
 
-    renderWithStore();
+    // Заголовок
+    expect(screen.getByText('Параметры прогноза')).toBeInTheDocument();
 
-    // селект таймфрейма
-    expect(screen.getByDisplayValue('8h')).toBeInTheDocument();
+    // Находим элементы напрямую через DOM, без DOM-типов
+    const selects = container.querySelectorAll('select');
+    const timeframeSelect = selects[0] as any;
+    const modelSelect = selects[1] as any;
+    const horizonInput = container.querySelector('input[type="number"]') as any;
 
-    // инпут горизонта
-    expect(screen.getByDisplayValue('42')).toBeInTheDocument();
+    expect(timeframeSelect).toBeTruthy();
+    expect(horizonInput).toBeTruthy();
+    expect(modelSelect).toBeTruthy();
 
-    // опция модели baseline существует
-    const baselineOption = screen.getByRole('option', { name: 'Baseline' });
-    expect(baselineOption).toBeInTheDocument();
-
-    // и в сторе точно лежит baseline
-    expect(store.getState().forecast.params.model).toBe('baseline');
+    // Проверяем стартовые значения из стора
+    expect(timeframeSelect.value).toBe('1h');
+    expect(horizonInput.value).toBe('42');
+    expect(modelSelect.value).toBe('baseline');
   });
 
   it('меняет параметры и диспатчит в стор', () => {
-    renderWithStore();
+    const store = createTestStore();
 
-    // меняем timeframe по label
-    const timeframeSelect = screen.getByLabelText(
-      'Timeframe',
-    ) as HTMLSelectElement;
-    fireEvent.change(timeframeSelect, { target: { value: '1d' } });
+    const { container } = render(
+      <Provider store={store}>
+        <ParamsPanel />
+      </Provider>,
+    );
 
-    // меняем horizon — берём единственный number input по роли
-    const horizonInput = screen.getByRole('spinbutton') as HTMLInputElement;
-    fireEvent.change(horizonInput, { target: { value: '100' } });
+    const selects = container.querySelectorAll('select');
+    const timeframeSelect = selects[0] as any;
+    const modelSelect = selects[1] as any;
+    const horizonInput = container.querySelector('input[type="number"]') as any;
 
-    // меняем model
-    const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
-    fireEvent.change(modelSelect, { target: { value: 'advanced' } });
+    // Меняем timeframe
+    fireEvent.change(timeframeSelect, {
+      target: { value: '8h' },
+    });
 
-    // проверяем, что в сторе всё обновилось
+    // Меняем horizon
+    fireEvent.change(horizonInput, {
+      target: { value: '100' },
+    });
+
+    // Меняем model
+    fireEvent.change(modelSelect, {
+      target: { value: 'advanced' },
+    });
+
     const state = store.getState().forecast.params;
-    expect(state.timeframe).toBe('1d');
+
+    expect(state.timeframe).toBe('8h');
     expect(state.horizon).toBe(100);
     expect(state.model).toBe('advanced');
   });
