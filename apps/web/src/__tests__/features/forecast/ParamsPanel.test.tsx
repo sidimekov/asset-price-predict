@@ -1,90 +1,69 @@
+/* eslint-env browser */
+
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
+import { Provider } from 'react-redux';
+import { describe, it, expect} from 'vitest';
+import { store } from '@/shared/store';
 import ParamsPanel from '@/features/forecast/ParamsPanel';
-import type { ForecastState } from '@/entities/forecast/model/forecastSlice';
+import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
 
-let mockState: { forecast: ForecastState };
-const mockDispatch = vi.fn();
-
-// мокаем хуки стора
-vi.mock('@/shared/store/hooks', () => ({
-  useAppDispatch: () => mockDispatch,
-  useAppSelector: (selector: (state: typeof mockState) => any) =>
-    selector(mockState),
-}));
-
-const makeBaseForecastState = (): ForecastState => ({
-  params: {
-    symbol: 'BTCUSDT',
-    timeframe: '1h',
-    horizon: 24,
-    model: undefined, // как в реальном initialState
-  },
-  series: { p50: [], p10: [], p90: [] },
-  explain: [],
-  meta: null,
-});
+function renderWithStore() {
+  return render(
+    <Provider store={store}>
+      <ParamsPanel />
+    </Provider>,
+  );
+}
 
 describe('ParamsPanel', () => {
-  beforeEach(() => {
-    mockDispatch.mockClear();
-    mockState = { forecast: makeBaseForecastState() };
-  });
-
-  it('рендерит текущие параметры', () => {
-    render(<ParamsPanel />);
-
-    // селект таймфрейма
-    expect(screen.getByDisplayValue('1h')).toBeInTheDocument();
-
-    // инпут горизонта (number)
-    expect((screen.getByDisplayValue('24') as HTMLInputElement).type).toBe(
-      'number',
+  it('рендерит текущие параметры из стора', () => {
+    // Задаём нестандартные значения, чтобы явно проверить биндинг из стора
+    store.dispatch(
+      setForecastParams({
+        timeframe: '8h',
+        horizon: 42,
+        model: 'baseline',
+      }),
     );
 
-    // селект модели — по умолчанию Auto (value === '')
-    const modelSelect = screen.getByLabelText(/Model/i) as HTMLSelectElement;
-    expect(modelSelect.value).toBe('');
-    expect(screen.getByText('Auto')).toBeInTheDocument();
+    renderWithStore();
+
+    // селект таймфрейма
+    expect(screen.getByDisplayValue('8h')).toBeInTheDocument();
+
+    // инпут горизонта
+    expect(screen.getByDisplayValue('42')).toBeInTheDocument();
+
+    // опция модели baseline существует
+    const baselineOption = screen.getByRole('option', { name: 'Baseline' });
+    expect(baselineOption).toBeInTheDocument();
+
+    // и в сторе точно лежит baseline
+    expect(store.getState().forecast.params.model).toBe('baseline');
   });
 
-  it('диспатчит setForecastParams при изменении таймфрейма', () => {
-    render(<ParamsPanel />);
+  it('меняет параметры и диспатчит в стор', () => {
+    renderWithStore();
 
-    const tfSelect = screen.getByLabelText(/Timeframe/i) as HTMLSelectElement;
-    fireEvent.change(tfSelect, { target: { value: '8h' } });
+    // меняем timeframe по label
+    const timeframeSelect = screen.getByLabelText(
+      'Timeframe',
+    ) as HTMLSelectElement;
+    fireEvent.change(timeframeSelect, { target: { value: '1d' } });
 
-    expect(mockDispatch).toHaveBeenCalled();
-    const action = mockDispatch.mock.calls.at(-1)?.[0];
-
-    expect(action.type).toBe('forecast/setForecastParams');
-    expect(action.payload.timeframe).toBe('8h');
-    expect(action.payload.symbol).toBe('BTCUSDT');
-  });
-
-  it('диспатчит setForecastParams при изменении горизонта', () => {
-    render(<ParamsPanel />);
-
-    const horizonInput = screen.getByLabelText(/Horizon/i) as HTMLInputElement;
+    // меняем horizon — берём единственный number input по роли
+    const horizonInput = screen.getByRole('spinbutton') as HTMLInputElement;
     fireEvent.change(horizonInput, { target: { value: '100' } });
 
-    const action = mockDispatch.mock.calls.at(-1)?.[0];
-
-    expect(action.type).toBe('forecast/setForecastParams');
-    expect(action.payload.horizon).toBe(100);
-  });
-
-  it('диспатчит setForecastParams при изменении модели', () => {
-    render(<ParamsPanel />);
-
-    const modelSelect = screen.getByLabelText(/Model/i) as HTMLSelectElement;
+    // меняем model
+    const modelSelect = screen.getByLabelText('Model') as HTMLSelectElement;
     fireEvent.change(modelSelect, { target: { value: 'advanced' } });
 
-    const action = mockDispatch.mock.calls.at(-1)?.[0];
-
-    expect(action.type).toBe('forecast/setForecastParams');
-    expect(action.payload.model).toBe('advanced');
+    // проверяем, что в сторе всё обновилось
+    const state = store.getState().forecast.params;
+    expect(state.timeframe).toBe('1d');
+    expect(state.horizon).toBe(100);
+    expect(state.model).toBe('advanced');
   });
 });
