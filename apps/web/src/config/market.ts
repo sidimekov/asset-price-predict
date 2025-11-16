@@ -1,7 +1,7 @@
 // apps/web/src/config/market.ts
 
 // Берём ТОЛЬКО типы из shared — на рантайме этот импорт не нужен.
-import type { Timeframe, Provider } from '@assetpredict/shared';
+import type { Timeframe, Provider } from '@shared/types/market';
 
 // ---- TIMEFRAMES ----
 

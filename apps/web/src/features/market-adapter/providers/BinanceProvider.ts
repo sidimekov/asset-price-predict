@@ -1,7 +1,7 @@
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { BinanceKline } from '@/shared/api/marketApi';
-import type { Symbol as MarketSymbol, Timeframe } from '@assetpredict/shared';
+import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
 
 /**
  * Базовый контракт для запросов к любому маркет-провайдеру.
