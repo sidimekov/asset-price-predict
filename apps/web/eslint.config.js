@@ -27,6 +27,13 @@ export default [
         MouseEvent: 'readonly',
         Node: 'readonly',
         clearTimeout: 'readonly',
+        AbortController: 'readonly',
+        fetch: 'readonly',
+        localStorage: 'readonly',
+        localQuery: 'readonly',
+        handleQueryChange: 'readonly',
+        global: 'readonly',
+        AbortSignal: 'readonly',
       },
     },
     rules: {
