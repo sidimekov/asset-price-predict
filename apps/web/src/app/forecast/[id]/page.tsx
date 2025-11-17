@@ -21,8 +21,8 @@ export default function ForecastPage() {
   const searchParams = useSearchParams();
 
   const id = params.id;
-  const ticker = searchParams.get('ticker');
 
+  const ticker = searchParams.get('ticker');
   const selectedModel = searchParams.get('model') ?? '';
   const selectedDate = searchParams.get('to') ?? '';
 
@@ -85,6 +85,7 @@ export default function ForecastPage() {
   return (
       <div className="min-h-screen bg-primary">
         <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
+          {/* Selected asset panel */}
           <div className="col-span-12">
             <div className="gradient-border">
               <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
@@ -100,10 +101,12 @@ export default function ForecastPage() {
                 </div>
               </div>
             </div>
+
             <br />
             <br />
           </div>
 
+          {/* Chart + forecast shape */}
           <div className="col-span-12 lg:col-span-8">
             <div className="bg-surface-dark rounded-3xl p-6">
               <div className="overflow-x-auto w-[1100px]">
@@ -138,6 +141,7 @@ export default function ForecastPage() {
 
           <div className="hidden lg:block col-span-4" />
 
+          {/* Params */}
           <div className="col-span-12 lg:col-span-4">
             <ParamsPanel
                 state={paramsState}
@@ -151,6 +155,7 @@ export default function ForecastPage() {
 
           <div className="hidden lg:block col-span-1" />
 
+          {/* Factors table */}
           <div className="col-span-12 lg:col-span-7">
             <div className="overflow-x-auto">
               <div className="min-w-[600px] lg:min-w-0">
