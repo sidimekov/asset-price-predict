@@ -18,9 +18,9 @@ vi.mock('next/navigation', () => {
       id: '0',
     }),
     useSearchParams: () =>
-        ({
-          get: (key: string) => query[key as keyof typeof query] ?? null,
-        } as any),
+      ({
+        get: (key: string) => query[key as keyof typeof query] ?? null,
+      }) as any,
   };
 });
 

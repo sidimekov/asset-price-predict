@@ -30,13 +30,13 @@ export default function ForecastPage() {
 
   const index = Number(id);
   const assetByIndex =
-      Number.isFinite(index) && index >= 0 && index < assets.length
-          ? assets[index]
-          : undefined;
+    Number.isFinite(index) && index >= 0 && index < assets.length
+      ? assets[index]
+      : undefined;
 
   const assetByTicker = ticker
-      ? assets.find((a) => a.symbol === ticker)
-      : undefined;
+    ? assets.find((a) => a.symbol === ticker)
+    : undefined;
 
   const selectedAsset = assetByTicker ?? assetByIndex;
 
@@ -83,89 +83,89 @@ export default function ForecastPage() {
   ];
 
   return (
-      <div className="min-h-screen bg-primary">
-        <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
-          {/* Selected asset panel */}
-          <div className="col-span-12">
-            <div className="gradient-border">
-              <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
-                <div className="text-sm text-ink-tertiary">Selected asset:</div>
+    <div className="min-h-screen bg-primary">
+      <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
+        {/* Selected asset panel */}
+        <div className="col-span-12">
+          <div className="gradient-border">
+            <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
+              <div className="text-sm text-ink-tertiary">Selected asset:</div>
 
-                <div className="flex items-baseline gap-3">
+              <div className="flex items-baseline gap-3">
                 <span className="text-xl font-semibold text-white">
                   {displaySymbol}
                 </span>
-                  <span className="text-lg font-medium text-[#8480C9]">
+                <span className="text-lg font-medium text-[#8480C9]">
                   {selectedPrice}
                 </span>
-                </div>
               </div>
             </div>
-
-            <br />
-            <br />
           </div>
 
-          {/* Chart + forecast shape */}
-          <div className="col-span-12 lg:col-span-8">
-            <div className="bg-surface-dark rounded-3xl p-6">
-              <div className="overflow-x-auto w-[1100px]">
-                <div className="flex items-start">
-                  <div className="flex items-start relative left-0">
-                    <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
+          <br />
+          <br />
+        </div>
 
-                    <div className="flex flex-col">
-                      <div className="flex">
-                        <div className="relative h-96 w-[800px] flex-none">
-                          <CandlesChartPlaceholder state={chartState} />
-                        </div>
+        {/* Chart + forecast shape */}
+        <div className="col-span-12 lg:col-span-8">
+          <div className="bg-surface-dark rounded-3xl p-6">
+            <div className="overflow-x-auto w-[1100px]">
+              <div className="flex items-start">
+                <div className="flex items-start relative left-0">
+                  <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
 
-                        <div className="relative h-96 w-[330px] left-0 border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
-                          <ForecastShapePlaceholder className="h-96 w-full" />
-                        </div>
+                  <div className="flex flex-col">
+                    <div className="flex">
+                      <div className="relative h-96 w-[800px] flex-none">
+                        <CandlesChartPlaceholder state={chartState} />
                       </div>
 
-                      <XAxis
-                          width={1130}
-                          className="ml-12 h-96 text-[#8480C9]"
-                          labels={forecastTimeLabels}
-                      />
+                      <div className="relative h-96 w-[330px] left-0 border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
+                        <ForecastShapePlaceholder className="h-96 w-full" />
+                      </div>
                     </div>
+
+                    <XAxis
+                      width={1130}
+                      className="ml-12 h-96 text-[#8480C9]"
+                      labels={forecastTimeLabels}
+                    />
                   </div>
                 </div>
               </div>
             </div>
-
-            <div className="h-8" />
           </div>
 
-          <div className="hidden lg:block col-span-4" />
+          <div className="h-8" />
+        </div>
 
-          {/* Params */}
-          <div className="col-span-12 lg:col-span-4">
-            <ParamsPanel
-                state={paramsState}
-                onPredict={handleBackToAssets}
-                buttonLabel="Back to asset selection"
-                selectedModel={selectedModel}
-                selectedDate={selectedDate}
-                readOnly
-            />
-          </div>
+        <div className="hidden lg:block col-span-4" />
 
-          <div className="hidden lg:block col-span-1" />
+        {/* Params */}
+        <div className="col-span-12 lg:col-span-4">
+          <ParamsPanel
+            state={paramsState}
+            onPredict={handleBackToAssets}
+            buttonLabel="Back to asset selection"
+            selectedModel={selectedModel}
+            selectedDate={selectedDate}
+            readOnly
+          />
+        </div>
 
-          {/* Factors table */}
-          <div className="col-span-12 lg:col-span-7">
-            <div className="overflow-x-auto">
-              <div className="min-w-[600px] lg:min-w-0">
-                <FactorsTable state={factorsState} />
-              </div>
+        <div className="hidden lg:block col-span-1" />
+
+        {/* Factors table */}
+        <div className="col-span-12 lg:col-span-7">
+          <div className="overflow-x-auto">
+            <div className="min-w-[600px] lg:min-w-0">
+              <FactorsTable state={factorsState} />
             </div>
           </div>
         </div>
-
-        <div className="h-10" />
       </div>
+
+      <div className="h-10" />
+    </div>
   );
 }
