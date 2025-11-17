@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Bar } from '@assetpredict/shared';
-import {
-  ForecastManager,
-  type OrchestratorInput,
-} from '@/processes/orchestrator/ForecastManager';
+
+// сначала мок зависимостей, потом импорт
+vi.mock('@/features/market-adapter/MarketAdapter', () => ({
+  getMarketTimeseries: vi.fn(),
+}));
+
+vi.mock('@/processes/orchestrator/mlWorkerClient', () => ({
+  inferForecast: vi.fn(),
+}));
+
+import { ForecastManager, type OrchestratorInput } from '@/processes/orchestrator/ForecastManager';
 import {
   setLocalTimeseries,
   getLocalTimeseries,
@@ -11,23 +18,17 @@ import {
   getLocalForecast,
   orchestratorState,
 } from '@/processes/orchestrator/state';
-
-// мокаем MarketAdapter и mlWorkerClient
-vi.mock('@/features/market-adapter/MarketAdapter', () => ({
-  getMarketTimeseries: vi.fn(),
-}));
-
-vi.mock('../mlWorkerClient', () => ({
-  inferForecast: vi.fn(),
-}));
-
-import { getTimeseries as getMarketTimeseries } from '@/features/marker-adapter/MarketAdapter';
+import { makeTimeseriesKey, makeForecastKey } from '@/processes/orchestrator/keys';
+import { getTimeseries as getMarketTimeseries } from '@/features/market-adapter/MarketAdapter';
 import { inferForecast } from '@/processes/orchestrator/mlWorkerClient';
 
 const mockDispatch = vi.fn();
-const mockGetState = vi.fn(() => ({}) as any);
+const mockGetState = vi.fn(() => ({} as any));
 
 describe('ForecastManager', () => {
+  const getMarketTimeseriesMock = getMarketTimeseries as unknown as vi.Mock;
+  const inferForecastMock = inferForecast as unknown as vi.Mock;
+
   beforeEach(() => {
     vi.clearAllMocks();
     orchestratorState.status = 'idle';
@@ -54,11 +55,16 @@ describe('ForecastManager', () => {
       [1, 1.5, 2.5, 1, 2, 120],
     ];
 
-    // формируем ключ почти так же как makeTimeseriesKey
-    const tsKey = 'MOCK:SBER:1h:200';
+    const tsKey = makeTimeseriesKey({
+      provider: baseCtx.provider,
+      symbol: baseCtx.symbol,
+      tf: baseCtx.tf,
+      window: baseCtx.window,
+    });
+
     setLocalTimeseries(tsKey, bars);
 
-    (inferForecast as any).mockResolvedValue({
+    inferForecastMock.mockResolvedValue({
       p50: [1, 2],
       p10: [0.9, 1.9],
       p90: [1.1, 2.1],
@@ -71,13 +77,13 @@ describe('ForecastManager', () => {
 
     await ForecastManager.run(baseCtx, deps);
 
-    expect(getMarketTimeseries).not.toHaveBeenCalled();
-    expect(inferForecast).toHaveBeenCalledTimes(1);
+    expect(getMarketTimeseriesMock).not.toHaveBeenCalled();
+    expect(inferForecastMock).toHaveBeenCalledTimes(1);
     expect(orchestratorState.status).toBe('idle');
   });
 
   it('calls MarketAdapter when no local timeseries, then caches them', async () => {
-    (getMarketTimeseries as any).mockResolvedValue({
+    getMarketTimeseriesMock.mockResolvedValue({
       bars: [
         [0, 1, 2, 0.5, 1.5, 100],
         [1, 1.5, 2.5, 1, 2, 120],
@@ -88,7 +94,7 @@ describe('ForecastManager', () => {
       source: 'NETWORK',
     });
 
-    (inferForecast as any).mockResolvedValue({
+    inferForecastMock.mockResolvedValue({
       p50: [1, 2],
       p10: [0.9, 1.9],
       p90: [1.1, 2.1],
@@ -101,14 +107,24 @@ describe('ForecastManager', () => {
 
     await ForecastManager.run(baseCtx, deps);
 
-    expect(getMarketTimeseries).toHaveBeenCalledTimes(1);
+    expect(getMarketTimeseriesMock).toHaveBeenCalledTimes(1);
 
-    const tsKey = 'MOCK:SBER:1h:200';
+    const tsKey = makeTimeseriesKey({
+      provider: baseCtx.provider,
+      symbol: baseCtx.symbol,
+      tf: baseCtx.tf,
+      window: baseCtx.window,
+    });
     const entry = getLocalTimeseries(tsKey);
     expect(entry).toBeDefined();
     expect(entry?.bars.length).toBe(2);
 
-    const fcKey = 'SBER:1h:h24:mclient';
+    const fcKey = makeForecastKey({
+      symbol: baseCtx.symbol,
+      tf: baseCtx.tf,
+      horizon: baseCtx.horizon,
+      model: baseCtx.model || undefined,
+    });
     const forecast = getLocalForecast(fcKey);
     expect(forecast).toBeDefined();
     expect(forecast?.series.p50).toEqual([1, 2]);
@@ -119,10 +135,21 @@ describe('ForecastManager', () => {
       [0, 1, 2, 0.5, 1.5, 100],
       [1, 1.5, 2.5, 1, 2, 120],
     ];
-    const tsKey = 'MOCK:SBER:1h:200';
+
+    const tsKey = makeTimeseriesKey({
+      provider: baseCtx.provider,
+      symbol: baseCtx.symbol,
+      tf: baseCtx.tf,
+      window: baseCtx.window,
+    });
     setLocalTimeseries(tsKey, bars);
 
-    const fcKey = 'SBER:1h:h24:mclient';
+    const fcKey = makeForecastKey({
+      symbol: baseCtx.symbol,
+      tf: baseCtx.tf,
+      horizon: baseCtx.horizon,
+      model: baseCtx.model || undefined,
+    });
     setLocalForecast(fcKey, {
       series: {
         p10: [90],
@@ -138,13 +165,13 @@ describe('ForecastManager', () => {
 
     await ForecastManager.run(baseCtx, deps);
 
-    expect(getMarketTimeseries).not.toHaveBeenCalled();
-    expect(inferForecast).not.toHaveBeenCalled();
+    expect(getMarketTimeseriesMock).not.toHaveBeenCalled();
+    expect(inferForecastMock).not.toHaveBeenCalled();
     expect(orchestratorState.status).toBe('idle');
   });
 
   it('throws if MarketAdapter returns error-like result', async () => {
-    (getMarketTimeseries as any).mockResolvedValue({
+    getMarketTimeseriesMock.mockResolvedValue({
       code: 'PROVIDER_ERROR',
       message: 'fail',
     });

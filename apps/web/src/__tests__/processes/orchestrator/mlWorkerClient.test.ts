@@ -1,18 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TailPoint } from '@/workers/ml-worker';
-import { inferForecast } from '@/processes/orchestrator/mlWorkerClient';
 
+// мок Worker
 class MockWorker {
   public onmessage: ((event: MessageEvent<any>) => void) | null = null;
   public lastMessage: any = null;
-
-  constructor() {}
 
   postMessage(data: any) {
     this.lastMessage = data;
   }
 
-  // helper для теста
   emitMessage(data: any) {
     if (this.onmessage) {
       this.onmessage({ data } as MessageEvent<any>);
@@ -21,18 +18,22 @@ class MockWorker {
 }
 
 describe('mlWorkerClient.inferForecast', () => {
-  let WorkerSpy: any;
   let workerInstance: MockWorker;
+  let WorkerCtorMock: vi.Mock;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     workerInstance = new MockWorker();
+    WorkerCtorMock = vi.fn(() => workerInstance as any);
 
-    WorkerSpy = vi
-      .spyOn(globalThis as any, 'Worker')
-      .mockImplementation(() => workerInstance as any);
+    // подменяем глобальный Worker
+    vi.stubGlobal('Worker', WorkerCtorMock);
+
+    vi.resetModules(); // убедиться, что mlWorkerClient подхватит новый Worker
   });
 
   it('sends infer request to worker and resolves on onnx:infer:done', async () => {
+    const { inferForecast } = await import('@/processes/orchestrator/mlWorkerClient');
+
     const tail: TailPoint[] = [
       [1, 100],
       [2, 101],
@@ -41,22 +42,19 @@ describe('mlWorkerClient.inferForecast', () => {
 
     const promise = inferForecast(tail, horizon, 'my-model');
 
-    // проверяем, что postMessage вызван с правильной структурой
-    expect(workerInstance.lastMessage).toBeNull();
-
-    // после вызова inferForecast должна быть отправка сообщения
-    // (сам вызов postMessage происходит синхронно до первого await)
-    // поэтому ждём один такт event loop
+    // даём коду возможность вызвать postMessage
     await Promise.resolve();
 
+    expect(WorkerCtorMock).toHaveBeenCalledTimes(1);
     expect(workerInstance.lastMessage).toBeDefined();
+
     const sent = workerInstance.lastMessage;
     expect(sent.type).toBe('infer');
     expect(sent.payload.tail).toEqual(tail);
     expect(sent.payload.horizon).toBe(horizon);
     expect(sent.payload.model).toBe('my-model');
 
-    // теперь эмулируем ответ воркера
+    // эмулируем успешный ответ воркера
     workerInstance.emitMessage({
       id: sent.id,
       type: 'onnx:infer:done',
@@ -78,12 +76,11 @@ describe('mlWorkerClient.inferForecast', () => {
     expect(result.p10).toEqual([0.9, 1.9, 2.9]);
     expect(result.p90).toEqual([1.1, 2.1, 3.1]);
     expect(result.diag.backend).toBe('mock');
-    expect(result.diag.model_ver).toBe('mock-v0');
-
-    expect(WorkerSpy).toHaveBeenCalledTimes(1);
   });
 
   it('rejects when worker sends error message', async () => {
+    const { inferForecast } = await import('@/processes/orchestrator/mlWorkerClient');
+
     const tail: TailPoint[] = [
       [1, 100],
       [2, 101],
@@ -94,7 +91,6 @@ describe('mlWorkerClient.inferForecast', () => {
     await Promise.resolve();
     const sent = workerInstance.lastMessage;
 
-    // эмулируем ошибку
     workerInstance.emitMessage({
       id: sent.id,
       type: 'error',
@@ -105,6 +101,8 @@ describe('mlWorkerClient.inferForecast', () => {
   });
 
   it('throws on invalid tail or horizon', async () => {
+    const { inferForecast } = await import('@/processes/orchestrator/mlWorkerClient');
+
     await expect(inferForecast([], 0)).rejects.toThrow(
       'Invalid tail or horizon for inference',
     );

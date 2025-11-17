@@ -1,24 +1,20 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Provider } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { render } from '@testing-library/react';
-import { useSelector } from 'react-redux';
-import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
 // мок ForecastManager
-vi.mock('../ForecastManager', () => ({
+vi.mock('@/processes/orchestrator/ForecastManager', () => ({
   ForecastManager: {
     run: vi.fn().mockResolvedValue(undefined),
   },
 }));
-import { ForecastManager } from '@/processes/orchestrator/ForecastManager';
 
-// reducer заглушка
-const catalogReducer = (
-  state = { selected: undefined as any },
-  action: any,
-) => {
+import { ForecastManager } from '@/processes/orchestrator/ForecastManager';
+import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+
+const catalogReducer = (state = { selected: undefined as any }, action: any) => {
   switch (action.type) {
     case 'SET_SELECTED':
       return { ...state, selected: action.payload };
@@ -36,7 +32,6 @@ const forecastReducer = (state = { params: undefined as any }, action: any) => {
   }
 };
 
-// компонент для хука
 const TestComponent: React.FC = () => {
   useOrchestrator();
   const selected = useSelector((s: any) => s.catalog.selected);
@@ -75,7 +70,7 @@ describe('useOrchestrator', () => {
 
     vi.advanceTimersByTime(1000);
 
-    expect(ForecastManager.run).not.toHaveBeenCalled();
+    expect((ForecastManager as any).run).not.toHaveBeenCalled();
   });
 
   it('calls ForecastManager.run once when selected and params are set', () => {
@@ -96,11 +91,12 @@ describe('useOrchestrator', () => {
       </Provider>,
     );
 
-    // debounce
     vi.advanceTimersByTime(300);
 
-    expect(ForecastManager.run).toHaveBeenCalledTimes(1);
-    const [ctxArg] = (ForecastManager.run as any).mock.calls[0];
+    const runMock = (ForecastManager as any).run as vi.Mock;
+
+    expect(runMock).toHaveBeenCalledTimes(1);
+    const [ctxArg] = runMock.mock.calls[0];
 
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
@@ -128,8 +124,6 @@ describe('useOrchestrator', () => {
       type: 'SET_PARAMS',
       payload: { tf: '1h', window: 200, horizon: 24, model: null },
     });
-
-    // несколько раз меняем параметры до debounce
     store.dispatch({
       type: 'SET_PARAMS',
       payload: { tf: '1h', window: 300, horizon: 24, model: null },
@@ -141,8 +135,10 @@ describe('useOrchestrator', () => {
 
     vi.advanceTimersByTime(300);
 
-    expect(ForecastManager.run).toHaveBeenCalledTimes(1);
-    const [ctxArg] = (ForecastManager.run as any).mock.calls[0];
+    const runMock = (ForecastManager as any).run as vi.Mock;
+    expect(runMock).toHaveBeenCalledTimes(1);
+
+    const [ctxArg] = runMock.mock.calls[0];
     expect(ctxArg.window).toBe(300);
     expect(ctxArg.horizon).toBe(48);
     expect(ctxArg.model).toBe('xgb');

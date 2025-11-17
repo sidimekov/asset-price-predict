@@ -11,7 +11,7 @@ import {
   type LocalForecastEntry,
 } from './state';
 import type { RootState, AppDispatch } from '@/shared/store';
-import { getTimeseries as getTimeseriesFromMarketAdapter } from '@/features/marker-adapter/MarketAdapter';
+import { getTimeseries as getTimeseriesFromMarketAdapter } from '@/features/market-adapter/MarketAdapter';
 import { inferForecast } from './mlWorkerClient';
 
 export type OrchestratorInput = {
