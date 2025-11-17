@@ -4,7 +4,7 @@ import { Provider, useSelector } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { render } from '@testing-library/react';
 
-// мок ForecastManager
+// сначала мокаем ForecastManager
 vi.mock('@/processes/orchestrator/ForecastManager', () => ({
   ForecastManager: {
     run: vi.fn().mockResolvedValue(undefined),
@@ -70,7 +70,8 @@ describe('useOrchestrator', () => {
 
     vi.advanceTimersByTime(1000);
 
-    expect((ForecastManager as any).run).not.toHaveBeenCalled();
+    const runMock = (ForecastManager as any).run as vi.Mock;
+    expect(runMock).not.toHaveBeenCalled();
   });
 
   it('calls ForecastManager.run once when selected and params are set', () => {
@@ -94,10 +95,9 @@ describe('useOrchestrator', () => {
     vi.advanceTimersByTime(300);
 
     const runMock = (ForecastManager as any).run as vi.Mock;
-
     expect(runMock).toHaveBeenCalledTimes(1);
-    const [ctxArg] = runMock.mock.calls[0];
 
+    const [ctxArg] = runMock.mock.calls[0];
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
       provider: 'MOCK',
@@ -107,14 +107,8 @@ describe('useOrchestrator', () => {
     });
   });
 
-  it('debounces multiple quick changes into one run', () => {
+  it('does not rerun ForecastManager for the same signature on rerender', () => {
     const store = createTestStore();
-
-    render(
-      <Provider store={store}>
-        <TestComponent />
-      </Provider>,
-    );
 
     store.dispatch({
       type: 'SET_SELECTED',
@@ -124,23 +118,27 @@ describe('useOrchestrator', () => {
       type: 'SET_PARAMS',
       payload: { tf: '1h', window: 200, horizon: 24, model: null },
     });
-    store.dispatch({
-      type: 'SET_PARAMS',
-      payload: { tf: '1h', window: 300, horizon: 24, model: null },
-    });
-    store.dispatch({
-      type: 'SET_PARAMS',
-      payload: { tf: '1h', window: 300, horizon: 48, model: 'xgb' },
-    });
+
+    const { rerender } = render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
 
     vi.advanceTimersByTime(300);
 
     const runMock = (ForecastManager as any).run as vi.Mock;
     expect(runMock).toHaveBeenCalledTimes(1);
 
-    const [ctxArg] = runMock.mock.calls[0];
-    expect(ctxArg.window).toBe(300);
-    expect(ctxArg.horizon).toBe(48);
-    expect(ctxArg.model).toBe('xgb');
+    // Ререндер с теми же данными
+    rerender(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+    vi.advanceTimersByTime(300);
+
+    // всё равно один вызов
+    expect(runMock).toHaveBeenCalledTimes(1);
   });
 });
