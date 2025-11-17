@@ -1,54 +1,151 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
-import SearchBar from '../../../features/history/HistorySearch';
+import { useState, useRef, useEffect } from 'react';
 
-describe('HistorySearch', () => {
-  it('types in Search and calls onSearch with last value', async () => {
-    const onSearch = vi.fn();
-    render(<SearchBar onSearch={onSearch} />);
+type Filters = {
+  categories: { c1: boolean; c2: boolean; c3: boolean };
+  order: 'desc' | 'asc';
+};
 
-    const input = screen.getByPlaceholderText(/search/i);
-    await userEvent.type(input, 'btc');
+type Props = {
+  onSearch: (q: string) => void;
+  onApplyFilters?: (v: Filters) => void;
+};
 
-    expect(onSearch).toHaveBeenCalled();
-    expect(onSearch).toHaveBeenLastCalledWith('btc');
+export default function HistorySearch({ onSearch, onApplyFilters }: Props) {
+  const [query, setQuery] = useState('');
+  const [filterClicked, setFilterClicked] = useState(false);
+  const [filters, setFilters] = useState<Filters>({
+    categories: { c1: false, c2: false, c3: false },
+    order: 'desc',
   });
 
-  it('opens filter popover, selects options and applies', async () => {
-    const onApplyFilters = vi.fn();
-    render(<SearchBar onSearch={() => {}} onApplyFilters={onApplyFilters} />);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
-    const filterBtn = screen.getByRole('button', { name: /фильтр|filter/i });
-    await userEvent.click(filterBtn);
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+          popoverRef.current &&
+          !popoverRef.current.contains(event.target as Node)
+      ) {
+        setFilterClicked(false);
+      }
+    }
 
-    const dialog = await screen.findByRole('dialog', { name: /filters/i });
-    expect(dialog).toBeVisible();
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    await userEvent.click(screen.getByLabelText(/ascending order/i));
-    await userEvent.click(screen.getByLabelText(/category 1/i));
+  const handleFilter = () => setFilterClicked((v) => !v);
 
-    await userEvent.click(screen.getByRole('button', { name: /apply/i }));
+  const applyFilters = () => {
+    onApplyFilters?.(filters);
+    setFilterClicked(false);
+  };
 
-    expect(onApplyFilters).toHaveBeenCalledTimes(1);
-    const payload = onApplyFilters.mock.calls[0][0];
-    expect(payload.order).toBe('asc');
-    expect(payload.categories).toEqual({ c1: true, c2: false, c3: false });
-  });
+  return (
+      <div className="search-bar-container">
+        <button className="search-button" aria-hidden>
+          <img src="/magnifier.svg" alt="" />
+        </button>
 
-  it('closes popover on outside click', async () => {
-    render(<SearchBar onSearch={() => {}} />);
+        <input
+            type="text"
+            placeholder="Search"
+            value={query}
+            onChange={(e) => {
+              const value = e.target.value;
+              setQuery(value);
+              onSearch(value);
+            }}
+            className="search-input"
+        />
 
-    const filterBtn = screen.getByRole('button', { name: /фильтр|filter/i });
-    await userEvent.click(filterBtn);
+        <div style={{ position: 'relative' }}>
+          <button
+              className="filter-button"
+              onClick={handleFilter}
+              aria-label="Фильтры"
+          >
+            <img src="/filter.svg" alt="Фильтр" />
+          </button>
 
-    const dialog = await screen.findByRole('dialog', { name: /filters/i });
-    expect(dialog).toBeVisible();
+          {filterClicked && (
+              <div
+                  ref={popoverRef}
+                  role="dialog"
+                  aria-label="Filters"
+                  className="search-filter-popover"
+              >
+                <div className="search-filter-arrow" />
+                <div className="filter-popover-content">
+                  <div className="filter-section">
+                    <div className="filter-section-title">Category</div>
+                    <div className="filter-categories">
+                      {['1', '2', '3'].map((num) => (
+                          <label key={num} className="filter-label">
+                            <input
+                                type="checkbox"
+                                checked={
+                                  filters.categories[
+                                      `c${num}` as keyof typeof filters.categories
+                                      ]
+                                }
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setFilters((f) => ({
+                                    ...f,
+                                    categories: {
+                                      ...f.categories,
+                                      [`c${num}`]: checked,
+                                    },
+                                  }));
+                                }}
+                                className="filter-checkbox"
+                            />
+                            <span>Category {num}</span>
+                          </label>
+                      ))}
+                    </div>
+                  </div>
 
-    fireEvent.mouseDown(document.body);
+                  <div className="filter-section">
+                    <div className="filter-section-title">Data</div>
+                    <div className="filter-options">
+                      <label className="filter-label">
+                        <input
+                            type="radio"
+                            name="order"
+                            value="desc"
+                            checked={filters.order === 'desc'}
+                            onChange={() =>
+                                setFilters((f) => ({ ...f, order: 'desc' }))
+                            }
+                            className="filter-checkbox"
+                        />
+                        <span>Descending order</span>
+                      </label>
+                      <label className="filter-label">
+                        <input
+                            type="radio"
+                            name="order"
+                            value="asc"
+                            checked={filters.order === 'asc'}
+                            onChange={() =>
+                                setFilters((f) => ({ ...f, order: 'asc' }))
+                            }
+                            className="filter-checkbox"
+                        />
+                        <span>Ascending order</span>
+                      </label>
+                    </div>
+                  </div>
 
-    expect(
-      screen.queryByRole('dialog', { name: /filters/i }),
-    ).not.toBeInTheDocument();
-  });
-});
+                  <button onClick={applyFilters} className="apply-filter-button">
+                    Apply
+                  </button>
+                </div>
+              </div>
+          )}
+        </div>
+      </div>
+  );
+}

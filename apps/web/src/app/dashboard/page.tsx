@@ -18,8 +18,20 @@ export default function Dashboard() {
   const [assets, setAssets] = React.useState<Asset[]>(mockAssets as Asset[]);
   const [selected, setSelected] = React.useState<string | null>(null);
   const [assetState, setAssetState] = React.useState<State>('idle');
+
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
   const [factorsState, setFactorsState] = React.useState<State>('idle');
+
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [selectedModel, setSelectedModel] = React.useState<string>('');
+  const [selectedDate, setSelectedDate] = React.useState<string>(getTodayDate());
 
   React.useEffect(() => {
     setAssetState('loading');
@@ -57,7 +69,21 @@ export default function Dashboard() {
   };
   const handlePredict = () => {
     if (!selected) return;
-    router.push(`/forecast/${encodeURIComponent(selected)}`);
+
+    const assetIndex = assets.findIndex((a) => a.symbol === selected);
+    if (assetIndex === -1) return;
+
+    const searchParams = new URLSearchParams();
+
+    if (selectedModel) searchParams.set('model', selectedModel);
+    if (selectedDate) searchParams.set('to', selectedDate);
+
+    searchParams.set('ticker', selected);
+
+    const query = searchParams.toString();
+    const url = `/forecast/${assetIndex}${query ? `?${query}` : ''}`;
+
+    router.push(url);
   };
 
   const handleRemoveAsset = (symbol: string) => {
@@ -102,7 +128,14 @@ export default function Dashboard() {
         <div className="hidden lg:block col-span-4" />
 
         <div className="col-span-12 lg:col-span-4">
-          <ParamsPanel state={paramsState} onPredict={handlePredict} />
+          <ParamsPanel
+              state={paramsState}
+              onPredict={handlePredict}
+              selectedModel={selectedModel}
+              selectedDate={selectedDate}
+              onModelChange={setSelectedModel}
+              onDateChange={setSelectedDate}
+          />
         </div>
 
         <div className="hidden lg:block col-span-1" />
