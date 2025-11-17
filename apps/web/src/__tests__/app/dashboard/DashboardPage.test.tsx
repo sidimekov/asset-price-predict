@@ -1,11 +1,21 @@
 import { render } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { describe, it, expect } from 'vitest';
-import Dashboard from '@/app/dashboard/page'; // скорректируй путь, если у тебя другой
+import Dashboard from '@/app/dashboard/page';
+import { Provider } from 'react-redux';
+import { store } from '@/shared/store';
+
+const renderWithStore = () =>
+  render(
+    <Provider store={store}>
+      <Dashboard />
+    </Provider>,
+  );
 
 describe('Dashboard (smoke test)', () => {
   it('renders without crashing', () => {
-    const { container } = render(<Dashboard />);
+    const { container } = renderWithStore();
+
     expect(container.firstChild).toBeTruthy();
 
     // есть базовые куски UI
