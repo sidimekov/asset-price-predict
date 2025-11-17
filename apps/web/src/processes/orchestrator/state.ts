@@ -1,7 +1,7 @@
 import type { RootState } from '@/shared/store';
 import type { Bar } from '@assetpredict/shared';
 
-export type OrchestratorStatus = 'idle' | 'running' | 'error'
+export type OrchestratorStatus = 'idle' | 'running' | 'error';
 
 export const TIMESERIES_TTL_MS = 10 * 60 * 1000; // 10 минут
 
@@ -10,7 +10,10 @@ export const orchestratorState: { status: OrchestratorStatus } = {
 };
 
 // временный локальный кэш ts, пока нет timeseriesSlice из market adapter / timeseries store
-const localTimeseriesCache = new Map<string, { bars: Bar[]; fetchedAt: number }>();
+const localTimeseriesCache = new Map<
+  string,
+  { bars: Bar[]; fetchedAt: number }
+>();
 
 export function getLocalTimeseries(key: string) {
   return localTimeseriesCache.get(key);
@@ -20,7 +23,10 @@ export function setLocalTimeseries(key: string, bars: Bar[]) {
   localTimeseriesCache.set(key, { bars, fetchedAt: Date.now() });
 }
 
-export function isLocalTimeseriesStale(key: string, ttlMs = TIMESERIES_TTL_MS): boolean {
+export function isLocalTimeseriesStale(
+  key: string,
+  ttlMs = TIMESERIES_TTL_MS,
+): boolean {
   const entry = localTimeseriesCache.get(key);
   if (!entry) return true;
   return Date.now() - entry.fetchedAt > ttlMs;
@@ -72,7 +78,12 @@ export const selectSelectedAsset = (state: RootState) =>
  */
 export const selectForecastParams = (state: RootState) =>
   (state as any).forecast?.params as
-    | { tf: string; window: string | number; horizon: number; model?: string | null }
+    | {
+        tf: string;
+        window: string | number;
+        horizon: number;
+        model?: string | null;
+      }
     | undefined;
 
 /**
@@ -81,18 +92,22 @@ export const selectForecastParams = (state: RootState) =>
  * state.timeseries.byKey[key] = { bars: Bar[]; fetchedAt: string }
  */
 export const selectTimeseriesEntry = (state: RootState, key: string) =>
-  ((state as any).timeseries?.byKey?.[key] ??
-    undefined) as
+  ((state as any).timeseries?.byKey?.[key] ?? undefined) as
     | {
-    bars: Bar[]
-    fetchedAt: string
-  }
+        bars: Bar[];
+        fetchedAt: string;
+      }
     | undefined;
 
-export const selectIsTimeseriesLoading = (state: RootState, key: string): boolean =>
-  Boolean((state as any).timeseries?.loadingByKey?.[key]);
+export const selectIsTimeseriesLoading = (
+  state: RootState,
+  key: string,
+): boolean => Boolean((state as any).timeseries?.loadingByKey?.[key]);
 
-export const selectTimeseriesError = (state: RootState, key: string): string | null =>
+export const selectTimeseriesError = (
+  state: RootState,
+  key: string,
+): string | null =>
   ((state as any).timeseries?.errorByKey?.[key] ?? null) as string | null;
 
 export const selectIsTimeseriesStale = (
@@ -106,7 +121,6 @@ export const selectIsTimeseriesStale = (
   if (Number.isNaN(fetchedAtMs)) return true;
   return Date.now() - fetchedAtMs > ttlMs;
 };
-
 
 // TODO, когда появится timeseriesSlice:
 //  - удалить localTimeseriesCache и функции его

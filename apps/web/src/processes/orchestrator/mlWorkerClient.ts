@@ -16,10 +16,9 @@ let workerInstance: Worker | null = null;
 const pendingMap = new Map<string, Pending>();
 
 function createWorker(): Worker {
-  const w = new Worker(
-    new URL('../../workers/ml-worker.ts', import.meta.url),
-    { type: 'module' },
-  );
+  const w = new Worker(new URL('../../workers/ml-worker.ts', import.meta.url), {
+    type: 'module',
+  });
 
   w.onmessage = (event: MessageEvent<InferDoneMessage | InferErrorMessage>) => {
     const msg = event.data as any;

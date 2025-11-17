@@ -14,34 +14,41 @@ import type { RootState, AppDispatch } from '@/shared/store';
 import { getTimeseries as getTimeseriesFromMarketAdapter } from '@/features/marker-adapter/MarketAdapter';
 import { inferForecast } from './mlWorkerClient';
 
-
-type OrchestratorInput = {
-  symbol: Symbol // символ актива (например SBER, APPL)
-  provider: Provider | string // (moex, binance, mock)
-  tf: Timeframe // timeframe - шаг по времени между свечами
-  window: string | number // какой промежуток времени брать как информацию для прогноза
-  horizon: number // на какой промежуток времени прогнозировать
-  model?: string | null // выбранная модель (опционально)
-}
+export type OrchestratorInput = {
+  symbol: Symbol; // символ актива (например SBER, APPL)
+  provider: Provider | string; // (moex, binance, mock)
+  tf: Timeframe; // timeframe - шаг по времени между свечами
+  window: string | number; // какой промежуток времени брать как информацию для прогноза
+  horizon: number; // на какой промежуток времени прогнозировать
+  model?: string | null; // выбранная модель (опционально)
+};
 
 // на будущее, сейчас не используется
 type OrchestratorDeps = {
-  dispatch: AppDispatch
-  getState: () => RootState
-  signal?: AbortSignal
-}
+  dispatch: AppDispatch;
+  getState: () => RootState;
+  signal?: AbortSignal;
+};
 
 /**
  * ForecastManager - центр оркестратора
  * считает ключи и логирует шаги
  */
 export class ForecastManager {
-  static async run(ctx: OrchestratorInput, deps: OrchestratorDeps): Promise<void> {
+  static async run(
+    ctx: OrchestratorInput,
+    deps: OrchestratorDeps,
+  ): Promise<void> {
     const { symbol, provider, tf, window, horizon, model } = ctx;
     const { dispatch, getState, signal } = deps;
 
     const tsKey = makeTimeseriesKey({ provider, symbol, tf, window });
-    const fcKey = makeForecastKey({ symbol, tf, horizon, model: model || undefined });
+    const fcKey = makeForecastKey({
+      symbol,
+      tf,
+      horizon,
+      model: model || undefined,
+    });
 
     orchestratorState.status = 'running';
 
@@ -105,11 +112,11 @@ export class ForecastManager {
 
   private static async ensureTimeseries(
     args: {
-      tsKey: string
-      symbol: Symbol
-      provider: Provider | string
-      tf: Timeframe
-      window: string | number
+      tsKey: string;
+      symbol: Symbol;
+      provider: Provider | string;
+      tf: Timeframe;
+      window: string | number;
     },
     deps: OrchestratorDeps,
   ): Promise<Bar[]> {
@@ -128,7 +135,9 @@ export class ForecastManager {
     }
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[Orchestrator] loading timeseries with MarketAdapter', { tsKey });
+      console.log('[Orchestrator] loading timeseries with MarketAdapter', {
+        tsKey,
+      });
     }
 
     try {
@@ -145,9 +154,9 @@ export class ForecastManager {
       setLocalTimeseries(tsKey, result.bars);
 
       return result.bars;
-
     } catch (err: any) {
-      const message = err?.message || 'Failed to load timeseries with MarketAdapter';
+      const message =
+        err?.message || 'Failed to load timeseries with MarketAdapter';
 
       if (process.env.NODE_ENV !== 'production') {
         console.error('[Orchestrator] timeseries error', { tsKey, message });
@@ -164,7 +173,10 @@ export class ForecastManager {
    * @param horizon - промежуток который используем
    * @private
    */
-  private static buildTailForWorker(bars: Bar[], horizon: number): Array<[number, number]> {
+  private static buildTailForWorker(
+    bars: Bar[],
+    horizon: number,
+  ): Array<[number, number]> {
     if (!bars.length) return [];
     const tailSize = Math.max(horizon * 2, 128);
     const slice = bars.slice(-tailSize);

@@ -1,20 +1,20 @@
 import type { Bar, Symbol, Timeframe, Provider } from '@assetpredict/shared';
 
 export type MarketAdapterRequest = {
-  symbol: Symbol
-  provider?: Provider | string
-  timeframe?: Timeframe
-  limit?: number
-  signal?: AbortSignal
-}
+  symbol: Symbol;
+  provider?: Provider | string;
+  timeframe?: Timeframe;
+  limit?: number;
+  signal?: AbortSignal;
+};
 
 export type MarketAdapterResponse = {
-  bars: Bar[]
-  symbol: Symbol
-  provider: Provider | string
-  timeframe: Timeframe
-  source: 'MOCK'
-}
+  bars: Bar[];
+  symbol: Symbol;
+  provider: Provider | string;
+  timeframe: Timeframe;
+  source: 'MOCK';
+};
 
 /**
  * временная мок реализация Market Adapter
@@ -22,7 +22,12 @@ export type MarketAdapterResponse = {
 export async function getTimeseries(
   req: MarketAdapterRequest,
 ): Promise<MarketAdapterResponse> {
-  const { symbol, provider = 'MOCK', timeframe = '1h' as Timeframe, limit = 200 } = req;
+  const {
+    symbol,
+    provider = 'MOCK',
+    timeframe = '1h' as Timeframe,
+    limit = 200,
+  } = req;
 
   const now = Date.now();
   const bars: Bar[] = Array.from({ length: limit }).map((_, idx) => {
