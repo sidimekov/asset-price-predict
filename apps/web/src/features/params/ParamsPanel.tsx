@@ -48,8 +48,8 @@ export default function ParamsPanel({
     const modelValue = selectedModel ?? internalModel;
     const dateValue = selectedDate ?? internalDate;
 
-    const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
+    const handleModelChange = (e: React.ChangeEvent<any>) => {
+        const value = e.target.value as string;
         if (readOnly) return;
 
         onModelChange?.(value);
@@ -58,8 +58,8 @@ export default function ParamsPanel({
         }
     };
 
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
+    const handleDateChange = (e: React.ChangeEvent<any>) => {
+        const value = e.target.value as string;
         if (readOnly) return;
 
         onDateChange?.(value);

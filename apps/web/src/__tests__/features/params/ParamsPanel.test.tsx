@@ -30,15 +30,11 @@ describe('ParamsPanel', () => {
             />,
         );
 
-        // select (combobox) — норм через getByRole
         const select = screen.getByRole('combobox');
         fireEvent.change(select, { target: { value: 'model-2' } });
         expect(onModelChange).toHaveBeenCalledWith('model-2');
 
-        // input[type="date"] роли textbox не имеет, поэтому берём через querySelector
-        const dateInput = container.querySelector(
-            'input[type="date"]',
-        ) as HTMLInputElement | null;
+        const dateInput = container.querySelector('input[type="date"]');
 
         expect(dateInput).not.toBeNull();
 
@@ -66,9 +62,7 @@ describe('ParamsPanel', () => {
         );
 
         const select = screen.getByRole('combobox');
-        const dateInput = container.querySelector(
-            'input[type="date"]',
-        ) as HTMLInputElement | null;
+        const dateInput = container.querySelector('input[type="date"]');
 
         expect(dateInput).not.toBeNull();
 

@@ -25,7 +25,7 @@ export default function HistorySearch({
         order: 'desc',
     });
 
-    const popoverRef = useRef<HTMLDivElement | null>(null);
+    const popoverRef = useRef<any>(null);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
