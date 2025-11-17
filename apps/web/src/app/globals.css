@@ -472,6 +472,12 @@ body {
   text-decoration-color: var(--color-ink);
 }
 
+.provider-tabs-under-search .tab-button {
+  padding: 0.5rem 1rem; /* чуть крупнее */
+  font-weight: 700;
+  font-size: 1rem;
+}
+
 .auth-tabs .tab-button:focus {
   outline: 2px solid #ff409a;
 }
@@ -1183,11 +1189,9 @@ body {
   width: 90vw;
   max-width: 480px;
   height: 85vh;
-  background: var(
-    --gradient-card
-  ); /* linear-gradient(135deg, #ff409a, #c438ef, #201d47) */
+  background: var(--gradient-card);
   border-radius: 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 60%);
   overflow: hidden;
   position: relative;
   display: flex;
@@ -1234,7 +1238,7 @@ body {
 }
 
 .find-assets-search-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgb(255 255 255 / 50%);
 }
 
 .find-assets-search-input:focus {
@@ -1252,7 +1256,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: all var(--transition-smooth);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
 }
 
 .find-assets-add-button:hover {
