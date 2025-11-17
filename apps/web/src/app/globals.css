@@ -1293,9 +1293,3 @@ body {
   gap: 4rem; /* ← огромное расстояние между кнопками */
   padding: 0 1.5rem;
 }
-
-.provider-tabs-under-search .tab-button {
-  padding: 0.5rem 1rem; /* чуть крупнее */
-  font-weight: 700;
-  font-size: 1rem;
-}
