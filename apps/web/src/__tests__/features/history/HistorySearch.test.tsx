@@ -1,151 +1,37 @@
-import { useState, useRef, useEffect } from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { describe, it, expect, vi } from 'vitest';
+import HistorySearch from '@/features/history/HistorySearch';
 
-type Filters = {
-  categories: { c1: boolean; c2: boolean; c3: boolean };
-  order: 'desc' | 'asc';
-};
+describe('HistorySearch', () => {
+    it('calls searchAction when user types in input', () => {
+        const searchAction = vi.fn();
 
-type Props = {
-  onSearch: (q: string) => void;
-  onApplyFilters?: (v: Filters) => void;
-};
+        render(<HistorySearch searchAction={searchAction} />);
 
-export default function HistorySearch({ onSearch, onApplyFilters }: Props) {
-  const [query, setQuery] = useState('');
-  const [filterClicked, setFilterClicked] = useState(false);
-  const [filters, setFilters] = useState<Filters>({
-    categories: { c1: false, c2: false, c3: false },
-    order: 'desc',
-  });
+        const input = screen.getByPlaceholderText('Search');
+        fireEvent.change(input, { target: { value: 'btc' } });
 
-  const popoverRef = useRef<HTMLDivElement | null>(null);
+        expect(searchAction).toHaveBeenCalledWith('btc');
+    });
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-          popoverRef.current &&
-          !popoverRef.current.contains(event.target as Node)
-      ) {
-        setFilterClicked(false);
-      }
-    }
+    it('calls applyFiltersAction when Apply button is clicked', () => {
+        const searchAction = vi.fn();
+        const applyFiltersAction = vi.fn();
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+        render(
+            <HistorySearch
+                searchAction={searchAction}
+                applyFiltersAction={applyFiltersAction}
+            />,
+        );
 
-  const handleFilter = () => setFilterClicked((v) => !v);
+        const filterButton = screen.getByLabelText('Фильтры');
+        fireEvent.click(filterButton);
 
-  const applyFilters = () => {
-    onApplyFilters?.(filters);
-    setFilterClicked(false);
-  };
+        const applyButton = screen.getByText('Apply');
+        fireEvent.click(applyButton);
 
-  return (
-      <div className="search-bar-container">
-        <button className="search-button" aria-hidden>
-          <img src="/magnifier.svg" alt="" />
-        </button>
-
-        <input
-            type="text"
-            placeholder="Search"
-            value={query}
-            onChange={(e) => {
-              const value = e.target.value;
-              setQuery(value);
-              onSearch(value);
-            }}
-            className="search-input"
-        />
-
-        <div style={{ position: 'relative' }}>
-          <button
-              className="filter-button"
-              onClick={handleFilter}
-              aria-label="Фильтры"
-          >
-            <img src="/filter.svg" alt="Фильтр" />
-          </button>
-
-          {filterClicked && (
-              <div
-                  ref={popoverRef}
-                  role="dialog"
-                  aria-label="Filters"
-                  className="search-filter-popover"
-              >
-                <div className="search-filter-arrow" />
-                <div className="filter-popover-content">
-                  <div className="filter-section">
-                    <div className="filter-section-title">Category</div>
-                    <div className="filter-categories">
-                      {['1', '2', '3'].map((num) => (
-                          <label key={num} className="filter-label">
-                            <input
-                                type="checkbox"
-                                checked={
-                                  filters.categories[
-                                      `c${num}` as keyof typeof filters.categories
-                                      ]
-                                }
-                                onChange={(e) => {
-                                  const checked = e.target.checked;
-                                  setFilters((f) => ({
-                                    ...f,
-                                    categories: {
-                                      ...f.categories,
-                                      [`c${num}`]: checked,
-                                    },
-                                  }));
-                                }}
-                                className="filter-checkbox"
-                            />
-                            <span>Category {num}</span>
-                          </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="filter-section">
-                    <div className="filter-section-title">Data</div>
-                    <div className="filter-options">
-                      <label className="filter-label">
-                        <input
-                            type="radio"
-                            name="order"
-                            value="desc"
-                            checked={filters.order === 'desc'}
-                            onChange={() =>
-                                setFilters((f) => ({ ...f, order: 'desc' }))
-                            }
-                            className="filter-checkbox"
-                        />
-                        <span>Descending order</span>
-                      </label>
-                      <label className="filter-label">
-                        <input
-                            type="radio"
-                            name="order"
-                            value="asc"
-                            checked={filters.order === 'asc'}
-                            onChange={() =>
-                                setFilters((f) => ({ ...f, order: 'asc' }))
-                            }
-                            className="filter-checkbox"
-                        />
-                        <span>Ascending order</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <button onClick={applyFilters} className="apply-filter-button">
-                    Apply
-                  </button>
-                </div>
-              </div>
-          )}
-        </div>
-      </div>
-  );
-}
+        expect(applyFiltersAction).toHaveBeenCalledTimes(1);
+    });
+});
