@@ -6,9 +6,13 @@ import {
   getLocalTimeseries,
   setLocalTimeseries,
   isLocalTimeseriesStale,
+  getLocalForecast,
+  setLocalForecast,
+  type LocalForecastEntry,
 } from './state';
 import type { RootState, AppDispatch } from '@/shared/store';
 import { getTimeseries as getTimeseriesFromMarketAdapter } from '@/features/marker-adapter/MarketAdapter';
+import { inferForecast } from './mlWorkerClient';
 
 
 type OrchestratorInput = {
@@ -54,16 +58,47 @@ export class ForecastManager {
       });
     }
 
+    // 1. timeseries
     const bars = await ForecastManager.ensureTimeseries(
       { tsKey, symbol, provider, tf, window },
       { dispatch, getState, signal },
     );
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Orchestrator] got timeseries', { tsKey, count: bars.length });
+    // 2. если прогноз в кэше - используем его
+    const existingForecast = getLocalForecast(fcKey);
+    if (existingForecast) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Orchestrator] using cached forecast', { fcKey });
+      }
+      orchestratorState.status = 'idle';
+      return;
     }
 
-    // todo forecast и тд
+    // 3. tail для воркера
+    const tail = ForecastManager.buildTailForWorker(bars, horizon);
+
+    // 4. вызов ML-воркера
+    const inferResult = await inferForecast(tail, horizon, model);
+
+    const entry: LocalForecastEntry = {
+      series: {
+        p10: inferResult.p10,
+        p50: inferResult.p50,
+        p90: inferResult.p90,
+      },
+      meta: inferResult.diag,
+    };
+
+    // загрузка в пока что локальный кэш
+    setLocalForecast(fcKey, entry);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Orchestrator] forecast ready', {
+        fcKey,
+        horizon,
+        points: inferResult.p50.length,
+      });
+    }
 
     orchestratorState.status = 'idle';
   }
@@ -121,5 +156,24 @@ export class ForecastManager {
       // позже dispatch(timeseriesFailed(...)) когда будет timeseriesSlice
       throw err;
     }
+  }
+
+  /**
+   * Построить "хвост" временного ряда как данные для прогноза
+   * @param bars - свечи временного ряда
+   * @param horizon - промежуток который используем
+   * @private
+   */
+  private static buildTailForWorker(bars: Bar[], horizon: number): Array<[number, number]> {
+    if (!bars.length) return [];
+    const tailSize = Math.max(horizon * 2, 128);
+    const slice = bars.slice(-tailSize);
+
+    // формат Bar = [ts, o, h, l, c, v?]
+    return slice.map((b) => {
+      const ts = b[0];
+      const close = b[4];
+      return [ts, close] as [number, number];
+    });
   }
 }

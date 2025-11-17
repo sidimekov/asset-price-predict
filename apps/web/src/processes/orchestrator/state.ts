@@ -9,7 +9,7 @@ export const orchestratorState: { status: OrchestratorStatus } = {
   status: 'idle',
 };
 
-// временный локальный кэш ts, пока нет timeseriesSlice из pr market adapter
+// временный локальный кэш ts, пока нет timeseriesSlice из market adapter / timeseries store
 const localTimeseriesCache = new Map<string, { bars: Bar[]; fetchedAt: number }>();
 
 export function getLocalTimeseries(key: string) {
@@ -26,7 +26,37 @@ export function isLocalTimeseriesStale(key: string, ttlMs = TIMESERIES_TTL_MS): 
   return Date.now() - entry.fetchedAt > ttlMs;
 }
 
+// локальный кэш прогнозов (fcKey -> результат)
+
+export type LocalForecastSeries = {
+  p10: number[];
+  p50: number[];
+  p90: number[];
+};
+
+export type LocalForecastMeta = {
+  runtime_ms: number;
+  backend: string;
+  model_ver: string;
+};
+
+export type LocalForecastEntry = {
+  series: LocalForecastSeries;
+  meta: LocalForecastMeta;
+};
+
+const localForecastCache = new Map<string, LocalForecastEntry>();
+
+export function getLocalForecast(key: string): LocalForecastEntry | undefined {
+  return localForecastCache.get(key);
+}
+
+export function setLocalForecast(key: string, entry: LocalForecastEntry) {
+  localForecastCache.set(key, entry);
+}
+
 /**
+ * селекторы catalog / forecast
  * Выбранный актив из catalogSlice
  * state.catalog.selected = { symbol: string; provider: string }
  */
