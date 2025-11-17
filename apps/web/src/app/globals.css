@@ -916,7 +916,6 @@ body {
   color-scheme: dark;
 }
 
-
 .param-panel-item[type='date']::placeholder {
   color: #8480c9;
 }
@@ -926,11 +925,10 @@ body {
   opacity: 0.9;
 }
 
-/* убираем синий outline и делаем свой фокус */
 .param-panel-item[type='date']:focus {
   outline: none;
   border-color: #7c5cff;
-  box-shadow: 0 0 0 1px rgba(124, 92, 255, 0.5);
+  box-shadow: 0 0 0 1px rgb(124 92 255 / 50%);
 }
 
 .pill {
@@ -1202,4 +1200,3 @@ body {
   padding: 1px; /* толщина рамки */
   background: linear-gradient(90deg, #ff409a, #c438ef);
 }
-
