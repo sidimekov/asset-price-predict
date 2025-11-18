@@ -1,43 +1,33 @@
 // apps/web/src/config/market.ts
 
-// Берём ТОЛЬКО типы из shared — на рантайме этот импорт не нужен.
-import type { Timeframe, Provider } from '@shared/types/market';
+import {
+  SUPPORTED_TIMEFRAMES,
+  SUPPORTED_PROVIDERS,
+  type Timeframe,
+  type Provider,
+} from '@shared/types/market';
 
-// ---- TIMEFRAMES ----
+// ---- TIMEFRAMES -------------------------------------------------
 
-// Литеральный список таймфреймов, при этом TS проверяет,
-// что каждый из них совместим с общим типом Timeframe.
-export const SUPPORTED_TIMEFRAMES = [
-  '1h',
-  '8h',
-  '1d',
-  '7d',
-  '1mo',
-] as const satisfies Timeframe[];
+// просто реэкспортируем список из shared, чтобы не плодить копии
+export { SUPPORTED_TIMEFRAMES };
 
-// Тип для фронта — просто union из элементов кортежа
-export type MarketTimeframe = (typeof SUPPORTED_TIMEFRAMES)[number];
-
+// для удобства оставляем алиас-типа и дефолт
+export type MarketTimeframe = Timeframe;
 export const DEFAULT_TIMEFRAME: MarketTimeframe = '1h';
 
-// ---- PROVIDERS ----
+// ---- PROVIDERS --------------------------------------------------
 
-// Базовые провайдеры из бекенда
-const CORE_PROVIDERS = [
-  'BINANCE',
-  'MOEX',
-  'CUSTOM',
-] as const satisfies Provider[];
+// базовые провайдеры тоже берём из shared
+export { SUPPORTED_PROVIDERS };
 
-// Плюс наш фронтовый MOCK
-export const SUPPORTED_PROVIDERS = ['MOCK', ...CORE_PROVIDERS] as const;
+// алиас-типа для UI
+export type MarketDataProvider = Provider;
 
-// Union-типа из кортежа
-export type MarketDataProvider = (typeof SUPPORTED_PROVIDERS)[number];
+// по ревью: custom-провайдер из shared считаем mock’ом по смыслу
+export const DEFAULT_PROVIDER: MarketDataProvider = 'CUSTOM';
 
-export const DEFAULT_PROVIDER: MarketDataProvider = 'MOCK';
-
-// ---- ПРОЧЕЕ ----
+// ---- ПРОЧЕЕ -----------------------------------------------------
 
 export const DEFAULT_LIMIT = 500;
 

@@ -1,6 +1,7 @@
+// apps/web/src/features/market-adapter/providers/MockProvider.ts
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
-import type { ProviderRequestBase } from './BinanceProvider';
+import type { ProviderRequestBase } from './types';
 
 /**
  * Вариант 1 – берём моковые данные с API через RTK Query.
@@ -29,7 +30,6 @@ export async function fetchMockTimeseries(
 
 /**
  * Вариант 2 – полностью локальный генератор свечей без сети.
- * Используется тем же контрактом ProviderRequestBase.
  */
 export function generateMockBarsRaw(
   params: ProviderRequestBase,
@@ -41,7 +41,7 @@ export function generateMockBarsRaw(
   let lastClose = 100;
 
   for (let i = limit - 1; i >= 0; i--) {
-    const ts = now - i * 60 * 60 * 1000; // шаг 1h для примера
+    const ts = now - i * 60 * 60 * 1000; // шаг 1h
     const open = lastClose;
     const high = open + Math.random() * 3;
     const low = open - Math.random() * 3;
