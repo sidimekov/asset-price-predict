@@ -6,8 +6,9 @@ import {
   selectForecastParams,
   setForecastParams,
 } from '@/entities/forecast/model/forecastSlice';
+import type { Timeframe } from '@shared/types/market';
 
-const SUPPORTED_TIMEFRAMES = ['1h', '8h', '1d', '7d', '1mo'];
+const SUPPORTED_TIMEFRAMES: Timeframe[] = ['1h', '8h', '1d', '7d', '1mo'];
 
 export default function ParamsPanel() {
   const dispatch = useAppDispatch();
@@ -37,7 +38,11 @@ export default function ParamsPanel() {
           <select
             className="input-base"
             value={params.timeframe}
-            onChange={(e) => handleChange({ timeframe: e.target.value })}
+            onChange={(e) =>
+              handleChange({
+                timeframe: e.target.value as Timeframe,
+              })
+            }
           >
             {SUPPORTED_TIMEFRAMES.map((tf) => (
               <option key={tf} value={tf}>
