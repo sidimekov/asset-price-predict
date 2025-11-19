@@ -1,29 +1,26 @@
+// apps/web/src/features/market-adapter/providers/MoexProvider.ts
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
-import type { ProviderRequestBase } from './BinanceProvider';
+import type { ProviderRequestBase } from './types';
 
-/**
- * Провайдер MOEX. Пока реализация через RTK Query-эндпоинт.
- * Контракт запроса переиспользует общий ProviderRequestBase.
- */
 export async function fetchMoexTimeseries(
-  dispatch: AppDispatch,
-  params: ProviderRequestBase,
+    dispatch: AppDispatch,
+    params: ProviderRequestBase,
 ): Promise<unknown> {
-  const { symbol, timeframe, limit } = params;
+    const { symbol, timeframe, limit } = params;
 
-  const queryResult = dispatch(
-    marketApi.endpoints.getMoexTimeseries.initiate({
-      symbol,
-      timeframe,
-      limit,
-    }),
-  );
+    const queryResult = dispatch(
+        marketApi.endpoints.getMoexTimeseries.initiate({
+            symbol,
+            timeframe,
+            limit,
+        }),
+    );
 
-  try {
-    const data = await queryResult.unwrap();
-    return data;
-  } finally {
-    queryResult.unsubscribe();
-  }
+    try {
+        const data = await queryResult.unwrap();
+        return data;
+    } finally {
+        queryResult.unsubscribe();
+    }
 }

@@ -1,45 +1,21 @@
-// apps/web/src/config/market.ts
+import {
+  SUPPORTED_TIMEFRAMES,
+  SUPPORTED_PROVIDERS,
+  type Timeframe,
+  type Provider,
+} from '@shared/types/market';
 
-// Берём ТОЛЬКО типы из shared — на рантайме этот импорт не нужен.
-import type { Timeframe, Provider } from '@shared/types/market';
+export { SUPPORTED_TIMEFRAMES };
 
-// ---- TIMEFRAMES ----
-
-// Литеральный список таймфреймов, при этом TS проверяет,
-// что каждый из них совместим с общим типом Timeframe.
-export const SUPPORTED_TIMEFRAMES = [
-  '1h',
-  '8h',
-  '1d',
-  '7d',
-  '1mo',
-] as const satisfies Timeframe[];
-
-// Тип для фронта — просто union из элементов кортежа
-export type MarketTimeframe = (typeof SUPPORTED_TIMEFRAMES)[number];
-
+export type MarketTimeframe = Timeframe;
 export const DEFAULT_TIMEFRAME: MarketTimeframe = '1h';
 
-// ---- PROVIDERS ----
+export { SUPPORTED_PROVIDERS };
 
-// Базовые провайдеры из бекенда
-const CORE_PROVIDERS = [
-  'BINANCE',
-  'MOEX',
-  'CUSTOM',
-] as const satisfies Provider[];
+export type MarketDataProvider = Provider;
 
-// Плюс наш фронтовый MOCK
-export const SUPPORTED_PROVIDERS = ['MOCK', ...CORE_PROVIDERS] as const;
-
-// Union-типа из кортежа
-export type MarketDataProvider = (typeof SUPPORTED_PROVIDERS)[number];
-
-export const DEFAULT_PROVIDER: MarketDataProvider = 'MOCK';
-
-// ---- ПРОЧЕЕ ----
+export const DEFAULT_PROVIDER: MarketDataProvider = 'CUSTOM';
 
 export const DEFAULT_LIMIT = 500;
 
-// TTL клиентского кэша таймсерий, мс
 export const CACHE_TTL_MS = 30_000;
