@@ -6,9 +6,9 @@ import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 export type TimeseriesKey = string;
 
 export const buildTimeseriesKey = (
-    provider: MarketDataProvider,
-    symbol: string,
-    timeframe: MarketTimeframe,
+  provider: MarketDataProvider,
+  symbol: string,
+  timeframe: MarketTimeframe,
 ): TimeseriesKey => `${provider}:${symbol}:${timeframe}`;
 
 interface TimeseriesState {
@@ -42,16 +42,16 @@ const timeseriesSlice = createSlice({
   initialState,
   reducers: {
     timeseriesRequested(
-        state,
-        action: PayloadAction<TimeseriesRequestedPayload>,
+      state,
+      action: PayloadAction<TimeseriesRequestedPayload>,
     ) {
       const { key } = action.payload;
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
     },
     timeseriesReceived(
-        state,
-        action: PayloadAction<TimeseriesReceivedPayload>,
+      state,
+      action: PayloadAction<TimeseriesReceivedPayload>,
     ) {
       const { key, bars } = action.payload;
       state.byKey[key] = bars;
@@ -67,20 +67,20 @@ const timeseriesSlice = createSlice({
 });
 
 export const { timeseriesRequested, timeseriesReceived, timeseriesFailed } =
-    timeseriesSlice.actions;
+  timeseriesSlice.actions;
 
 export const timeseriesReducer = timeseriesSlice.reducer;
 
 // selectors
 export const selectTimeseriesByKey = (state: RootState, key: TimeseriesKey) =>
-    state.timeseries.byKey[key] ?? null;
+  state.timeseries.byKey[key] ?? null;
 
 export const selectTimeseriesLoadingByKey = (
-    state: RootState,
-    key: TimeseriesKey,
+  state: RootState,
+  key: TimeseriesKey,
 ) => state.timeseries.loadingByKey[key] ?? false;
 
 export const selectTimeseriesErrorByKey = (
-    state: RootState,
-    key: TimeseriesKey,
+  state: RootState,
+  key: TimeseriesKey,
 ) => state.timeseries.errorByKey[key] ?? null;

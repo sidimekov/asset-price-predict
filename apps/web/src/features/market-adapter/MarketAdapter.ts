@@ -62,10 +62,10 @@ export interface MarketAdapterSuccess {
 
 export interface MarketAdapterError {
   code:
-      | 'INVALID_PARAMS'
-      | 'UNSUPPORTED_PROVIDER'
-      | 'PROVIDER_ERROR'
-      | 'NORMALIZATION_ERROR';
+    | 'INVALID_PARAMS'
+    | 'UNSUPPORTED_PROVIDER'
+    | 'PROVIDER_ERROR'
+    | 'NORMALIZATION_ERROR';
   message: string;
   provider?: MarketDataProvider;
 }
@@ -122,9 +122,9 @@ function normalizeRawBars(raw: unknown): Bar[] {
 
     // обратно в Bar[] (Bar = [ts, o, h, l, c, v?])
     const bars: Bar[] = tuples.map((t) =>
-        t.length === 5
-            ? ([t[0], t[1], t[2], t[3], t[4]] as unknown as Bar)
-            : ([t[0], t[1], t[2], t[3], t[4], (t as any)[5]] as unknown as Bar),
+      t.length === 5
+        ? ([t[0], t[1], t[2], t[3], t[4]] as unknown as Bar)
+        : ([t[0], t[1], t[2], t[3], t[4], (t as any)[5]] as unknown as Bar),
     );
 
     return bars;
@@ -137,9 +137,9 @@ function normalizeRawBars(raw: unknown): Bar[] {
 // ---------- выбор провайдера ----------
 
 async function resolveProviderData(
-    dispatch: AppDispatch,
-    provider: MarketDataProvider,
-    params: { symbol: string; timeframe: MarketTimeframe; limit: number },
+  dispatch: AppDispatch,
+  provider: MarketDataProvider,
+  params: { symbol: string; timeframe: MarketTimeframe; limit: number },
 ): Promise<{ raw: unknown; normalized: Bar[] }> {
   switch (provider) {
     case 'BINANCE': {
@@ -177,8 +177,8 @@ async function resolveProviderData(
 // ---------- публичная функция ----------
 
 export async function getMarketTimeseries(
-    dispatch: AppDispatch,
-    rawRequest: MarketAdapterRequest,
+  dispatch: AppDispatch,
+  rawRequest: MarketAdapterRequest,
 ): Promise<MarketAdapterSuccess | MarketAdapterError> {
   const parseResult = marketAdapterRequestSchema.safeParse(rawRequest);
 

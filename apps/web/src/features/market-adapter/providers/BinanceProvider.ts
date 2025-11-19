@@ -7,18 +7,18 @@ import type { ProviderRequestBase } from './types';
  * Получение таймсерий с Binance через RTK Query.
  */
 export async function fetchBinanceTimeseries(
-    dispatch: AppDispatch,
-    params: ProviderRequestBase,
+  dispatch: AppDispatch,
+  params: ProviderRequestBase,
 ): Promise<BinanceKline[]> {
   const { symbol, timeframe, limit } = params;
 
   // при необходимости можно сделать маппинг timeframe → interval
   const queryResult = dispatch(
-      marketApi.endpoints.getBinanceTimeseries.initiate({
-        symbol,
-        interval: timeframe,
-        limit,
-      }),
+    marketApi.endpoints.getBinanceTimeseries.initiate({
+      symbol,
+      interval: timeframe,
+      limit,
+    }),
   );
 
   try {

@@ -6,7 +6,7 @@ import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
  * Используется MarketAdapter'ом и всеми провайдерами (Binance/Moex/Mock/Custom).
  */
 export interface ProviderRequestBase {
-    symbol: MarketSymbol;
-    timeframe: Timeframe;
-    limit: number;
+  symbol: MarketSymbol;
+  timeframe: Timeframe;
+  limit: number;
 }

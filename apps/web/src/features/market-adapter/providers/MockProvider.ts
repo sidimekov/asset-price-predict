@@ -7,17 +7,17 @@ import type { ProviderRequestBase } from './types';
  * Вариант 1 – берём моковые данные с API через RTK Query.
  */
 export async function fetchMockTimeseries(
-    dispatch: AppDispatch,
-    params: ProviderRequestBase,
+  dispatch: AppDispatch,
+  params: ProviderRequestBase,
 ): Promise<unknown> {
   const { symbol, timeframe, limit } = params;
 
   const queryResult = dispatch(
-      marketApi.endpoints.getMockTimeseries.initiate({
-        symbol,
-        timeframe,
-        limit,
-      }),
+    marketApi.endpoints.getMockTimeseries.initiate({
+      symbol,
+      timeframe,
+      limit,
+    }),
   );
 
   try {
@@ -32,7 +32,7 @@ export async function fetchMockTimeseries(
  * Вариант 2 – полностью локальный генератор свечей без сети.
  */
 export function generateMockBarsRaw(
-    params: ProviderRequestBase,
+  params: ProviderRequestBase,
 ): [number, number, number, number, number, number][] {
   const { limit } = params;
   const now = Date.now();
