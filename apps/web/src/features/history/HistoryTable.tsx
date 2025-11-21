@@ -3,7 +3,7 @@
 import Skeleton from '@/shared/ui/Skeleton';
 import data from '@/mocks/history.json';
 
-type Row = {
+export type HistoryRow = {
   asset: string;
   date: string;
   model: string;
@@ -12,8 +12,8 @@ type Row = {
   factors_top5: string[];
 };
 
-function normalize(raw: any): Row {
-  if ('asset' in raw) return raw as Row;
+function normalize(raw: any): HistoryRow {
+  if ('asset' in raw) return raw as HistoryRow;
   return {
     asset: raw.Asset,
     date: raw.Data,
@@ -22,15 +22,23 @@ function normalize(raw: any): Row {
     period: (raw.Period || '').trim(),
     factors_top5:
       raw['Factors (TOP 5): impact, SHAP, Conf.'] ?? raw.factors_top5 ?? [],
-  } as Row;
+  } as HistoryRow;
 }
 
 export default function HistoryTable({
   loading = false,
+  items,
 }: {
   loading?: boolean;
+  items?: HistoryRow[];
 }) {
-  const rows: Row[] = Array.isArray(data) ? (data as any[]).map(normalize) : [];
+  // если items переданы – используем их, иначе падаем обратно на mocks
+  const rows: HistoryRow[] =
+    items && items.length
+      ? items
+      : Array.isArray(data)
+        ? (data as any[]).map(normalize)
+        : [];
 
   if (loading) {
     return (
