@@ -4,7 +4,6 @@ import {
   fetchMockTimeseries,
   generateMockBarsRaw,
 } from '@/features/market-adapter/providers/MockProvider';
-import type { ProviderRequestBase } from '@/features/market-adapter/providers/types';
 
 // hoisted-мок для initiate
 const { mockMockInitiate } = vi.hoisted(() => ({
@@ -30,10 +29,10 @@ describe('fetchMockTimeseries', () => {
   it('вызывает getMockTimeseries и возвращает данные', async () => {
     const mockDispatch = vi.fn((action: any) => action);
 
-    const params: ProviderRequestBase = {
-      symbol: 'TEST',
-      timeframe: '1h' as ProviderRequestBase['timeframe'],
-      limit: 10,
+    const params = {
+      symbol: 'SOMETHING',
+      timeframe: '1h' as const,
+      limit: 100,
     };
 
     const mockData = [{ foo: 'bar' }] as any;
@@ -45,7 +44,7 @@ describe('fetchMockTimeseries', () => {
 
     mockMockInitiate.mockReturnValue(mockQueryResult);
 
-    const result = await fetchMockTimeseries(mockDispatch as any, params);
+    const result = await fetchMockTimeseries(mockDispatch as any, params as any);
 
     expect(mockMockInitiate).toHaveBeenCalledTimes(1);
     expect(mockMockInitiate).toHaveBeenCalledWith({
@@ -64,9 +63,9 @@ describe('fetchMockTimeseries', () => {
 
 describe('generateMockBarsRaw', () => {
   it('генерирует массив нужной длины и формата [ts, o, h, l, c, v]', () => {
-    const params: ProviderRequestBase = {
+    const params = {
       symbol: 'TEST',
-      timeframe: '1h' as ProviderRequestBase['timeframe'],
+      timeframe: '1h' as const,
       limit: 5,
     };
 

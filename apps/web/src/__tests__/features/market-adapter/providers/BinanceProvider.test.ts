@@ -1,7 +1,6 @@
 // apps/web/src/__tests__/features/market-adapter/providers/BinanceProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchBinanceTimeseries } from '@/features/market-adapter/providers/BinanceProvider';
-import type { ProviderRequestBase } from '@/features/market-adapter/providers/types';
 
 // хостим мок до vi.mock
 const { mockBinanceInitiate } = vi.hoisted(() => ({
@@ -29,9 +28,9 @@ describe('fetchBinanceTimeseries', () => {
   it('вызывает getBinanceTimeseries с корректными параметрами и возвращает данные', async () => {
     const mockDispatch = vi.fn((action: any) => action);
 
-    const params: ProviderRequestBase = {
+    const params = {
       symbol: 'BTCUSDT',
-      timeframe: '1h' as ProviderRequestBase['timeframe'],
+      timeframe: '1h' as const,
       limit: 100,
     };
 

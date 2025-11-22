@@ -1,4 +1,3 @@
-// apps/web/src/__tests__/entities/timeseries/timeseriesSlice.test.ts
 import { describe, it, expect } from 'vitest';
 import {
   timeseriesReducer,
@@ -21,13 +20,14 @@ describe('timeseriesSlice', () => {
 
   it('stores bars on received', () => {
     const bars: Bar[] = [[1, 2, 3, 1, 2, 10]];
+    const fetchedAt = '2024-01-01T00:00:00.000Z';
 
     const state = timeseriesReducer(
-      undefined,
-      timeseriesReceived({ key, bars }),
+        undefined,
+        timeseriesReceived({ key, bars, fetchedAt }),
     );
 
-    expect(state.byKey[key]).toEqual(bars);
+    expect(state.byKey[key]).toEqual({ bars, fetchedAt });
     expect(state.loadingByKey[key]).toBe(false);
     expect(state.errorByKey[key]).toBeNull();
   });
@@ -36,8 +36,8 @@ describe('timeseriesSlice', () => {
     const error = 'oops';
 
     const state = timeseriesReducer(
-      undefined,
-      timeseriesFailed({ key, error }),
+        undefined,
+        timeseriesFailed({ key, error }),
     );
 
     expect(state.loadingByKey[key]).toBe(false);
