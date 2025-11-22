@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Bar } from '@shared/types/market';
 import type { RootState } from '@/shared/store';
+import { buildTimeseriesCacheKey } from '@/shared/lib/cacheKey';
 
 import {
   timeseriesReducer,
@@ -9,7 +10,6 @@ import {
   timeseriesFailed,
   clearTimeseries,
   clearAllTimeseries,
-  buildTimeseriesKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 
 import {
@@ -20,7 +20,8 @@ import {
   selectIsStale,
 } from '@/entities/timeseries/model/selectors';
 
-const key = buildTimeseriesKey('MOCK' as any, 'BTCUSDT', '1h' as any);
+const key = buildTimeseriesCacheKey('MOCK' as any, 'BTCUSDT', '1h' as any, 100);
+
 
 const makeRootState = (timeseriesState: any): RootState =>
     ({ timeseries: timeseriesState } as unknown as RootState);

@@ -2,8 +2,9 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/shared/store';
 import type { Bar } from '@shared/types/market';
 import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+import type { TimeseriesCacheKey } from '@/shared/lib/cacheKey';
 
-export type TimeseriesKey = string;
+export type TimeseriesKey = TimeseriesCacheKey;
 
 export const buildTimeseriesKey = (
     provider: MarketDataProvider,
