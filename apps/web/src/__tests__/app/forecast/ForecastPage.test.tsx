@@ -20,9 +20,9 @@ vi.mock('next/navigation', () => {
       id: '0',
     }),
     useSearchParams: () =>
-        ({
-          get: (key: string) => query[key as keyof typeof query] ?? null,
-        }) as any,
+      ({
+        get: (key: string) => query[key as keyof typeof query] ?? null,
+      }) as any,
   };
 });
 
@@ -30,10 +30,10 @@ vi.mock('next/navigation', () => {
 vi.mock('@/features/params/ParamsPanel', () => ({
   __esModule: true,
   default: (props: any) => (
-      <div>
-        <div>Parameters</div>
-        <button onClick={props.onPredict}>Back to asset selection</button>
-      </div>
+    <div>
+      <div>Parameters</div>
+      <button onClick={props.onPredict}>Back to asset selection</button>
+    </div>
   ),
 }));
 
