@@ -1,11 +1,7 @@
 import '@testing-library/jest-dom';
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { Provider } from 'react-redux';
-
 import Dashboard from '@/app/dashboard/page';
-import { store } from '@/shared/store';
 
 const pushMock = vi.fn();
 
@@ -40,16 +36,9 @@ vi.mock('@/features/params/ParamsPanel', () => ({
   ),
 }));
 
-const renderWithStore = () =>
-  render(
-    <Provider store={store}>
-      <Dashboard />
-    </Provider>,
-  );
-
 describe('Dashboard', () => {
   it('renders without crashing and shows main sections', () => {
-    const { container } = renderWithStore();
+    const { container } = render(<Dashboard />);
 
     expect(container.firstChild).toBeTruthy();
     expect(container.textContent).toContain('Parameters');
@@ -58,7 +47,7 @@ describe('Dashboard', () => {
   });
 
   it('navigates to forecast page when Predict is clicked', () => {
-    const { getByText } = renderWithStore();
+    const { getByText } = render(<Dashboard />);
 
     const predictButton = getByText('Predict');
     fireEvent.click(predictButton);
@@ -71,6 +60,8 @@ describe('Dashboard', () => {
     expect(url.startsWith('/forecast/')).toBe(true);
     expect(url).toContain('ticker=');
 
+    // при желании можем проверить, что query вообще присутствует
+    // и отделён знаком '?'
     const [path, query] = url.split('?');
     expect(path).toMatch(/^\/forecast\/\d+$/);
     expect(query).toBeTruthy();
