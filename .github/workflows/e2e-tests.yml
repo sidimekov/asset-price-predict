@@ -34,6 +34,9 @@ jobs:
       - name: Установка зависимостей монорепо
         run: pnpm install --frozen-lockfile
 
+      - name: Сборка пакета @assetpredict/shared
+        run: pnpm -F @assetpredict/shared build
+
       - name: Установка браузеров Playwright (в пакете apps/web)
         run: pnpm -F @assetpredict/web exec playwright install --with-deps
 
