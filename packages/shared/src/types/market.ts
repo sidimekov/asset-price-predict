@@ -10,7 +10,7 @@ export type Timeframe = '1h' | '8h' | '1d' | '7d' | '1mo';
 /**
  * Поддерживаемые провайдеры данных
  */
-export type Provider = 'MOEX' | 'BINANCE' | 'CUSTOM';
+export type Provider = 'MOEX' | 'BINANCE' | 'CUSTOM' | 'MOCK';
 
 /**
  * Символ инструмента (тикер)
