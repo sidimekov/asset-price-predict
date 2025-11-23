@@ -10,7 +10,10 @@ vi.mock('@/processes/orchestrator/mlWorkerClient', () => ({
   inferForecast: vi.fn(),
 }));
 
-import { ForecastManager, type OrchestratorInput } from '@/processes/orchestrator/ForecastManager';
+import {
+  ForecastManager,
+  type OrchestratorInput,
+} from '@/processes/orchestrator/ForecastManager';
 import {
   orchestratorState,
   setLocalTimeseries,
@@ -19,7 +22,10 @@ import {
   getLocalForecast,
   type LocalForecastEntry,
 } from '@/processes/orchestrator/state';
-import { makeTimeseriesKey, makeForecastKey } from '@/processes/orchestrator/keys';
+import {
+  makeTimeseriesKey,
+  makeForecastKey,
+} from '@/processes/orchestrator/keys';
 import { getMarketTimeseries } from '@/features/market-adapter/MarketAdapter';
 import { inferForecast } from '@/processes/orchestrator/mlWorkerClient';
 
@@ -29,7 +35,7 @@ const getMarketTimeseriesMock = getMarketTimeseries as unknown as vi.Mock;
 const inferForecastMock = inferForecast as unknown as vi.Mock;
 
 const mockDispatch = vi.fn();
-const mockGetState = vi.fn(() => ({} as any));
+const mockGetState = vi.fn(() => ({}) as any);
 
 const makeDeps = () => ({
   dispatch: mockDispatch,

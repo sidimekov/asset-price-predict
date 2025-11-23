@@ -26,8 +26,7 @@ export function useOrchestrator() {
 
     // нормализуем provider и window под ожидания ForecastManager
     const providerNorm = provider as MarketDataProvider;
-    const windowNum =
-      typeof window === 'string' ? Number(window) : window;
+    const windowNum = typeof window === 'string' ? Number(window) : window;
 
     if (!Number.isFinite(windowNum) || windowNum <= 0) {
       // некорректное окно - просто не запускаем оркестратор
