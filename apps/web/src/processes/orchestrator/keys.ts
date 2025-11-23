@@ -1,22 +1,20 @@
-import type { Timeframe, Symbol } from '@assetpredict/shared';
-import type { Provider } from '@assetpredict/shared';
+import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 export function makeTimeseriesKey(params: {
-  provider: Provider | string;
-  symbol: Symbol;
-  tf: Timeframe;
-  window: string | number;
+  provider: MarketDataProvider | 'MOCK';
+  symbol: string;
+  tf: MarketTimeframe;
+  window: number;
 }): string {
-  const { provider, symbol, tf, window } = params;
-  return `${provider}:${symbol}:${tf}:${window}`;
+  return `${params.provider}:${params.symbol}:${params.tf}:${params.window}`;
 }
 
 export function makeForecastKey(params: {
-  symbol: Symbol;
-  tf: Timeframe;
+  symbol: string;
+  tf: MarketTimeframe;
   horizon: number;
   model?: string | null;
 }): string {
-  const { symbol, tf, horizon, model } = params;
-  return `${symbol}:${tf}:h${horizon}:m${model || 'client'}`;
+  const modelPart = params.model ?? 'client';
+  return `${params.symbol}:${params.tf}:h${params.horizon}:m${modelPart}`;
 }

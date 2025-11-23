@@ -1,4 +1,4 @@
-import type { Timeframe, Symbol, Provider, Bar } from '@assetpredict/shared';
+import type { Symbol, Bar } from '@assetpredict/shared';
 import { makeTimeseriesKey, makeForecastKey } from './keys';
 import {
   orchestratorState,
@@ -11,19 +11,20 @@ import {
   type LocalForecastEntry,
 } from './state';
 import type { RootState, AppDispatch } from '@/shared/store';
-import { getTimeseries as getTimeseriesFromMarketAdapter } from '@/features/market-adapter/MarketAdapter';
+import { getMarketTimeseries } from '@/features/market-adapter/MarketAdapter';
+import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+
 import { inferForecast } from './mlWorkerClient';
 
 export type OrchestratorInput = {
   symbol: Symbol; // символ актива (например SBER, APPL)
-  provider: Provider | string; // (moex, binance, mock)
-  tf: Timeframe; // timeframe - шаг по времени между свечами
-  window: string | number; // какой промежуток времени брать как информацию для прогноза
-  horizon: number; // на какой промежуток времени прогнозировать
+  provider: MarketDataProvider | 'MOCK'; // (MOEX, BINANCE, CUSTOM, MOCK)
+  tf: MarketTimeframe; // таймфрейм (шаг между барами)
+  window: number; // сколько баров брать в качестве «истории» для прогноза
+  horizon: number; // на сколько баров вперёд прогнозировать
   model?: string | null; // выбранная модель (опционально)
 };
 
-// на будущее, сейчас не используется
 type OrchestratorDeps = {
   dispatch: AppDispatch;
   getState: () => RootState;
@@ -32,7 +33,7 @@ type OrchestratorDeps = {
 
 /**
  * ForecastManager - центр оркестратора
- * считает ключи и логирует шаги
+ * Считает ключи, решает, откуда брать таймсерии, вызывает воркер и кладёт прогноз в кэш
  */
 export class ForecastManager {
   static async run(
@@ -65,13 +66,13 @@ export class ForecastManager {
       });
     }
 
-    // 1. timeseries
+    // 1. Загружаем / берём из кэша таймсерии
     const bars = await ForecastManager.ensureTimeseries(
       { tsKey, symbol, provider, tf, window },
       { dispatch, getState, signal },
     );
 
-    // 2. если прогноз в кэше - используем его
+    // 2. Если прогноз уже есть в локальном кэше - используем его и завершаем
     const existingForecast = getLocalForecast(fcKey);
     if (existingForecast) {
       if (process.env.NODE_ENV !== 'production') {
@@ -81,11 +82,11 @@ export class ForecastManager {
       return;
     }
 
-    // 3. tail для воркера
+    // 3. Формируем хвост для воркера
     const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
-    // 4. вызов ML-воркера
-    const inferResult = await inferForecast(tail, horizon, model);
+    // 4. Вызов ML-воркера
+    const inferResult = await inferForecast(tail, horizon, model ?? undefined);
 
     const entry: LocalForecastEntry = {
       series: {
@@ -96,7 +97,7 @@ export class ForecastManager {
       meta: inferResult.diag,
     };
 
-    // загрузка в пока что локальный кэш
+    // 5. Кладём в локальный кэш прогнозов
     setLocalForecast(fcKey, entry);
 
     if (process.env.NODE_ENV !== 'production') {
@@ -114,16 +115,16 @@ export class ForecastManager {
     args: {
       tsKey: string;
       symbol: Symbol;
-      provider: Provider | string;
-      tf: Timeframe;
-      window: string | number;
+      provider: MarketDataProvider | 'MOCK';
+      tf: MarketTimeframe;
+      window: number;
     },
     deps: OrchestratorDeps,
   ): Promise<Bar[]> {
     const { tsKey, symbol, provider, tf, window } = args;
-    const { signal } = deps;
+    const { dispatch } = deps;
 
-    // 1. локальный кэш вместо timeseriesSlice
+    // 1. Временный локальный кэш вместо timeseriesSlice
     const cached = getLocalTimeseries(tsKey);
     const stale = isLocalTimeseriesStale(tsKey, TIMESERIES_TTL_MS);
 
@@ -137,23 +138,32 @@ export class ForecastManager {
     if (process.env.NODE_ENV !== 'production') {
       console.log('[Orchestrator] loading timeseries with MarketAdapter', {
         tsKey,
+        symbol,
+        provider,
+        tf,
+        window,
       });
     }
 
     try {
-      const limit = typeof window === 'number' ? window : undefined;
+      const limit =
+        typeof window === 'number' && window > 0 ? window : undefined;
 
-      const result = await getTimeseriesFromMarketAdapter({
+      const adapterRes = await getMarketTimeseries(dispatch, {
         symbol,
         provider,
         timeframe: tf,
         limit,
-        signal,
       });
 
-      setLocalTimeseries(tsKey, result.bars);
+      if ('code' in adapterRes) {
+        throw new Error(adapterRes.message);
+      }
 
-      return result.bars;
+      const bars = adapterRes.bars;
+      setLocalTimeseries(tsKey, bars);
+
+      return bars;
     } catch (err: any) {
       const message =
         err?.message || 'Failed to load timeseries with MarketAdapter';
@@ -162,16 +172,14 @@ export class ForecastManager {
         console.error('[Orchestrator] timeseries error', { tsKey, message });
       }
 
-      // позже dispatch(timeseriesFailed(...)) когда будет timeseriesSlice
+      // позже здесь появится dispatch(timeseriesFailed(...)), когда будет timeseriesSlice
       throw err;
     }
   }
 
   /**
    * Построить "хвост" временного ряда как данные для прогноза
-   * @param bars - свечи временного ряда
-   * @param horizon - промежуток который используем
-   * @private
+   * Берём max(horizon*2, 128) последних свеч и упрощаем до [ts, close]
    */
   private static buildTailForWorker(
     bars: Bar[],

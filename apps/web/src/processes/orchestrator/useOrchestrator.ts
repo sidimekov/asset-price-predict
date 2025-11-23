@@ -1,22 +1,20 @@
 import { useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
-import { useAppDispatch } from '@/shared/store/hooks';
-import type { RootState } from '@/shared/store';
+import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import { store } from '@/shared/store';
 import { ForecastManager } from './ForecastManager';
 import { selectSelectedAsset, selectForecastParams } from './state';
+import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
-  const selected = useSelector((state: RootState) =>
-    selectSelectedAsset(state),
-  );
-  const params = useSelector((state: RootState) => selectForecastParams(state));
+  const selected = useAppSelector(selectSelectedAsset);
+  const params = useAppSelector(selectForecastParams);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSignatureRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!selected || !params) return;
@@ -26,22 +24,48 @@ export function useOrchestrator() {
 
     if (!symbol || !provider || !tf || !horizon) return;
 
-    const signature = `${provider}:${symbol}:${tf}:${window}:${horizon}:${model || 'client'}`;
+    // нормализуем provider и window под ожидания ForecastManager
+    const providerNorm = provider as MarketDataProvider;
+    const windowNum =
+      typeof window === 'string' ? Number(window) : window;
+
+    if (!Number.isFinite(windowNum) || windowNum <= 0) {
+      // некорректное окно - просто не запускаем оркестратор
+      return;
+    }
+
+    const signature = `${providerNorm}:${symbol}:${tf}:${windowNum}:${horizon}:${
+      model ?? 'client'
+    }`;
 
     if (signature === lastSignatureRef.current) {
       return;
     }
     lastSignatureRef.current = signature;
 
+    // отменяем предыдущий запуск
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
 
     const abortController = new AbortController();
+    abortRef.current = abortController;
 
     timeoutRef.current = setTimeout(() => {
       ForecastManager.run(
-        { symbol, provider, tf: tf as any, window, horizon, model },
+        {
+          symbol,
+          provider: providerNorm,
+          tf: tf as MarketTimeframe,
+          window: windowNum,
+          horizon,
+          model,
+        },
         {
           dispatch,
           getState: store.getState,
@@ -57,8 +81,12 @@ export function useOrchestrator() {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
-      abortController.abort();
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
     };
   }, [dispatch, selected, params]);
 }
