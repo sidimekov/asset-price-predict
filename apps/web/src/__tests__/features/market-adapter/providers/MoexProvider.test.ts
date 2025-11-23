@@ -27,8 +27,8 @@ describe('fetchMoexTimeseries', () => {
     const mockDispatch = vi.fn((action: any) => action);
 
     const params = {
-      symbol: 'SOMETHING',
-      timeframe: '1h' as const,
+      symbol: 'SBER',
+      timeframe: '1d' as const,
       limit: 20,
     };
 
@@ -41,12 +41,15 @@ describe('fetchMoexTimeseries', () => {
 
     mockMoexInitiate.mockReturnValue(mockQueryResult);
 
-    const result = await fetchMoexTimeseries(mockDispatch as any, params);
+    const result = await fetchMoexTimeseries(
+        mockDispatch as any,
+        params as any,
+    );
 
     expect(mockMoexInitiate).toHaveBeenCalledTimes(1);
     expect(mockMoexInitiate).toHaveBeenCalledWith({
       symbol: 'SBER',
-      timeframe: '1d' as const,
+      timeframe: '1d',
       limit: 20,
     });
 
