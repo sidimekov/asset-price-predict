@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { marketApi } from '@/shared/api/marketApi';
 import { backendApi } from '@/shared/api/backendApi';
+import { forecastReducer } from '@/entities/forecast/model/forecastSlice';
 
 export const store = configureStore({
   reducer: {
+    forecast: forecastReducer,
     [marketApi.reducerPath]: marketApi.reducer,
     [backendApi.reducerPath]: backendApi.reducer,
   },
