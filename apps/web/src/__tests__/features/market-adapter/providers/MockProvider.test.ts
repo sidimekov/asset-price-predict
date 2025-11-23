@@ -32,7 +32,7 @@ describe('fetchMockTimeseries', () => {
     const params = {
       symbol: 'SOMETHING',
       timeframe: '1h' as const,
-      limit: 100,
+      limit: 10,
     };
 
     const mockData = [{ foo: 'bar' }] as any;

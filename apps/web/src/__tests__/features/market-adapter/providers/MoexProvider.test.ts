@@ -29,7 +29,7 @@ describe('fetchMoexTimeseries', () => {
     const params = {
       symbol: 'SOMETHING',
       timeframe: '1h' as const,
-      limit: 100,
+      limit: 20,
     };
 
     const mockData = [{ price: 100 }] as any;
