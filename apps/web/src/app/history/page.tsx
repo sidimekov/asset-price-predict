@@ -14,7 +14,7 @@ export default function HistoryPage() {
   return (
     <main className="history-page">
       <div className="search-bar-wrapper">
-        <SearchBar onSearch={handleSearch} />
+        <SearchBar searchAction={handleSearch} />
       </div>
 
       <div className="history-page-content">

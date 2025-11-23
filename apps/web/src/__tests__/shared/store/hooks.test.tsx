@@ -4,9 +4,10 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { render, screen, waitFor } from '@testing-library/react';
 
+import { store } from '@/shared/store';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 
-// Простой тестовый редьюсер
+// Простой тестовый редьюсер для локального стора
 const counterReducer = (state = { value: 0 }, action: { type: string }) => {
   switch (action.type) {
     case 'increment':
@@ -24,8 +25,28 @@ const createTestStore = () =>
   });
 
 describe('store hooks', () => {
-  it('useAppSelector читает данные из стора', () => {
-    const store = createTestStore();
+  it('useAppDispatch и useAppSelector работают внутри настоящего Provider со store', () => {
+    let capturedDispatch: unknown;
+    let capturedState: unknown;
+
+    function TestComponent() {
+      capturedDispatch = useAppDispatch();
+      capturedState = useAppSelector((s) => s);
+      return null;
+    }
+
+    render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+
+    expect(typeof capturedDispatch).toBe('function');
+    expect(capturedState).toEqual(store.getState());
+  });
+
+  it('useAppSelector читает данные из тестового стора', () => {
+    const testStore = createTestStore();
 
     const SelectorTest: React.FC = () => {
       const value = useAppSelector((state) => state.counter.value);
@@ -33,7 +54,7 @@ describe('store hooks', () => {
     };
 
     render(
-      <Provider store={store}>
+      <Provider store={testStore}>
         <SelectorTest />
       </Provider>,
     );
@@ -41,8 +62,8 @@ describe('store hooks', () => {
     expect(screen.getByText('Value: 0')).toBeInTheDocument();
   });
 
-  it('useAppDispatch диспатчит экшены и меняет стейт', async () => {
-    const store = createTestStore();
+  it('useAppDispatch диспатчит экшены и меняет стейт в тестовом сторе', async () => {
+    const testStore = createTestStore();
 
     const DispatchTest: React.FC = () => {
       const dispatch = useAppDispatch();
@@ -56,7 +77,7 @@ describe('store hooks', () => {
     };
 
     render(
-      <Provider store={store}>
+      <Provider store={testStore}>
         <DispatchTest />
       </Provider>,
     );
@@ -65,7 +86,6 @@ describe('store hooks', () => {
       expect(screen.getByText('Value: 1')).toBeInTheDocument();
     });
 
-    // дополнительная проверка на самом сторе
-    expect(store.getState().counter.value).toBe(1);
+    expect(testStore.getState().counter.value).toBe(1);
   });
 });
