@@ -8,11 +8,16 @@ type Filters = {
 };
 
 type Props = {
-  onSearch: (q: string) => void;
-  onApplyFilters?: (v: Filters) => void;
+  // коллбек поиска
+  searchAction: (q: string) => void;
+  // коллбек применения фильтров
+  applyFiltersAction?: (v: Filters) => void;
 };
 
-export default function SearchBar({ onSearch, onApplyFilters }: Props) {
+export default function HistorySearch({
+  searchAction,
+  applyFiltersAction,
+}: Props) {
   const [query, setQuery] = useState('');
   const [filterClicked, setFilterClicked] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -37,8 +42,9 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
   }, []);
 
   const handleFilter = () => setFilterClicked((v) => !v);
+
   const applyFilters = () => {
-    onApplyFilters?.(filters);
+    applyFiltersAction?.(filters);
     setFilterClicked(false);
   };
 
@@ -55,7 +61,7 @@ export default function SearchBar({ onSearch, onApplyFilters }: Props) {
         onChange={(e) => {
           const value = e.target.value;
           setQuery(value);
-          onSearch(value);
+          searchAction(value);
         }}
         className="search-input"
       />

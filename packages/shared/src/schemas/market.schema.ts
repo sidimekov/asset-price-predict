@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import { MAX_BARS } from '../types/common.js';
+import { MAX_BARS } from '../types/common';
 
 /**
  * Схема для таймфрейма
