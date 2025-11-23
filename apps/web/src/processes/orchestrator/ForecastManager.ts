@@ -1,3 +1,5 @@
+/* global AbortSignal */
+
 import type { Symbol, Bar } from '@assetpredict/shared';
 import { makeTimeseriesKey, makeForecastKey } from './keys';
 import {

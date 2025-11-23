@@ -1,3 +1,5 @@
+/* global AbortSignal */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Bar } from '@assetpredict/shared';
 

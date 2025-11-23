@@ -1,3 +1,6 @@
+'use client';
+/* global AbortController */
+
 import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import { store } from '@/shared/store';

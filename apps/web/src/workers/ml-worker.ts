@@ -1,3 +1,5 @@
+/* global self, MessageEvent, performance */
+
 // mock ml worker
 
 export type TailPoint = [ts: number, close: number];

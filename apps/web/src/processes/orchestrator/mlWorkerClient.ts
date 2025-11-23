@@ -1,3 +1,5 @@
+/* global Worker, MessageEvent */
+
 import type {
   TailPoint,
   InferRequest,

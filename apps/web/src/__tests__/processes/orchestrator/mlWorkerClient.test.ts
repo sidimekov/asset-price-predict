@@ -1,3 +1,5 @@
+/* global MessageEvent */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TailPoint } from '@/workers/ml-worker';
 
@@ -19,6 +21,7 @@ class MockWorker {
 
 describe('mlWorkerClient.inferForecast', () => {
   let workerInstance: MockWorker;
+  // @ts-ignore
   let WorkerCtorMock: vi.Mock;
 
   beforeEach(async () => {
