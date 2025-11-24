@@ -1,3 +1,4 @@
+// apps/web/src/features/market-adapter/MarketAdapter.ts
 'use client';
 
 import { z } from 'zod';

@@ -3,7 +3,7 @@ import type { RootState } from '@/shared/store';
 import type { Bar } from '@shared/types/market';
 import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
-export type TimeseriesKey = string;
+export type TimeseriesKey = string; // "provider:symbol:timeframe"
 
 export const buildTimeseriesKey = (
   provider: MarketDataProvider,

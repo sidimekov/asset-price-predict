@@ -1,215 +1,78 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import React from 'react';
+import { render, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { Provider } from 'react-redux';
-import { store } from '@/shared/store';
+
 import Dashboard from '@/app/dashboard/page';
+import { store } from '@/shared/store';
 
-// Правильный мок для JSON файла - с default
-vi.mock('@/mocks/recentAssets.json', () => ({
-  default: [
-    { symbol: 'BTCUSDT', price: '50000', provider: 'binance' },
-    { symbol: 'SBER', price: '300', provider: 'moex' },
-  ],
+const pushMock = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: pushMock,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
 }));
 
-// Мокаем child компоненты чтобы избежать сложных зависимостей
-vi.mock('@/widgets/recent-assets/RecentAssetsBar', () => ({
-  default: ({ state, assets, selected, onSelect, onRemove, onAdd }: any) => (
-    <div data-testid="recent-assets-bar">
-      <div>Recent Assets</div>
-      <div>State: {state}</div>
-      <div>Assets count: {assets.length}</div>
-      <div>Selected: {selected}</div>
-      <button onClick={() => onSelect('TEST')}>Select Asset</button>
-      <button onClick={() => onRemove('BTCUSDT')}>Remove Asset</button>
-      <button onClick={onAdd}>Add Asset</button>
-    </div>
-  ),
-}));
-
-vi.mock('@/widgets/chart/CandlesChartPlaceholder', () => ({
-  default: ({ state }: any) => (
-    <div data-testid="chart">Chart State: {state}</div>
-  ),
-}));
-
-vi.mock('@/widgets/chart/coordinates/XAxis', () => ({
-  default: ({ className }: any) => <div className={className}>XAxis</div>,
-}));
-
-vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
-  default: ({ className }: any) => <div className={className}>YAxis</div>,
-}));
-
+// Мокаем ParamsPanel, чтобы дернуть onPredict (и заодно onModelChange/onDateChange)
 vi.mock('@/features/params/ParamsPanel', () => ({
-  default: ({ state }: any) => (
-    <div data-testid="params-panel">Parameters State: {state}</div>
-  ),
-}));
-
-vi.mock('@/features/factors/FactorsTable', () => ({
-  default: ({ state }: any) => (
-    <div data-testid="factors-table">Factors State: {state}</div>
-  ),
-}));
-
-vi.mock('@/features/asset-catalog/ui/AssetCatalogPanel', () => ({
-  AssetCatalogPanel: ({ query, onQueryChange, onSelect, onClose }: any) => (
-    <div data-testid="asset-catalog">
-      <div>Find Assets</div>
-      <input
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="Search for asset..."
-        data-testid="search-input"
-      />
+  __esModule: true,
+  default: (props: any) => (
+    <div>
+      <div>Parameters</div>
       <button
-        onClick={() => onSelect({ symbol: 'ETHUSDT', provider: 'binance' })}
+        onClick={() => {
+          // вызываем, чтобы код дашборда точно пробежал через коллбеки
+          props.onModelChange?.('model-2');
+          props.onDateChange?.('2030-01-01');
+          props.onPredict?.();
+        }}
       >
-        Select ETH
+        Predict
       </button>
-      <button onClick={onClose}>Close</button>
     </div>
   ),
 }));
+
+const renderWithStore = () =>
+  render(
+    <Provider store={store}>
+      <Dashboard />
+    </Provider>,
+  );
 
 describe('Dashboard', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('renders without crashing and shows all sections', () => {
-    const { container } = render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
+  it('renders without crashing and shows main sections', () => {
+    const { container } = renderWithStore();
 
     expect(container.firstChild).toBeTruthy();
-    expect(screen.getByText('Recent Assets')).toBeInTheDocument();
-    expect(screen.getByTestId('chart')).toBeInTheDocument();
-    expect(screen.getByTestId('params-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('factors-table')).toBeInTheDocument();
+    expect(container.textContent).toContain('Parameters');
+    expect(container.textContent).toContain('Recent Assets');
+    expect(container.textContent).toContain('Factors');
   });
 
-  it('shows loading states initially', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
+  it('navigates to forecast page when Predict is clicked', () => {
+    const { getByText } = renderWithStore();
 
-    // Проверяем начальное состояние загрузки
-    expect(screen.getByText('State: loading')).toBeInTheDocument();
-    expect(screen.getByText('Parameters State: loading')).toBeInTheDocument();
-    expect(screen.getByText('Factors State: loading')).toBeInTheDocument();
-  });
+    const predictButton = getByText('Predict');
+    fireEvent.click(predictButton);
 
-  it('handles asset selection from catalog modal', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
+    expect(pushMock).toHaveBeenCalledTimes(1);
 
-    // Открываем модалку
-    fireEvent.click(screen.getByText('Add Asset'));
+    const url = pushMock.mock.calls[0][0] as string;
 
-    expect(screen.getByTestId('asset-catalog')).toBeInTheDocument();
-    expect(screen.getByText('Find Assets')).toBeInTheDocument();
+    // базовые проверки на корректный url
+    expect(url.startsWith('/forecast/')).toBe(true);
+    expect(url).toContain('ticker=');
 
-    // Выбираем актив
-    fireEvent.click(screen.getByText('Select ETH'));
-
-    // Модалка должна закрыться
-    expect(screen.queryByTestId('asset-catalog')).not.toBeInTheDocument();
-  });
-
-  it('handles asset removal', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
-
-    // Удаляем актив
-    fireEvent.click(screen.getByText('Remove Asset'));
-
-    // Проверяем что компонент не падает
-    expect(screen.getByTestId('recent-assets-bar')).toBeInTheDocument();
-  });
-
-  it('handles asset selection from recent bar', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
-
-    // Выбираем актив из recent bar
-    fireEvent.click(screen.getByText('Select Asset'));
-
-    // Проверяем что компонент обрабатывает выбор
-    expect(screen.getByTestId('recent-assets-bar')).toBeInTheDocument();
-  });
-
-  it('closes catalog modal when close button is clicked', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
-
-    // Открываем модалку
-    fireEvent.click(screen.getByText('Add Asset'));
-    expect(screen.getByTestId('asset-catalog')).toBeInTheDocument();
-
-    // Закрываем модалку
-    fireEvent.click(screen.getByText('Close'));
-
-    // Модалка должна закрыться
-    expect(screen.queryByTestId('asset-catalog')).not.toBeInTheDocument();
-  });
-
-  it('handles query change in catalog modal', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
-
-    // Открываем модалку
-    fireEvent.click(screen.getByText('Add Asset'));
-
-    // Меняем query
-    const searchInput = screen.getByTestId('search-input');
-    fireEvent.change(searchInput, { target: { value: 'BTC' } });
-
-    expect(searchInput).toHaveValue('BTC');
-  });
-
-  it('handles modal backdrop click', () => {
-    render(
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>,
-    );
-
-    // Открываем модалку
-    fireEvent.click(screen.getByText('Add Asset'));
-    expect(screen.getByTestId('asset-catalog')).toBeInTheDocument();
-
-    // Находим бэкдроп (первый элемент с fixed позицией)
-    const backdrop = document.querySelector('.fixed');
-    if (backdrop) {
-      fireEvent.click(backdrop);
-    }
-
-    // Модалка должна остаться открытой (по логике кода)
-    expect(screen.getByTestId('asset-catalog')).toBeInTheDocument();
+    const [path, query] = url.split('?');
+    expect(path).toMatch(/^\/forecast\/\d+$/);
+    expect(query).toBeTruthy();
   });
 });

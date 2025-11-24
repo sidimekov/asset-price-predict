@@ -6,6 +6,7 @@ import { Container } from '@/shared/ui/Container';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
+import { StoreProvider } from '@/app/providers/StoreProvider';
 
 // ←←← ДОБАВЬ ЭТИ ДВЕ СТРОКИ
 import { Provider } from 'react-redux';
@@ -41,7 +42,9 @@ export default function RootLayout({
     return (
       <html lang="ru">
         <body className="bg-primary min-h-screen flex items-center justify-center">
-          <div className="text-ink text-lg">Загрузка...</div>
+          <StoreProvider>
+            <div className="text-ink text-lg">Загрузка...</div>
+          </StoreProvider>
         </body>
       </html>
     );
@@ -51,7 +54,7 @@ export default function RootLayout({
     <html lang="ru">
       {/* ←←← ВОТ ЗДЕСЬ ОБЕРНУЛИ В PROVIDER — всё остальное без изменений */}
       <body className="bg-primary text-ink font-sans antialiased min-h-screen">
-        <Provider store={store}>
+        <StoreProvider>
           {showAppLayout ? (
             <div className="flex h-screen overflow-hidden">
               <div className={sidebarOpen ? 'sidebar' : 'sidebar collapsed'}>
@@ -86,7 +89,7 @@ export default function RootLayout({
           ) : (
             <>{children}</>
           )}
-        </Provider>
+        </StoreProvider>
       </body>
     </html>
   );

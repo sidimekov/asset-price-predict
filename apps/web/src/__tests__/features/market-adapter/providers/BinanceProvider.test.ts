@@ -1,3 +1,4 @@
+// apps/web/src/__tests__/features/market-adapter/providers/BinanceProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchBinanceTimeseries } from '@/features/market-adapter/providers/BinanceProvider';
 

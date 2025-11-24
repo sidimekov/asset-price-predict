@@ -1,3 +1,4 @@
+// apps/web/src/__tests__/features/market-adapter/providers/MoexProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchMoexTimeseries } from '@/features/market-adapter/providers/MoexProvider';
 
