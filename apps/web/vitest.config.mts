@@ -33,7 +33,7 @@ export default defineConfig({
         'src/workers/ml-worker.ts',
         'src/entities/forecast/model/types.ts',
         'src/features/market-adapter/providers/types.ts',
-        'src/app/forecast/**'
+        'src/app/forecast/**',
       ],
       thresholds: {
         lines: 80,
