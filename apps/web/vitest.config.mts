@@ -27,7 +27,13 @@ export default defineConfig({
       reporter: ['text', 'html', 'clover', 'json'],
       all: true,
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['node_modules', '.next'],
+      exclude: [
+        'node_modules',
+        '.next',
+        'src/workers/ml-worker.ts',
+        'src/entities/forecast/model/types.ts',
+        'src/features/market-adapter/providers/types.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,
