@@ -16,7 +16,6 @@ import {
 } from './cache/ClientTimeseriesCache';
 import {
   fetchBinanceTimeseries,
-  type ProviderRequestBase,
   searchBinanceSymbols,
 } from './providers/BinanceProvider';
 import {
@@ -32,6 +31,7 @@ import {
 import type { BinanceKline } from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
+import type { ProviderRequestBase } from './providers/types';
 
 // ---- SCHEMAS for timeseries ----
 
