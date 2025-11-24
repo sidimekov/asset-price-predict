@@ -56,3 +56,16 @@ export const SUPPORTED_PROVIDERS: readonly Provider[] = [
   'BINANCE',
   'CUSTOM',
 ] as const;
+
+// Провайдеры данных рынка: базовые + фронтовый MOCK
+export type MarketDataProvider = Provider | 'MOCK';
+
+// Нормализованный элемент каталога инструментов
+export type CatalogItem = {
+  symbol: Symbol;
+  name: string;
+  exchange: string;
+  assetClass: 'equity' | 'fx' | 'crypto' | 'etf' | 'bond' | 'other';
+  currency?: string;
+  provider: MarketDataProvider;
+};

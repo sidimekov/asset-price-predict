@@ -1,7 +1,18 @@
 // apps/web/src/features/market-adapter/providers/BinanceProvider.ts
 import type { AppDispatch } from '@/shared/store';
-import { marketApi, type BinanceKline } from '@/shared/api/marketApi';
-import type { ProviderRequestBase } from './types';
+import { marketApi } from '@/shared/api/marketApi';
+import type { BinanceKline } from '@/shared/api/marketApi';
+import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
+
+/**
+ * Базовый контракт для запросов к любому маркет-провайдеру.
+ * Типы symbol/timeframe берём из @assetpredict/shared.
+ */
+export interface ProviderRequestBase {
+  symbol: MarketSymbol;
+  timeframe: Timeframe;
+  limit: number;
+}
 
 /**
  * Получение таймсерий с Binance через RTK Query.
@@ -12,7 +23,7 @@ export async function fetchBinanceTimeseries(
 ): Promise<BinanceKline[]> {
   const { symbol, timeframe, limit } = params;
 
-  // при необходимости можно сделать маппинг timeframe → interval
+  // при необходимости тут можно сделать маппинг timeframe → interval
   const queryResult = dispatch(
     marketApi.endpoints.getBinanceTimeseries.initiate({
       symbol,
@@ -24,6 +35,29 @@ export async function fetchBinanceTimeseries(
   try {
     const data = await queryResult.unwrap();
     return data;
+  } finally {
+    // Отписка от запроса RTK Query
+    queryResult.unsubscribe();
+  }
+}
+
+/**
+ * Поиск символов на Binance по строке запроса.
+ * Возвращает сырой ответ провайдера (без нормализации).
+ */
+export async function searchBinanceSymbols(
+  dispatch: AppDispatch,
+  query: string,
+): Promise<unknown> {
+  const q = query.trim();
+  if (!q) return [];
+
+  const queryResult = dispatch(
+    marketApi.endpoints.searchBinanceSymbols.initiate(q),
+  );
+
+  try {
+    return await queryResult.unwrap();
   } finally {
     queryResult.unsubscribe();
   }
