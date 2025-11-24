@@ -1,4 +1,3 @@
-
 // Ключ прогноза. Формат фактической строки задаётся makeForecastKey
 // (symbol:tf:horizon:model)
 export type ForecastKey = string;

@@ -93,7 +93,6 @@ export class ForecastManager {
 
       const lastTs = bars.length ? bars[bars.length - 1][0] : Date.now();
 
-
       // 2. Если прогноз уже есть в локальном кэше - используем его и завершаем
       const existingForecast = getLocalForecast(fcKey);
       if (existingForecast) {
@@ -123,7 +122,11 @@ export class ForecastManager {
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
       // 4. Вызов ML-воркера
-      const inferResult = await inferForecast(tail, horizon, model ?? undefined);
+      const inferResult = await inferForecast(
+        tail,
+        horizon,
+        model ?? undefined,
+      );
 
       const entry: LocalForecastEntry = {
         series: {
@@ -159,8 +162,7 @@ export class ForecastManager {
         });
       }
     } catch (err: any) {
-      const message =
-        err?.message || 'Failed to run forecast orchestrator';
+      const message = err?.message || 'Failed to run forecast orchestrator';
 
       orchestratorState.status = 'error';
 

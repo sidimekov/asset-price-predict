@@ -1,9 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type {
-  ForecastKey,
-  ForecastEntry,
-  ForecastState,
-} from '../types';
+import type { ForecastKey, ForecastEntry, ForecastState } from '../types';
 
 const initialState: ForecastState = {
   byKey: {},
