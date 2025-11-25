@@ -14,50 +14,13 @@ import {
   selectRecent,
   setSelected,
   addRecent,
-  type Provider,
+  removeRecent,
 } from '../model/catalogSlice';
+import { searchAssets } from '@/features/market-adapter/MarketAdapter';
+import type { CatalogItem } from '@shared/types/market';
 import debounce from 'lodash.debounce';
 
 const DEBOUNCE_MS = 400;
-
-// ────────────────────── МОКОВЫЕ ДАННЫЕ ПОИСКА (работает всегда) ──────────────────────
-const MOCK_BINANCE_RESULTS = [
-  {
-    symbol: 'BTCUSDT',
-    name: 'Bitcoin',
-    assetClass: 'crypto',
-    currency: 'USDT',
-  },
-  {
-    symbol: 'ETHUSDT',
-    name: 'Ethereum',
-    assetClass: 'crypto',
-    currency: 'USDT',
-  },
-  { symbol: 'BNBUSDT', name: 'BNB', assetClass: 'crypto', currency: 'USDT' },
-  { symbol: 'SOLUSDT', name: 'Solana', assetClass: 'crypto', currency: 'USDT' },
-  { symbol: 'XRPUSDT', name: 'Ripple', assetClass: 'crypto', currency: 'USDT' },
-];
-
-const MOCK_MOEX_RESULTS = [
-  { symbol: 'SBER', name: 'Сбербанк', assetClass: 'equity', currency: 'RUB' },
-  { symbol: 'GAZP', name: 'Газпром', assetClass: 'equity', currency: 'RUB' },
-  { symbol: 'YNDX', name: 'Яндекс', assetClass: 'equity', currency: 'RUB' },
-  { symbol: 'LKOH', name: 'Лукойл', assetClass: 'equity', currency: 'RUB' },
-  { symbol: 'ROSN', name: 'Роснефть', assetClass: 'equity', currency: 'RUB' },
-];
-
-// ────────────────────── НОРМАЛИЗАЦИЯ (оставляем, но теперь с моками) ──────────────────────
-const normalizeMockResults = (
-  items: typeof MOCK_BINANCE_RESULTS,
-  provider: Provider,
-) =>
-  items.map((item) => ({
-    ...item,
-    provider,
-    name: item.name,
-    symbol: item.symbol,
-  }));
 
 interface AssetCatalogPanelProps {
   query: string;
@@ -73,15 +36,17 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   onClose,
 }) => {
   const dispatch = useAppDispatch();
+
   const results = useAppSelector(selectCatalogResults);
   const loading = useAppSelector(selectIsSearching);
   const error = useAppSelector(selectCatalogError);
-  const provider = useAppSelector(selectCurrentProvider);
+  const provider = useAppSelector(selectCurrentProvider); // 'binance' | 'moex'
   const recent = useAppSelector(selectRecent);
 
+  const abortRef = useRef<AbortController | null>(null);
   const [selectedForAdd, setSelectedForAdd] = useState<{
     symbol: string;
-    provider: Provider;
+    provider: 'binance' | 'moex';
   } | null>(null);
 
   const performSearch = useCallback(
@@ -92,32 +57,33 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         return;
       }
 
-      dispatch(searchStarted(q));
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
 
-      // Имитация задержки сети
-      await new Promise((r) => setTimeout(r, 300));
+      dispatch(searchStarted());
 
-      const lowerQuery = q.toLowerCase();
+      try {
+        const items = await searchAssets(dispatch, {
+          query: q,
+          provider: provider === 'binance' ? 'BINANCE' : 'MOEX',
+        });
 
-      const mockData =
-        provider === 'binance' ? MOCK_BINANCE_RESULTS : MOCK_MOEX_RESULTS;
-
-      const filtered = mockData
-        .filter(
-          (item) =>
-            item.symbol.toLowerCase().includes(lowerQuery) ||
-            item.name.toLowerCase().includes(lowerQuery),
-        )
-        .slice(0, 20);
-
-      const normalized = normalizeMockResults(filtered, provider);
-
-      dispatch(searchSucceeded(normalized));
+        if (!abortRef.current?.signal.aborted) {
+          dispatch(searchSucceeded(items));
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          dispatch(searchFailed('Search failed'));
+        }
+      }
     },
     [dispatch, provider],
   );
 
-  const debouncedSearch = useRef(debounce(performSearch, DEBOUNCE_MS)).current;
+  const debouncedSearch = React.useMemo(
+    () => debounce(performSearch, DEBOUNCE_MS),
+    [performSearch],
+  );
 
   useEffect(() => {
     debouncedSearch(query);
@@ -126,27 +92,47 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   useEffect(() => {
     return () => {
       debouncedSearch.cancel();
+      abortRef.current?.abort();
     };
   }, [debouncedSearch]);
 
-  const handleItemClick = (item: { symbol: string; provider: Provider }) => {
-    setSelectedForAdd(item);
+  const handleItemClick = (item: CatalogItem) => {
+    const lowerProvider = item.provider.toLowerCase() as 'binance' | 'moex';
+    setSelectedForAdd({
+      symbol: item.symbol,
+      provider: lowerProvider,
+    });
   };
 
   const handleAddClick = () => {
     if (selectedForAdd) {
       dispatch(setSelected(selectedForAdd));
       dispatch(addRecent(selectedForAdd));
-      onSelect?.({
-        symbol: selectedForAdd.symbol,
-        provider: selectedForAdd.provider,
-      });
+      onSelect?.(selectedForAdd);
       onClose();
     }
   };
 
+  const handleRemoveRecent = (
+    item: { symbol: string; provider: 'binance' | 'moex' },
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation();
+    dispatch(removeRecent(item));
+  };
+
+  const handleRecentItemClick = (item: {
+    symbol: string;
+    provider: 'binance' | 'moex';
+  }) => {
+    dispatch(setSelected(item));
+    dispatch(addRecent(item));
+    onSelect?.(item);
+    onClose();
+  };
+
   return (
-    <div className="px-6 pt-6 pb-24 flex flex-col h-full relative">
+    <div className="px-6 pt-6 pb-24 flex flex-col h-full ">
       <h1 className="find-assets-title text-center mb-6">Find Assets</h1>
 
       <div className="find-assets-search-wrapper mb-6">
@@ -163,7 +149,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
-
         <input
           type="text"
           value={query}
@@ -172,7 +157,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
           className="find-assets-search-input"
           autoFocus
         />
-
         <button
           className="find-assets-filter-icon"
           onClick={(e) => e.stopPropagation()}
@@ -208,7 +192,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto pb-6">
-        {/* Recent */}
         {!query && recent.length > 0 && (
           <div className="mb-6">
             <h3 className="text-ink-muted text-sm font-semibold mb-3 px-2">
@@ -216,97 +199,118 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             </h3>
             <div className="space-y-3">
               {recent.map((item) => (
-                <button
+                <div
                   key={`${item.provider}-${item.symbol}`}
-                  onClick={() => {
-                    dispatch(setSelected(item));
-                    dispatch(addRecent(item));
-                    onSelect?.({
-                      symbol: item.symbol,
-                      provider: item.provider,
-                    });
-                    onClose();
-                  }}
-                  className="w-full text-left px-6 py-5 rounded-2xl bg-surface-dark/40 hover:bg-surface-dark/80 transition-all duration-300 flex justify-between items-center group backdrop-blur-sm border border-white/5"
+                  className="relative group"
                 >
-                  <div>
-                    <div className="font-bold text-ink text-lg">
-                      {item.symbol}
+                  <button
+                    onClick={() => handleRecentItemClick(item)}
+                    className="w-full text-left px-6 py-5 rounded-2xl bg-surface-dark/40 hover:bg-surface-dark/80 transition-all duration-300 flex justify-between items-center backdrop-blur-sm border border-white/5"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-ink text-lg">
+                        {item.symbol}
+                      </div>
+                      <div className="text-sm text-ink-muted">
+                        Recently used
+                      </div>
                     </div>
-                    <div className="text-sm text-ink-muted">Recently used</div>
-                  </div>
-                  <span className="px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
-                    {item.provider.toUpperCase()}
-                  </span>
-                </button>
+                    <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
+                      {item.provider.toUpperCase()}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={(e) => handleRemoveRecent(item, e)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-error rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg hover:scale-110 z-10"
+                  >
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center h-32 text-ink-muted text-lg">
             Searching...
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="flex items-center justify-center h-32 text-error text-lg">
             {error}
           </div>
         )}
 
-        {/* Empty */}
         {!loading && !error && query.length >= 2 && results.length === 0 && (
           <div className="flex items-center justify-center h-32 text-ink-muted">
             No assets found for “{query}”
           </div>
         )}
 
-        {/* Results */}
         {results.length > 0 && (
           <div className="space-y-3">
-            {results.map((item) => (
-              <button
-                key={`${item.provider}-${item.symbol}`}
-                onClick={() => handleItemClick(item)}
-                className={`w-full text-left px-6 py-5 rounded-2xl transition-all duration-300 flex justify-between items-center group backdrop-blur-sm border ${
-                  selectedForAdd?.symbol === item.symbol &&
-                  selectedForAdd?.provider === item.provider
-                    ? 'bg-gradient-primary/20 border-gradient-primary shadow-glow'
-                    : 'bg-surface-dark/40 hover:bg-surface-dark/80 border-white/5'
-                }`}
-              >
-                <div className="min-w-0">
-                  <div className="font-bold text-ink text-lg truncate">
-                    {item.symbol}
-                  </div>
-                  <div className="text-sm text-ink-muted truncate mt-1">
-                    {item.name || item.symbol}
-                  </div>
-                  {item.assetClass && (
-                    <div className="text-xs text-accent/80 capitalize mt-2 opacity-80">
-                      {item.assetClass}
+            {results.map((item) => {
+              const lowerProvider = item.provider.toLowerCase() as
+                | 'binance'
+                | 'moex';
+              const isSelected =
+                selectedForAdd?.symbol === item.symbol &&
+                selectedForAdd?.provider === lowerProvider;
+
+              return (
+                <button
+                  key={`${item.symbol}-${item.provider}`}
+                  onClick={() => handleItemClick(item)}
+                  className={`w-full text-left px-6 py-5 rounded-2xl transition-all duration-300 flex justify-between items-center group backdrop-blur-sm border ${
+                    isSelected
+                      ? 'bg-gradient-primary/20 border-gradient-primary shadow-glow'
+                      : 'bg-surface-dark/40 hover:bg-surface-dark/80 border-white/5'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="font-bold text-ink text-lg truncate">
+                      {item.symbol}
                     </div>
-                  )}
-                </div>
-                <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
-                  {item.provider.toUpperCase()}
-                </span>
-              </button>
-            ))}
+                    <div className="text-sm text-ink-muted truncate mt-1">
+                      {item.name || item.symbol}
+                    </div>
+                    {item.assetClass && (
+                      <div className="text-xs text-accent/80 capitalize mt-2 opacity-80">
+                        {item.assetClass}
+                      </div>
+                    )}
+                  </div>
+                  <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
+                    {item.provider.toUpperCase()}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* КНОПКА ADD — фиксированная, не ломает крестик */}
       <div className="absolute inset-x-6 bottom-6 z-10 pointer-events-none">
         <div className="flex justify-center pointer-events-auto">
           <button
             onClick={handleAddClick}
-            className="find-assets-add-button w-full max-w-md shadow-2xl"
+            disabled={!selectedForAdd}
+            className="find-assets-add-button w-full max-w-md shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {selectedForAdd ? (
               <>

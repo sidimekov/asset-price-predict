@@ -1,18 +1,8 @@
-'use client';
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/shared/store';
+import type { CatalogItem } from '@shared/types/market';
 
 export type Provider = 'binance' | 'moex';
-
-export type CatalogItem = {
-  symbol: string;
-  name: string;
-  exchange?: string;
-  assetClass?: 'equity' | 'fx' | 'crypto' | 'etf' | 'bond' | string;
-  currency?: string;
-  provider: Provider;
-};
 
 export type RecentItem = {
   symbol: string;
@@ -20,29 +10,31 @@ export type RecentItem = {
   usedAt: string;
 };
 
-export interface CatalogState {
-  selected?: { symbol: string; provider: Provider };
+interface CatalogState {
+  provider: Provider;
+  query: string;
   results: CatalogItem[];
   recent: RecentItem[];
+  selected?: { symbol: string; provider: Provider };
   loading: boolean;
   error: string | null;
-  query: string;
-  provider: Provider;
 }
 
 const RECENT_KEY = 'asset_catalog_recent';
 const MAX_RECENT = 10;
 
-const loadRecentFromStorage = (): RecentItem[] => {
+const loadRecent = (): RecentItem[] => {
   try {
     const raw = localStorage.getItem(RECENT_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
   } catch {
     return [];
   }
 };
 
-const saveRecentToStorage = (items: RecentItem[]) => {
+const saveRecent = (items: RecentItem[]) => {
   try {
     localStorage.setItem(
       RECENT_KEY,
@@ -52,12 +44,12 @@ const saveRecentToStorage = (items: RecentItem[]) => {
 };
 
 const initialState: CatalogState = {
+  provider: 'binance',
+  query: '',
   results: [],
-  recent: loadRecentFromStorage(),
+  recent: loadRecent(),
   loading: false,
   error: null,
-  query: '',
-  provider: 'binance',
 };
 
 export const catalogSlice = createSlice({
@@ -69,36 +61,28 @@ export const catalogSlice = createSlice({
       state.results = [];
       state.query = '';
     },
-
     setQuery: (state, action: PayloadAction<string>) => {
       state.query = action.payload;
     },
-
-    searchStarted: (state, action: PayloadAction<string>) => {
+    searchStarted: (state) => {
       state.loading = true;
       state.error = null;
-      state.query = action.payload;
       state.results = [];
     },
-
     searchSucceeded: (state, action: PayloadAction<CatalogItem[]>) => {
       state.loading = false;
       state.results = action.payload;
     },
-
     searchFailed: (state, action: PayloadAction<string>) => {
       state.loading = false;
       state.error = action.payload;
-      state.results = [];
     },
-
     setSelected: (
       state,
       action: PayloadAction<{ symbol: string; provider: Provider } | undefined>,
     ) => {
-      state.selected = action.payload ?? undefined;
+      state.selected = action.payload;
     },
-
     addRecent: (
       state,
       action: PayloadAction<{ symbol: string; provider: Provider }>,
@@ -107,7 +91,6 @@ export const catalogSlice = createSlice({
         ...action.payload,
         usedAt: new Date().toISOString(),
       };
-
       state.recent = [
         newItem,
         ...state.recent.filter(
@@ -115,8 +98,17 @@ export const catalogSlice = createSlice({
             !(i.symbol === newItem.symbol && i.provider === newItem.provider),
         ),
       ].slice(0, MAX_RECENT);
-
-      saveRecentToStorage(state.recent);
+      saveRecent(state.recent);
+    },
+    removeRecent: (
+      state,
+      action: PayloadAction<{ symbol: string; provider: Provider }>,
+    ) => {
+      const { symbol, provider } = action.payload;
+      state.recent = state.recent.filter(
+        (item) => !(item.symbol === symbol && item.provider === provider),
+      );
+      saveRecent(state.recent);
     },
   },
 });
@@ -129,14 +121,19 @@ export const {
   searchFailed,
   setSelected,
   addRecent,
+  removeRecent,
 } = catalogSlice.actions;
 
-export const selectCatalogResults = (state: RootState) => state.catalog.results;
-export const selectIsSearching = (state: RootState) => state.catalog.loading;
-export const selectCatalogError = (state: RootState) => state.catalog.error;
-export const selectCurrentProvider = (state: RootState) =>
+export const selectCurrentProvider = (state: RootState): Provider =>
   state.catalog.provider;
+export const selectCatalogResults = (state: RootState): CatalogItem[] =>
+  state.catalog.results;
+export const selectIsSearching = (state: RootState): boolean =>
+  state.catalog.loading;
+export const selectCatalogError = (state: RootState): string | null =>
+  state.catalog.error;
+export const selectRecent = (state: RootState): RecentItem[] =>
+  state.catalog.recent;
 export const selectSelectedAsset = (state: RootState) => state.catalog.selected;
-export const selectRecent = (state: RootState) => state.catalog.recent;
 
 export default catalogSlice.reducer;

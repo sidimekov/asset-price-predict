@@ -1,47 +1,50 @@
-import type { CatalogItem } from '../model/catalogSlice';
+import type { CatalogItem } from '@shared/types/market';
 
 export const normalizeCatalogItem = (
   raw: any,
-  provider: 'binance' | 'moex',
+  provider: 'BINANCE' | 'MOEX' | 'MOCK' | 'CUSTOM',
 ): CatalogItem | null => {
-  if (!raw?.symbol && !raw?.SECID) return null;
+  if (!raw) return null;
 
-  const symbol = (raw.symbol || raw.SECID || '').toString().trim();
-  if (!symbol) return null;
+  if (provider === 'BINANCE') {
+    const symbol = raw.symbol || `${raw.baseAsset}${raw.quoteAsset}`;
+    if (!symbol) return null;
 
-  if (provider === 'binance') {
     return {
-      symbol,
+      symbol: symbol.toUpperCase(),
       name: raw.baseAsset
         ? `${raw.baseAsset}/${raw.quoteAsset || 'USDT'}`
         : symbol,
+      exchange: 'BINANCE',
       assetClass: 'crypto',
       currency: raw.quoteAsset || 'USDT',
-      provider: 'binance',
+      provider: 'BINANCE',
     };
   }
 
-  if (provider === 'moex') {
-    const typeMap: Record<string, CatalogItem['assetClass']> = {
-      stock: 'equity',
-      shares: 'equity',
-      currency: 'fx',
-      fund: 'etf',
-      etf: 'etf',
-      bond: 'bond',
-      future: 'futures',
-    };
-
-    const rawType = (raw.TYPE || raw.SECTYPE || '').toString().toLowerCase();
-    const assetClass = typeMap[rawType] || rawType || 'equity';
+  if (provider === 'MOEX') {
+    const symbol = (raw.SECID || raw.symbol || '').toString().trim();
+    if (!symbol) return null;
 
     return {
       symbol,
-      name: raw.SHORTNAME || raw.NAME || raw.description || symbol,
-      exchange: raw.MARKET || raw.BOARDID || 'moex',
-      assetClass,
-      currency: raw.CURRENCYID || raw.CURRENCY || 'RUB',
-      provider: 'moex',
+      name: raw.SHORTNAME || raw.NAME || symbol,
+      exchange: 'MOEX',
+      assetClass: 'equity',
+      currency: raw.CURRENCYID || 'RUB',
+      provider: 'MOEX',
+    };
+  }
+
+  if (
+    (provider === 'MOCK' || provider === 'CUSTOM') &&
+    raw.symbol &&
+    raw.name
+  ) {
+    return {
+      symbol: String(raw.symbol).toUpperCase(),
+      name: String(raw.name),
+      provider,
     };
   }
 
@@ -50,7 +53,7 @@ export const normalizeCatalogItem = (
 
 export const normalizeCatalogResponse = (
   data: any[],
-  provider: 'binance' | 'moex',
+  provider: 'BINANCE' | 'MOEX' | 'MOCK' | 'CUSTOM',
 ): CatalogItem[] => {
   if (!Array.isArray(data)) return [];
   return data
