@@ -126,6 +126,8 @@ export default function Dashboard() {
     }
   };
 
+  useOrchestrator();
+
   return (
     <div className="min-h-screen bg-primary">
       <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
