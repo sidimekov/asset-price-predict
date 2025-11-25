@@ -451,6 +451,12 @@ body {
   padding: 0 0.5rem;
 }
 
+.provider-tabs-under-search .tab-button {
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
 .auth-tabs .tab-button {
   padding: 0.375rem 0.75rem;
   border-radius: var(--radius-md);
@@ -470,12 +476,6 @@ body {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-decoration-color: var(--color-ink);
-}
-
-.provider-tabs-under-search .tab-button {
-  padding: 0.5rem 1rem; /* чуть крупнее */
-  font-weight: 700;
-  font-size: 1rem;
 }
 
 .auth-tabs .tab-button:focus {

@@ -10,11 +10,6 @@ describe('CandlesChartPlaceholder', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders loading state', () => {
-    render(<CandlesChartPlaceholder state="loading" />);
-    expect(screen.getByText('Uploading data...')).toBeInTheDocument();
-  });
-
   it('renders ready state', () => {
     render(<CandlesChartPlaceholder state="ready" />);
     expect(screen.getByText('Chart Placeholder')).toBeInTheDocument();

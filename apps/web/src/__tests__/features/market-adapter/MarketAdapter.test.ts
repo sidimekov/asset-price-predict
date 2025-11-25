@@ -61,10 +61,10 @@ import {
 import { fetchMoexTimeseries } from '@/features/market-adapter/providers/MoexProvider';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 
-// Используем реальные типы из приложения
+// Типы
 type Bar = [number, number, number, number, number, number];
 
-// Создаем правильные моковые данные на основе реального типа BinanceKline
+// Вспомогательные функции
 const createMockBinanceKline = (
   time: number,
   open: string,
@@ -73,29 +73,29 @@ const createMockBinanceKline = (
   close: string,
   volume: string,
 ): BinanceKline => [
-  time, // 0: Open time
-  open, // 1: Open
-  high, // 2: High
-  low, // 3: Low
-  close, // 4: Close
-  volume, // 5: Volume
-  time + 1000, // 6: Close time
-  '1.0', // 7: Quote asset volume
-  10, // 8: Number of trades
-  '1.0', // 9: Taker buy base asset volume
-  '1.0', // 10: Taker buy quote asset volume
-  '0', // 11: Ignore
+  time,
+  open,
+  high,
+  low,
+  close,
+  volume,
+  time + 1000,
+  '1.0',
+  10,
+  '1.0',
+  '1.0',
+  '0',
 ];
 
 const dispatch = vi.fn() as unknown as AppDispatch;
 
-describe('getMarketTimeseries', () => {
+describe('MarketAdapter - Получение временных рядов', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('validation', () => {
-    it('returns INVALID_PARAMS for empty symbol', async () => {
+  describe('Валидация параметров', () => {
+    it('возвращает ошибку при пустом символе', async () => {
       const result = await getMarketTimeseries(dispatch, { symbol: '' });
 
       expect(result).toEqual({
@@ -104,10 +104,10 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('returns INVALID_PARAMS for invalid provider', async () => {
+    it('возвращает ошибку при неверном провайдере', async () => {
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'TEST',
-        // @ts-expect-error - testing invalid provider
+        // @ts-expect-error - тестируем неверный провайдер
         provider: 'INVALID',
       });
 
@@ -117,10 +117,10 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('returns INVALID_PARAMS for invalid timeframe', async () => {
+    it('возвращает ошибку при неверном таймфрейме', async () => {
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'TEST',
-        // @ts-expect-error - testing invalid timeframe
+        // @ts-expect-error - тестируем неверный таймфрейм
         timeframe: 'INVALID',
       });
 
@@ -130,7 +130,7 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('returns INVALID_PARAMS for invalid limit', async () => {
+    it('возвращает ошибку при неверном лимите', async () => {
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'TEST',
         limit: -1,
@@ -143,8 +143,8 @@ describe('getMarketTimeseries', () => {
     });
   });
 
-  describe('cache behavior', () => {
-    it('returns cached data when available', async () => {
+  describe('Поведение кэширования', () => {
+    it('возвращает данные из кэша при их наличии', async () => {
       const cachedBars: Bar[] = [[1000, 1, 2, 0.5, 1.5, 10]];
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(cachedBars);
 
@@ -169,7 +169,7 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('fetches from network when cache is empty', async () => {
+    it('загружает данные из сети при отсутствии в кэше', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       const klines: BinanceKline[] = [
         createMockBinanceKline(1000, '1', '2', '0.5', '1.5', '10'),
@@ -203,8 +203,8 @@ describe('getMarketTimeseries', () => {
     });
   });
 
-  describe('provider integration', () => {
-    it('handles BINANCE provider with kline normalization', async () => {
+  describe('Интеграция с провайдерами', () => {
+    it('обрабатывает данные от Binance с нормализацией', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       const klines: BinanceKline[] = [
         createMockBinanceKline(1000, '1.0', '2.0', '0.5', '1.5', '100.0'),
@@ -231,7 +231,7 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('handles MOCK provider with raw bars normalization', async () => {
+    it('обрабатывает данные от Mock провайдера', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       const rawBars: Bar[] = [
         [1000, 1, 2, 0.5, 1.5, 100],
@@ -255,7 +255,7 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('handles MOEX provider with raw bars normalization', async () => {
+    it('обрабатывает данные от MOEX провайдера', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       const rawBars: Bar[] = [
         [1000, 100, 110, 95, 105, 1000],
@@ -279,7 +279,7 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('handles CUSTOM provider with mock generation', async () => {
+    it('обрабатывает CUSTOM провайдер с генерацией моковых данных', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       const mockBars: Bar[] = [
         [1000, 1, 2, 0.5, 1.5, 100],
@@ -310,11 +310,11 @@ describe('getMarketTimeseries', () => {
     });
   });
 
-  describe('error handling', () => {
-    it('returns PROVIDER_ERROR when provider throws error', async () => {
+  describe('Обработка ошибок', () => {
+    it('возвращает ошибку провайдера при сбое запроса', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       vi.mocked(fetchBinanceTimeseries).mockRejectedValue(
-        new Error('Network error'),
+        new Error('Ошибка сети'),
       );
 
       const result = await getMarketTimeseries(dispatch, {
@@ -326,13 +326,13 @@ describe('getMarketTimeseries', () => {
 
       expect(result).toEqual({
         code: 'PROVIDER_ERROR',
-        message: 'Network error',
+        message: 'Ошибка сети',
       });
     });
 
-    it('handles normalization errors gracefully', async () => {
+    it('корректно обрабатывает ошибки нормализации', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
-      // @ts-expect-error - testing invalid klines data
+      // @ts-expect-error - тестируем некорректные данные
       vi.mocked(fetchBinanceTimeseries).mockResolvedValue(null);
 
       const result = await getMarketTimeseries(dispatch, {
@@ -342,7 +342,6 @@ describe('getMarketTimeseries', () => {
         limit: 100,
       });
 
-      // Should still return PROVIDER_ERROR even for normalization issues
       expect(result).toEqual({
         code: 'PROVIDER_ERROR',
         message: expect.any(String),
@@ -350,14 +349,13 @@ describe('getMarketTimeseries', () => {
     });
   });
 
-  describe('default values', () => {
-    it('uses default provider when not specified', async () => {
+  describe('Значения по умолчанию', () => {
+    it('использует провайдер по умолчанию если не указан', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       vi.mocked(fetchBinanceTimeseries).mockResolvedValue([]);
 
       await getMarketTimeseries(dispatch, {
         symbol: 'BTCUSDT',
-        // provider not specified
       });
 
       expect(fetchBinanceTimeseries).toHaveBeenCalledWith(dispatch, {
@@ -367,14 +365,13 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('uses default timeframe when not specified', async () => {
+    it('использует таймфрейм по умолчанию если не указан', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       vi.mocked(fetchBinanceTimeseries).mockResolvedValue([]);
 
       await getMarketTimeseries(dispatch, {
         symbol: 'BTCUSDT',
         provider: 'BINANCE' as Provider,
-        // timeframe not specified
       });
 
       expect(fetchBinanceTimeseries).toHaveBeenCalledWith(dispatch, {
@@ -384,7 +381,7 @@ describe('getMarketTimeseries', () => {
       });
     });
 
-    it('uses default limit when not specified', async () => {
+    it('использует лимит по умолчанию если не указан', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       vi.mocked(fetchBinanceTimeseries).mockResolvedValue([]);
 
@@ -392,7 +389,6 @@ describe('getMarketTimeseries', () => {
         symbol: 'BTCUSDT',
         provider: 'BINANCE' as Provider,
         timeframe: '1h' as Timeframe,
-        // limit not specified
       });
 
       expect(fetchBinanceTimeseries).toHaveBeenCalledWith(dispatch, {
@@ -404,212 +400,118 @@ describe('getMarketTimeseries', () => {
   });
 });
 
-describe('searchAssets', () => {
+describe('MarketAdapter - Поиск активов', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Clear search cache between tests
     vi.mocked(normalizeCatalogResponse).mockClear();
   });
 
-  it('returns empty array for short queries', async () => {
-    const result = await searchAssets(dispatch, {
-      query: 'a',
-      provider: 'BINANCE' as Provider,
-    });
-
-    expect(result).toEqual([]);
-    expect(normalizeCatalogResponse).not.toHaveBeenCalled();
-  });
-
-  it('returns empty array for empty query', async () => {
-    const result = await searchAssets(dispatch, {
-      query: '',
-      provider: 'BINANCE' as Provider,
-    });
-
-    expect(result).toEqual([]);
-  });
-
-  it('uses cache for repeated searches', async () => {
-    const mockItems: CatalogItem[] = [
-      {
-        symbol: 'BTCUSDT',
-        name: 'Bitcoin',
+  describe('Базовые сценарии', () => {
+    it('возвращает пустой массив для коротких запросов', async () => {
+      const result = await searchAssets(dispatch, {
+        query: 'a',
         provider: 'BINANCE' as Provider,
-      },
-    ];
-    vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems);
+      });
 
-    // First call
-    const result1 = await searchAssets(dispatch, {
-      query: 'BTC',
-      provider: 'BINANCE' as Provider,
+      expect(result).toEqual([]);
+      expect(normalizeCatalogResponse).not.toHaveBeenCalled();
     });
 
-    expect(result1).toEqual(mockItems);
-    expect(normalizeCatalogResponse).toHaveBeenCalledTimes(1);
-
-    // Second call with same parameters
-    const result2 = await searchAssets(dispatch, {
-      query: 'BTC',
-      provider: 'BINANCE' as Provider,
-    });
-
-    expect(result2).toEqual(mockItems);
-    // Should still be called only once due to caching
-    expect(normalizeCatalogResponse).toHaveBeenCalledTimes(1);
-  });
-
-  it('searches MOEX assets', async () => {
-    const mockItems: CatalogItem[] = [
-      { symbol: 'SBER', name: 'Сбербанк', provider: 'MOEX' as Provider },
-      { symbol: 'GAZP', name: 'Газпром', provider: 'MOEX' as Provider },
-    ];
-    vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems);
-
-    const result = await searchAssets(dispatch, {
-      query: 'Сбер',
-      provider: 'MOEX' as Provider,
-    });
-
-    expect(normalizeCatalogResponse).toHaveBeenCalledWith(
-      expect.any(Array),
-      'MOEX',
-    );
-    expect(result).toEqual(mockItems);
-  });
-
-  it('handles cache expiration', async () => {
-    const mockItems: CatalogItem[] = [
-      {
-        symbol: 'TEST',
-        name: 'Test',
+    it('возвращает пустой массив для пустого запроса', async () => {
+      const result = await searchAssets(dispatch, {
+        query: '',
         provider: 'BINANCE' as Provider,
-      },
-    ];
-    vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems);
+      });
 
-    vi.useFakeTimers();
-
-    // First call
-    const result1 = await searchAssets(dispatch, {
-      query: 'TEST',
-      provider: 'BINANCE' as Provider,
+      expect(result).toEqual([]);
     });
 
-    // Advance time beyond TTL
-    vi.advanceTimersByTime(40000);
+    it('использует кэш для повторных поисков', async () => {
+      const mockItems: CatalogItem[] = [
+        {
+          symbol: 'BTCUSDT',
+          name: 'Bitcoin',
+          provider: 'BINANCE' as Provider,
+        },
+      ];
+      vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems);
 
-    // Second call should refetch
-    const result2 = await searchAssets(dispatch, {
-      query: 'TEST',
-      provider: 'BINANCE' as Provider,
+      // Первый вызов
+      const result1 = await searchAssets(dispatch, {
+        query: 'BTC',
+        provider: 'BINANCE' as Provider,
+      });
+
+      expect(result1).toEqual(mockItems);
+      expect(normalizeCatalogResponse).toHaveBeenCalledTimes(1);
+
+      // Второй вызов с теми же параметрами
+      const result2 = await searchAssets(dispatch, {
+        query: 'BTC',
+        provider: 'BINANCE' as Provider,
+      });
+
+      expect(result2).toEqual(mockItems);
+      // Должен быть вызван только один раз из-за кэширования
+      expect(normalizeCatalogResponse).toHaveBeenCalledTimes(1);
     });
-
-    expect(result1).toEqual(mockItems);
-    expect(result2).toEqual(mockItems);
-    // Should be called twice due to cache expiration
-    expect(normalizeCatalogResponse).toHaveBeenCalledTimes(2);
-
-    vi.useRealTimers();
-  });
-});
-
-// ============================================================================
-//                               SEARCH ASSETS
-// ============================================================================
-
-describe('searchAssets (MarketAdapter)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
   });
 
-  it('возвращает пустой массив при пустом запросе', async () => {
-    const result = await searchAssets(dispatch, {
-      provider: 'MOCK' as any,
-      query: '   ',
-    });
+  describe('Поиск по разным провайдерам', () => {
+    it('выполняет поиск по MOEX активам', async () => {
+      const mockItems: CatalogItem[] = [
+        { symbol: 'SBER', name: 'Сбербанк', provider: 'MOEX' as Provider },
+        { symbol: 'GAZP', name: 'Газпром', provider: 'MOEX' as Provider },
+      ];
+      vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems);
 
-    expect(result).toEqual([]);
-    expect(searchMockSymbols).not.toHaveBeenCalled();
+      const result = await searchAssets(dispatch, {
+        query: 'Сбер',
+        provider: 'MOEX' as Provider,
+      });
+
+      expect(normalizeCatalogResponse).toHaveBeenCalledWith(
+        expect.any(Array),
+        'MOEX',
+      );
+      expect(result).toEqual(mockItems);
+    });
   });
 
-  it('делает поиск по MOCK, нормализует данные и использует кэш', async () => {
-    const raw = [
-      {
-        symbol: 'SBER',
-        name: 'Sberbank',
-        exchange: 'MOCKEX',
-        class: 'stock',
-        currency: 'RUB',
-      },
-      {
-        // некорректная запись — должна быть отфильтрована
-        symbol: '',
-        name: 'Broken',
-      },
-    ];
+  describe('Истечение срока действия кэша', () => {
+    it('обновляет данные при истечении TTL', async () => {
+      const mockItems: CatalogItem[] = [
+        {
+          symbol: 'TEST',
+          name: 'Test',
+          provider: 'BINANCE' as Provider,
+        },
+      ];
+      vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems);
 
-    (searchMockSymbols as any).mockReturnValueOnce(raw);
+      vi.useFakeTimers();
 
-    const firstResult = await searchAssets(dispatch, {
-      provider: 'MOCK',
-      query: 'Sber',
+      // Первый вызов
+      const result1 = await searchAssets(dispatch, {
+        query: 'TEST',
+        provider: 'BINANCE' as Provider,
+      });
+
+      // Перемещаем время вперед за пределы TTL
+      vi.advanceTimersByTime(40000);
+
+      // Второй вызов должен выполнить новый запрос
+      const result2 = await searchAssets(dispatch, {
+        query: 'TEST',
+        provider: 'BINANCE' as Provider,
+      });
+
+      expect(result1).toEqual(mockItems);
+      expect(result2).toEqual(mockItems);
+      // Должен быть вызван дважды из-за истечения кэша
+      expect(normalizeCatalogResponse).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
     });
-
-    expect(searchMockSymbols).toHaveBeenCalledTimes(1);
-    expect(searchMockSymbols).toHaveBeenCalledWith('Sber');
-
-    // нормализация: один валидный элемент, assetClass берётся из class или 'other'
-    expect(firstResult).toEqual([
-      {
-        symbol: 'SBER',
-        name: 'Sberbank',
-        exchange: 'MOCKEX',
-        assetClass: 'stock',
-        currency: 'RUB',
-        provider: 'MOCK',
-      },
-    ]);
-
-    // второй вызов с теми же параметрами должен использовать кэш и не дергать searchMockSymbols
-    const secondResult = await searchAssets(dispatch, {
-      provider: 'MOCK',
-      query: 'Sber',
-    });
-
-    expect(searchMockSymbols).toHaveBeenCalledTimes(1);
-    expect(secondResult).toEqual(firstResult);
-  });
-
-  it('прокидывает запросы к BINANCE и MOEX в соответствующие провайдеры', async () => {
-    (searchBinanceSymbols as any).mockReturnValueOnce([{ any: 1 }]);
-    (searchMoexSymbols as any).mockReturnValueOnce([{ any: 2 }]);
-
-    await searchAssets(dispatch, {
-      provider: 'BINANCE',
-      query: 'btc',
-    });
-
-    await searchAssets(dispatch, {
-      provider: 'MOEX',
-      query: 'sber',
-    });
-
-    expect(searchBinanceSymbols).toHaveBeenCalledTimes(1);
-    expect(searchBinanceSymbols).toHaveBeenCalledWith(dispatch, 'btc');
-
-    expect(searchMoexSymbols).toHaveBeenCalledTimes(1);
-    expect(searchMoexSymbols).toHaveBeenCalledWith(dispatch, 'sber');
-  });
-
-  it('поддерживает кастомный провайдер CUSTOM (возвращает пустой список)', async () => {
-    const result = await searchAssets(dispatch, {
-      provider: 'CUSTOM' as any,
-      query: 'anything',
-    });
-
-    // сейчас normalizeCustomSymbols просто возвращает []
-    expect(result).toEqual([]);
   });
 });
