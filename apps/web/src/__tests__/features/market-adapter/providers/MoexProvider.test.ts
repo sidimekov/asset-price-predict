@@ -42,8 +42,8 @@ describe('fetchMoexTimeseries', () => {
     mockMoexInitiate.mockReturnValue(mockQueryResult);
 
     const result = await fetchMoexTimeseries(
-        mockDispatch as any,
-        params as any,
+      mockDispatch as any,
+      params as any,
     );
 
     expect(mockMoexInitiate).toHaveBeenCalledTimes(1);

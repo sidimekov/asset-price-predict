@@ -46,8 +46,8 @@ describe('fetchMockTimeseries', () => {
     mockMockInitiate.mockReturnValue(mockQueryResult);
 
     const result = await fetchMockTimeseries(
-        mockDispatch as any,
-        params as any,
+      mockDispatch as any,
+      params as any,
     );
 
     expect(mockMockInitiate).toHaveBeenCalledTimes(1);

@@ -22,18 +22,14 @@ import {
 
 const key = buildTimeseriesCacheKey('MOCK' as any, 'BTCUSDT', '1h' as any, 100);
 
-
 const makeRootState = (timeseriesState: any): RootState =>
-    ({ timeseries: timeseriesState } as unknown as RootState);
+  ({ timeseries: timeseriesState }) as unknown as RootState;
 
 describe('timeseriesSlice reducers', () => {
   it('sets loading and clears error on timeseriesRequested', () => {
     const prevState = timeseriesReducer(undefined, { type: '@@INIT' } as any);
 
-    const state = timeseriesReducer(
-        prevState,
-        timeseriesRequested({ key }),
-    );
+    const state = timeseriesReducer(prevState, timeseriesRequested({ key }));
 
     expect(state.loadingByKey[key]).toBe(true);
     expect(state.errorByKey[key]).toBeNull();
@@ -44,8 +40,8 @@ describe('timeseriesSlice reducers', () => {
     const fetchedAt = '2024-01-01T00:00:00.000Z';
 
     const state = timeseriesReducer(
-        undefined,
-        timeseriesReceived({ key, bars, fetchedAt }),
+      undefined,
+      timeseriesReceived({ key, bars, fetchedAt }),
     );
 
     expect(state.byKey[key]).toEqual({ bars, fetchedAt });
@@ -58,21 +54,21 @@ describe('timeseriesSlice reducers', () => {
     const secondBars: Bar[] = [[2, 3, 4, 2, 3, 20]];
 
     const firstState = timeseriesReducer(
-        undefined,
-        timeseriesReceived({
-          key,
-          bars: firstBars,
-          fetchedAt: '2024-01-01T00:00:00.000Z',
-        }),
+      undefined,
+      timeseriesReceived({
+        key,
+        bars: firstBars,
+        fetchedAt: '2024-01-01T00:00:00.000Z',
+      }),
     );
 
     const secondState = timeseriesReducer(
-        firstState,
-        timeseriesReceived({
-          key,
-          bars: secondBars,
-          fetchedAt: '2024-01-02T00:00:00.000Z',
-        }),
+      firstState,
+      timeseriesReceived({
+        key,
+        bars: secondBars,
+        fetchedAt: '2024-01-02T00:00:00.000Z',
+      }),
     );
 
     expect(secondState.byKey[key]).toEqual({
@@ -85,8 +81,8 @@ describe('timeseriesSlice reducers', () => {
     const error = 'oops';
 
     const state = timeseriesReducer(
-        undefined,
-        timeseriesFailed({ key, error }),
+      undefined,
+      timeseriesFailed({ key, error }),
     );
 
     expect(state.loadingByKey[key]).toBe(false);
@@ -98,8 +94,8 @@ describe('timeseriesSlice reducers', () => {
     const fetchedAt = '2024-01-01T00:00:00.000Z';
 
     const withData = timeseriesReducer(
-        undefined,
-        timeseriesReceived({ key, bars, fetchedAt }),
+      undefined,
+      timeseriesReceived({ key, bars, fetchedAt }),
     );
 
     const cleared = timeseriesReducer(withData, clearTimeseries(key));
@@ -114,8 +110,8 @@ describe('timeseriesSlice reducers', () => {
     const fetchedAt = '2024-01-01T00:00:00.000Z';
 
     const withData = timeseriesReducer(
-        undefined,
-        timeseriesReceived({ key, bars, fetchedAt }),
+      undefined,
+      timeseriesReceived({ key, bars, fetchedAt }),
     );
 
     const cleared = timeseriesReducer(withData, clearAllTimeseries());
@@ -194,9 +190,7 @@ describe('timeseries selectors', () => {
 
   it('selectIsStale returns false for fresh data and true for stale or missing', () => {
     const freshFetchedAt = new Date().toISOString();
-    const staleFetchedAt = new Date(
-        Date.now() - 11 * 60 * 1000,
-    ).toISOString();
+    const staleFetchedAt = new Date(Date.now() - 11 * 60 * 1000).toISOString();
 
     const bars: Bar[] = [];
 
