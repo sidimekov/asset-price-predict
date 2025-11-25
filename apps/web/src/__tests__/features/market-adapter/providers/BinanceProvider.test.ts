@@ -30,7 +30,7 @@ describe('fetchBinanceTimeseries', () => {
 
     const params = {
       symbol: 'BTCUSDT',
-      timeframe: '1h',
+      timeframe: '1h' as const,
       limit: 100,
     };
 

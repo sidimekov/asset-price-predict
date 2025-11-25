@@ -3,6 +3,8 @@ import {
   makeTimeseriesKey,
   makeForecastKey,
 } from '@/processes/orchestrator/keys';
+type TimeseriesKeyParams = Parameters<typeof makeTimeseriesKey>[0];
+type ForecastKeyParams = Parameters<typeof makeForecastKey>[0];
 
 describe('keys', () => {
   describe('makeTimeseriesKey', () => {
@@ -11,10 +13,10 @@ describe('keys', () => {
         provider: 'BINANCE',
         symbol: 'BTCUSDT',
         tf: '1h',
-        window: '6M',
+        window: 6,
       });
 
-      expect(key).toBe('BINANCE:BTCUSDT:1h:6M');
+      expect(key).toBe('BINANCE:BTCUSDT:1h:6');
     });
 
     it('changes key when provider changes', () => {
@@ -22,13 +24,13 @@ describe('keys', () => {
         provider: 'BINANCE',
         symbol: 'BTCUSDT',
         tf: '1h',
-        window: '6M',
+        window: 6,
       });
       const k2 = makeTimeseriesKey({
         provider: 'MOCK',
         symbol: 'BTCUSDT',
         tf: '1h',
-        window: '6M',
+        window: 6,
       });
 
       expect(k1).not.toBe(k2);
@@ -39,29 +41,29 @@ describe('keys', () => {
         provider: 'BINANCE',
         symbol: 'BTCUSDT',
         tf: '1h',
-        window: '6M',
+        window: 6,
       });
       const k2 = makeTimeseriesKey({
         provider: 'BINANCE',
         symbol: 'ETHUSDT',
         tf: '1h',
-        window: '6M',
+        window: 6,
       });
 
       expect(k1).not.toBe(k2);
     });
 
     it('changes key when timeframe or window changes', () => {
-      const base = {
+      const base: TimeseriesKeyParams = {
         provider: 'BINANCE',
         symbol: 'BTCUSDT',
         tf: '1h' as const,
-        window: '6M' as const,
+        window: 6,
       };
 
       const k1 = makeTimeseriesKey(base);
       const k2 = makeTimeseriesKey({ ...base, tf: '8h' });
-      const k3 = makeTimeseriesKey({ ...base, window: '1Y' });
+      const k3 = makeTimeseriesKey({ ...base, window: 12 });
 
       expect(k1).not.toBe(k2);
       expect(k1).not.toBe(k3);

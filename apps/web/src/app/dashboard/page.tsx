@@ -22,6 +22,9 @@ import {
   buildTimeseriesKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 import { DEFAULT_TIMEFRAME } from '@/config/market';
+import mockAssets from '@/mocks/recentAssets.json';
+import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -147,11 +150,15 @@ export default function Dashboard() {
           <div className="bg-surface-dark rounded-3xl p-6">
             <div className="flex items-start">
               <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
-              <div className="flex-1 flex flex-col">
-                <div className="flex-1 relative">
-                  <CandlesChartPlaceholder state={derivedAssetState} />
+
+              <div className="flex flex-col">
+                <div className="flex">
+                  <div className="relative h-96 w-[800px] flex-none">
+                    <CandlesChartPlaceholder state={derivedAssetState} />
+                  </div>
                 </div>
-                <XAxis className="ml-12 h-96 w-full text-[#8480C9]" />
+
+                <XAxis className="text-[#8480C9]" />
               </div>
             </div>
           </div>

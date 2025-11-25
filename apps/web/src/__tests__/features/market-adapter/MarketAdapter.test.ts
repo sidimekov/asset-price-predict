@@ -28,15 +28,18 @@ vi.mock('@/features/market-adapter/cache/ClientTimeseriesCache', () => ({
 // Мокаем провайдеры
 vi.mock('@/features/market-adapter/providers/BinanceProvider', () => ({
   fetchBinanceTimeseries: vi.fn(),
+  searchBinanceSymbols: vi.fn(),
 }));
 
 vi.mock('@/features/market-adapter/providers/MockProvider', () => ({
   fetchMockTimeseries: vi.fn(),
   generateMockBarsRaw: vi.fn(),
+  searchMockSymbols: vi.fn(),
 }));
 
 vi.mock('@/features/market-adapter/providers/MoexProvider', () => ({
   fetchMoexTimeseries: vi.fn(),
+  searchMoexSymbols: vi.fn(),
 }));
 
 // Мокаем функции нормализации
@@ -509,5 +512,104 @@ describe('searchAssets', () => {
     expect(normalizeCatalogResponse).toHaveBeenCalledTimes(2);
 
     vi.useRealTimers();
+  });
+});
+
+// ============================================================================
+//                               SEARCH ASSETS
+// ============================================================================
+
+describe('searchAssets (MarketAdapter)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('возвращает пустой массив при пустом запросе', async () => {
+    const result = await searchAssets(dispatch, {
+      provider: 'MOCK' as any,
+      query: '   ',
+    });
+
+    expect(result).toEqual([]);
+    expect(searchMockSymbols).not.toHaveBeenCalled();
+  });
+
+  it('делает поиск по MOCK, нормализует данные и использует кэш', async () => {
+    const raw = [
+      {
+        symbol: 'SBER',
+        name: 'Sberbank',
+        exchange: 'MOCKEX',
+        class: 'stock',
+        currency: 'RUB',
+      },
+      {
+        // некорректная запись — должна быть отфильтрована
+        symbol: '',
+        name: 'Broken',
+      },
+    ];
+
+    (searchMockSymbols as any).mockReturnValueOnce(raw);
+
+    const firstResult = await searchAssets(dispatch, {
+      provider: 'MOCK',
+      query: 'Sber',
+    });
+
+    expect(searchMockSymbols).toHaveBeenCalledTimes(1);
+    expect(searchMockSymbols).toHaveBeenCalledWith('Sber');
+
+    // нормализация: один валидный элемент, assetClass берётся из class или 'other'
+    expect(firstResult).toEqual([
+      {
+        symbol: 'SBER',
+        name: 'Sberbank',
+        exchange: 'MOCKEX',
+        assetClass: 'stock',
+        currency: 'RUB',
+        provider: 'MOCK',
+      },
+    ]);
+
+    // второй вызов с теми же параметрами должен использовать кэш и не дергать searchMockSymbols
+    const secondResult = await searchAssets(dispatch, {
+      provider: 'MOCK',
+      query: 'Sber',
+    });
+
+    expect(searchMockSymbols).toHaveBeenCalledTimes(1);
+    expect(secondResult).toEqual(firstResult);
+  });
+
+  it('прокидывает запросы к BINANCE и MOEX в соответствующие провайдеры', async () => {
+    (searchBinanceSymbols as any).mockReturnValueOnce([{ any: 1 }]);
+    (searchMoexSymbols as any).mockReturnValueOnce([{ any: 2 }]);
+
+    await searchAssets(dispatch, {
+      provider: 'BINANCE',
+      query: 'btc',
+    });
+
+    await searchAssets(dispatch, {
+      provider: 'MOEX',
+      query: 'sber',
+    });
+
+    expect(searchBinanceSymbols).toHaveBeenCalledTimes(1);
+    expect(searchBinanceSymbols).toHaveBeenCalledWith(dispatch, 'btc');
+
+    expect(searchMoexSymbols).toHaveBeenCalledTimes(1);
+    expect(searchMoexSymbols).toHaveBeenCalledWith(dispatch, 'sber');
+  });
+
+  it('поддерживает кастомный провайдер CUSTOM (возвращает пустой список)', async () => {
+    const result = await searchAssets(dispatch, {
+      provider: 'CUSTOM' as any,
+      query: 'anything',
+    });
+
+    // сейчас normalizeCustomSymbols просто возвращает []
+    expect(result).toEqual([]);
   });
 });

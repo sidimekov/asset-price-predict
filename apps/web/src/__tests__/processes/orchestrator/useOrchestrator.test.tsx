@@ -1,8 +1,8 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Provider, useSelector } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { render } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // сначала мокаем ForecastManager
 vi.mock('@/processes/orchestrator/ForecastManager', () => ({
@@ -73,7 +73,7 @@ describe('useOrchestrator', () => {
 
     vi.advanceTimersByTime(1000);
 
-    const runMock = (ForecastManager as any).run as vi.Mock;
+    const runMock = (ForecastManager as any).run as Mock;
     expect(runMock).not.toHaveBeenCalled();
   });
 
@@ -97,7 +97,7 @@ describe('useOrchestrator', () => {
 
     vi.advanceTimersByTime(300);
 
-    const runMock = (ForecastManager as any).run as vi.Mock;
+    const runMock = (ForecastManager as any).run as Mock;
     expect(runMock).toHaveBeenCalledTimes(1);
 
     const [ctxArg] = runMock.mock.calls[0];
@@ -130,7 +130,7 @@ describe('useOrchestrator', () => {
 
     vi.advanceTimersByTime(300);
 
-    const runMock = (ForecastManager as any).run as vi.Mock;
+    const runMock = (ForecastManager as any).run as Mock;
     expect(runMock).toHaveBeenCalledTimes(1);
 
     // Ререндер с теми же данными
