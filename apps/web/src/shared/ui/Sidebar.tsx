@@ -43,7 +43,11 @@ export const Sidebar: React.FC = () => {
 
         <nav className="sidebar-nav" aria-label="Основная навигация">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive =
+              item.href === '/dashboard'
+                ? pathname === '/dashboard' || pathname.startsWith('/forecast')
+                : pathname === item.href;
+
             return (
               <Link
                 key={item.href}
