@@ -13,69 +13,52 @@ import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import {
   addRecent,
   setSelected,
+  removeRecent,
   selectRecent,
+  selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
 import {
   timeseriesRequested,
   buildTimeseriesKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 import { DEFAULT_TIMEFRAME } from '@/config/market';
-import mockAssets from '@/mocks/recentAssets.json';
-import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
 
-type RecentBarAsset = {
-  symbol: string;
-  price: string;
-  provider: 'binance' | 'moex';
-};
-
 export default function Dashboard() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
-  const [assets, setAssets] = React.useState<Asset[]>(mockAssets as Asset[]);
-  const [selected, setSelected] = React.useState<string | null>(null);
-  const [assetState, setAssetState] = React.useState<State>('idle');
+  const recentAssets = useAppSelector(selectRecent);
+  const selectedAsset = useAppSelector(selectSelectedAsset);
 
+  const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
+  const [modalQuery, setModalQuery] = React.useState('');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
   const [factorsState, setFactorsState] = React.useState<State>('idle');
 
-  const getTodayDate = () => {
+  const [selectedModel, setSelectedModel] = React.useState('');
+  const [selectedDate, setSelectedDate] = React.useState(() => {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const [selectedModel, setSelectedModel] = React.useState<string>('');
-  const [selectedDate, setSelectedDate] =
-    React.useState<string>(getTodayDate());
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
 
   React.useEffect(() => {
-    setAssetState('loading');
-    setParamsState('loading');
-    setFactorsState('loading');
-
-    const t = setTimeout(() => {
-      setAssetState('ready');
+    const timer = setTimeout(() => {
       setParamsState('success');
       setFactorsState('ready');
     }, 1200);
-
-    return () => clearTimeout(t);
-  }, []);
-
     return () => clearTimeout(timer);
   }, []);
 
-  React.useEffect(() => {
-    if (!selectedSymbol && assets.length > 0) {
-      setSelectedSymbol(assets[0].symbol);
-    }
-  }, [assets, selectedSymbol]);
+  const selectedSymbol = selectedAsset?.symbol ?? null;
+
+  const derivedAssetState: State = !selectedSymbol
+    ? 'empty'
+    : recentAssets.length === 0
+      ? 'empty'
+      : 'ready';
 
   const handleAssetSelect = ({
     symbol,
@@ -84,31 +67,13 @@ export default function Dashboard() {
     symbol: string;
     provider: 'binance' | 'moex';
   }) => {
+    const normalizedProvider = provider.toUpperCase() as 'BINANCE' | 'MOEX';
+
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));
 
-    setAssets((prev) => {
-      const exists = prev.some(
-        (a) => a.symbol === symbol && a.provider === provider,
-      );
-      if (exists) {
-        return prev.map((a) =>
-          a.symbol === symbol && a.provider === provider
-            ? { ...a, price: '—' }
-            : a,
-        );
-      }
-      return [
-        { symbol, price: '—', provider },
-        ...prev.filter(
-          (a) => !(a.symbol === symbol && a.provider === provider),
-        ),
-      ].slice(0, 10);
-    });
-
-    setSelectedSymbol(symbol);
     const key = buildTimeseriesKey(
-      provider.toUpperCase() as 'BINANCE' | 'MOEX',
+      normalizedProvider,
       symbol,
       DEFAULT_TIMEFRAME,
     );
@@ -119,27 +84,44 @@ export default function Dashboard() {
   };
 
   const handlePredict = () => {
-    if (!selected) return;
+    if (!selectedSymbol || !selectedAsset) return;
 
-    const assetIndex = assets.findIndex((a) => a.symbol === selected);
-    const id = assetIndex === -1 ? 0 : assetIndex;
+    const parts = [`ticker=${encodeURIComponent(selectedAsset.symbol)}`];
+    if (selectedModel) parts.push(`model=${encodeURIComponent(selectedModel)}`);
+    if (selectedDate) parts.push(`to=${encodeURIComponent(selectedDate)}`);
 
-    const queryParts: string[] = [`ticker=${encodeURIComponent(selected)}`];
-
-    if (selectedModel) {
-      queryParts.push(`model=${encodeURIComponent(selectedModel)}`);
-    }
-    if (selectedDate) {
-      queryParts.push(`to=${encodeURIComponent(selectedDate)}`);
-    }
-
-    const query = queryParts.length ? `?${queryParts.join('&')}` : '';
-    router.push(`/forecast/${id}${query}`);
+    const query = parts.length > 0 ? `?${parts.join('&')}` : '';
+    router.push(`/forecast/0${query}`);
   };
 
-  const visibleAssets = assets.slice(0, 10);
+  const handleRemoveAsset = (symbol: string, provider?: string) => {
+    const asset = recentAssets.find((a) => a.symbol === symbol);
+    if (asset) {
+      dispatch(
+        removeRecent({
+          symbol: asset.symbol,
+          provider: asset.provider,
+        }),
+      );
+    }
+  };
 
-  useOrchestrator();
+  const handleRecentSelect = (symbol: string) => {
+    const asset = recentAssets.find((a) => a.symbol === symbol);
+    if (asset) {
+      dispatch(setSelected(asset));
+
+      const normalizedProvider = asset.provider.toUpperCase() as
+        | 'BINANCE'
+        | 'MOEX';
+      const key = buildTimeseriesKey(
+        normalizedProvider,
+        asset.symbol,
+        DEFAULT_TIMEFRAME,
+      );
+      dispatch(timeseriesRequested({ key }));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-primary">
@@ -148,11 +130,15 @@ export default function Dashboard() {
         <div className="col-span-12">
           <RecentAssetsBar
             state={derivedAssetState}
-            assets={visibleAssets}
-            selected={selected}
-            onSelect={setSelected}
+            assets={recentAssets.map((a) => ({
+              symbol: a.symbol,
+              price: '—', // Цена остается "—" как в оригинале
+              provider: a.provider,
+            }))}
+            selected={selectedSymbol}
+            onSelect={handleRecentSelect}
             onRemove={handleRemoveAsset}
-            onAdd={handleAddAsset}
+            onAdd={() => setIsCatalogOpen(true)}
           />
         </div>
 
@@ -161,25 +147,18 @@ export default function Dashboard() {
           <div className="bg-surface-dark rounded-3xl p-6">
             <div className="flex items-start">
               <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
-
-          <div className="col-span-12 lg:col-span-8">
-            <div className="bg-surface-dark rounded-3xl p-6">
-              <div className="flex items-start">
-                <YAxis className="h-96 w-full px-6" />
-                <div className="flex-1 flex flex-col">
-                  <div className="flex-1 relative">
-                    <CandlesChartPlaceholder state={derivedAssetState} />
-                  </div>
-                  <XAxis className="ml-12 h-96 w-full" />
+              <div className="flex-1 flex flex-col">
+                <div className="flex-1 relative">
+                  <CandlesChartPlaceholder state={derivedAssetState} />
                 </div>
-
                 <XAxis className="ml-12 h-96 w-full text-[#8480C9]" />
               </div>
             </div>
-            <div className="h-8" />
           </div>
+          <div className="h-8" />
+        </div>
 
-          <div className="hidden lg:block col-span-4" />
+        <div className="hidden lg:block col-span-4" />
 
         {/* Params */}
         <div className="col-span-12 lg:col-span-4">
@@ -193,7 +172,7 @@ export default function Dashboard() {
           />
         </div>
 
-          <div className="hidden lg:block col-span-1" />
+        <div className="hidden lg:block col-span-1" />
 
         {/* Factors */}
         <div className="col-span-12 lg:col-span-7">
@@ -205,11 +184,12 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Asset Catalog Modal */}
       {isCatalogOpen && (
         <>
           <div
             className="fixed inset-0 z-[1050] bg-[rgba(32,29,71,0.75)] backdrop-blur-xs transition-all duration-300"
-            onClick={() => setIsCatalogOpen(true)}
+            onClick={() => setIsCatalogOpen(false)}
           />
 
           <div className="fixed inset-0 z-[1100] flex items-center justify-center pointer-events-none">
@@ -235,6 +215,6 @@ export default function Dashboard() {
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
