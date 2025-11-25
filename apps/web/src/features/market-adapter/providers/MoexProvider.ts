@@ -2,7 +2,7 @@
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
-import type { ProviderRequestBase } from './BinanceProvider';
+import type { ProviderRequestBase } from './types';
 
 /**
  * Получение таймсерий с MOEX через RTK Query.
