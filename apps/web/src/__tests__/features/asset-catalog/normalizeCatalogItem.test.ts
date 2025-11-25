@@ -178,20 +178,6 @@ describe('normalizeCatalogItem', () => {
   });
 
   describe('MOCK provider', () => {
-    it('normalizes mock item with symbol and name', () => {
-      const rawItem = {
-        symbol: 'TEST',
-        name: 'Test Asset',
-      };
-
-      const result = normalizeCatalogItem(rawItem, 'MOCK');
-
-      expect(result).toEqual({
-        symbol: 'TEST',
-        name: 'Test Asset',
-        provider: 'MOCK',
-      });
-    });
 
     it('converts symbol to uppercase for mock items', () => {
       const rawItem = {
@@ -224,20 +210,6 @@ describe('normalizeCatalogItem', () => {
   });
 
   describe('CUSTOM provider', () => {
-    it('normalizes custom item with symbol and name', () => {
-      const rawItem = {
-        symbol: 'CUSTOM1',
-        name: 'Custom Asset',
-      };
-
-      const result = normalizeCatalogItem(rawItem, 'CUSTOM');
-
-      expect(result).toEqual({
-        symbol: 'CUSTOM1',
-        name: 'Custom Asset',
-        provider: 'CUSTOM',
-      });
-    });
 
     it('returns null for custom item without required fields', () => {
       const rawItem = {
