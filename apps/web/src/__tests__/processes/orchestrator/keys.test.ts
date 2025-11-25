@@ -16,7 +16,7 @@ describe('keys', () => {
         window: 6,
       });
 
-      expect(key).toBe('BINANCE:BTCUSDT:1h:6M');
+      expect(key).toBe('BINANCE:BTCUSDT:1h:6');
     });
 
     it('changes key when provider changes', () => {
