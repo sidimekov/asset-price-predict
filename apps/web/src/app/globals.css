@@ -1308,6 +1308,8 @@ body {
 .provider-tabs-under-search {
   gap: 4rem; /* ← огромное расстояние между кнопками */
   padding: 0 1.5rem;
+}
+
 .forecast-shape-panel {
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
