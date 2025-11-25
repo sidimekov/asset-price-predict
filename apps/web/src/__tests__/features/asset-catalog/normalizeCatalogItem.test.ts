@@ -178,7 +178,6 @@ describe('normalizeCatalogItem', () => {
   });
 
   describe('MOCK provider', () => {
-
     it('converts symbol to uppercase for mock items', () => {
       const rawItem = {
         symbol: 'test',
@@ -210,7 +209,6 @@ describe('normalizeCatalogItem', () => {
   });
 
   describe('CUSTOM provider', () => {
-
     it('returns null for custom item without required fields', () => {
       const rawItem = {
         symbol: 'CUSTOM1',

@@ -1,8 +1,8 @@
 import type { CatalogItem } from '@shared/types/market';
 
 export const normalizeCatalogItem = (
-    raw: any,
-    provider: 'BINANCE' | 'MOEX' | 'MOCK' | 'CUSTOM',
+  raw: any,
+  provider: 'BINANCE' | 'MOEX' | 'MOCK' | 'CUSTOM',
 ): CatalogItem | null => {
   if (!raw) return null;
 
@@ -13,8 +13,8 @@ export const normalizeCatalogItem = (
     return {
       symbol: symbol.toUpperCase(),
       name: raw.baseAsset
-          ? `${raw.baseAsset}/${raw.quoteAsset || 'USDT'}`
-          : symbol,
+        ? `${raw.baseAsset}/${raw.quoteAsset || 'USDT'}`
+        : symbol,
       exchange: 'BINANCE',
       assetClass: 'crypto',
       currency: raw.quoteAsset || 'USDT',
@@ -37,9 +37,9 @@ export const normalizeCatalogItem = (
   }
 
   if (
-      (provider === 'MOCK' || provider === 'CUSTOM') &&
-      raw.symbol &&
-      raw.name
+    (provider === 'MOCK' || provider === 'CUSTOM') &&
+    raw.symbol &&
+    raw.name
   ) {
     return {
       symbol: String(raw.symbol).toUpperCase(),
@@ -55,11 +55,11 @@ export const normalizeCatalogItem = (
 };
 
 export const normalizeCatalogResponse = (
-    data: any[],
-    provider: 'BINANCE' | 'MOEX' | 'MOCK' | 'CUSTOM',
+  data: any[],
+  provider: 'BINANCE' | 'MOEX' | 'MOCK' | 'CUSTOM',
 ): CatalogItem[] => {
   if (!Array.isArray(data)) return [];
   return data
-      .map((item) => normalizeCatalogItem(item, provider))
-      .filter((item): item is CatalogItem => item !== null);
+    .map((item) => normalizeCatalogItem(item, provider))
+    .filter((item): item is CatalogItem => item !== null);
 };
