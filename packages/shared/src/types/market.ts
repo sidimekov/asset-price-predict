@@ -35,18 +35,6 @@ export type Bar = [
 export type Bars = Bar[];
 
 /**
- * Единый формат элемента каталога активов
- */
-export type CatalogItem = {
-  symbol: string;
-  name: string;
-  exchange?: string;
-  assetClass?: 'equity' | 'fx' | 'crypto' | 'etf' | 'bond' | 'other';
-  currency?: string;
-  provider: Provider;
-};
-
-/**
  * Константы
  */
 export const SUPPORTED_TIMEFRAMES: readonly Timeframe[] = [
