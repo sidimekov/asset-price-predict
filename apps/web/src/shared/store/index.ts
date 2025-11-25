@@ -1,14 +1,13 @@
 // src/shared/store/index.ts
 import { configureStore } from '@reduxjs/toolkit';
 import { marketApi } from '@/shared/api/marketApi';
-import { backendApi } from '@/shared/api/backendApi';
-import { timeseriesReducer } from '@/entities/timeseries/model/timeseriesSlice'; // 👈 новый импорт
+import { timeseriesReducer } from '@/entities/timeseries/model/timeseriesSlice';
+import catalogReducer from '@/features/asset-catalog/model/catalogSlice'; 
 
 export const store = configureStore({
   reducer: {
     timeseries: timeseriesReducer,
     [marketApi.reducerPath]: marketApi.reducer,
-    timeseries: timeseriesReducer,
     catalog: catalogReducer,
   },
   middleware: (getDefaultMiddleware) =>
