@@ -34,6 +34,9 @@ export default [
         handleQueryChange: 'readonly',
         global: 'readonly',
         AbortSignal: 'readonly',
+        selected: 'readonly',
+        HTMLElement: 'readonly',
+        require: 'readonly',
       },
     },
     rules: {
