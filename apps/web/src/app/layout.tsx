@@ -8,11 +8,6 @@ import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import { StoreProvider } from '@/app/providers/StoreProvider';
 
-// ←←← ДОБАВЬ ЭТИ ДВЕ СТРОКИ
-import { Provider } from 'react-redux';
-import { store } from '@/shared/store';
-// ←←←
-
 const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
