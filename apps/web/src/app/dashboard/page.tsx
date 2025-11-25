@@ -10,7 +10,7 @@ import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import mockAssets from '@/mocks/recentAssets.json';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
-import ForecastShapePlaceholder from "@/widgets/chart/ForecastShapePlaceholder";
+import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
