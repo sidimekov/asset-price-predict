@@ -9,24 +9,26 @@ interface CandlesChartPlaceholderProps {
 }
 
 export default function CandlesChartPlaceholder({
-  state,
-}: CandlesChartPlaceholderProps) {
-  if (state === 'empty') {
-    return <p className="text-gray-500">Select or add asset to view chart</p>;
-  }
+                                                  state,
+                                                }: CandlesChartPlaceholderProps) {
+  const baseClasses =
+      'chart-container w-full h-96 rounded-3xl flex items-center justify-center';
 
-  if (state === 'loading') {
-    // тот же контейнер и габариты, что и у готового блока — без сдвигов
+  if (state === 'empty') {
     return (
-      <div className="h-93 w-225 absolute left-110 top-52 chart-container rounded skeleton-card--flush">
-        <Skeleton width="100%" height="100%" />
-      </div>
+        <div className={baseClasses}>
+          <p className="text-placeholder">Select or add asset to view chart</p>
+        </div>
     );
   }
 
-  return (
-    <div className="h-93 w-225 absolute left-110 top-52 chart-container rounded">
-      Chart Placeholder
-    </div>
-  );
+  if (state === 'loading') {
+    return (
+        <div className={`${baseClasses} skeleton-card-flush`}>
+          <Skeleton width="100%" height="100%" />
+        </div>
+    );
+  }
+
+  return <div className={baseClasses}>Chart Placeholder</div>;
 }
