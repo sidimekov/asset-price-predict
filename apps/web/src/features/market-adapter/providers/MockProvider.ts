@@ -2,6 +2,7 @@
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { ProviderRequestBase } from './types';
+import type { CatalogItem } from '@shared/types/market';
 
 /**
  * Вариант 1 – берём моковые данные с API через RTK Query.
@@ -30,6 +31,7 @@ export async function fetchMockTimeseries(
 
 /**
  * Вариант 2 – полностью локальный генератор свечей без сети.
+ * Используется тем же контрактом ProviderRequestBase.
  */
 export function generateMockBarsRaw(
   params: ProviderRequestBase,
@@ -41,7 +43,7 @@ export function generateMockBarsRaw(
   let lastClose = 100;
 
   for (let i = limit - 1; i >= 0; i--) {
-    const ts = now - i * 60 * 60 * 1000; // шаг 1h
+    const ts = now - i * 60 * 60 * 1000; // шаг 1h для примера
     const open = lastClose;
     const high = open + Math.random() * 3;
     const low = open - Math.random() * 3;
@@ -53,4 +55,69 @@ export function generateMockBarsRaw(
   }
 
   return res;
+}
+
+/**
+ * Сырой тип мокового символа (немного отличается от CatalogItem, чтобы была "нормализация").
+ */
+export type MockSymbolRaw = {
+  symbol: string;
+  name: string;
+  exchange: string;
+  class: CatalogItem['assetClass'];
+  currency?: string;
+};
+
+/**
+ * Статический моковый каталог инструментов.
+ * Можно потом вынести в отдельный JSON.
+ */
+const MOCK_SYMBOLS: MockSymbolRaw[] = [
+  {
+    symbol: 'BTCUSDT',
+    name: 'Bitcoin / Tether',
+    exchange: 'BINANCE',
+    class: 'crypto',
+    currency: 'USDT',
+  },
+  {
+    symbol: 'ETHUSDT',
+    name: 'Ethereum / Tether',
+    exchange: 'BINANCE',
+    class: 'crypto',
+    currency: 'USDT',
+  },
+  {
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    exchange: 'NASDAQ',
+    class: 'equity',
+    currency: 'USD',
+  },
+  {
+    symbol: 'SBER',
+    name: 'Sberbank',
+    exchange: 'MOEX',
+    class: 'equity',
+    currency: 'RUB',
+  },
+];
+
+/**
+ * Поиск в моковом каталоге по строке запроса.
+ * Никакого HTTP, всё локально.
+ */
+export async function searchMockSymbols(
+  query: string,
+): Promise<MockSymbolRaw[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  return MOCK_SYMBOLS.filter((item) => {
+    return (
+      item.symbol.toLowerCase().includes(q) ||
+      item.name.toLowerCase().includes(q) ||
+      item.exchange.toLowerCase().includes(q)
+    );
+  });
 }

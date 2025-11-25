@@ -1,12 +1,10 @@
 // apps/web/src/features/market-adapter/MarketAdapter.ts
-'use client';
-
 import { z } from 'zod';
 import type { AppDispatch } from '@/shared/store';
 import {
   SUPPORTED_PROVIDERS,
+  SUPPORTED_TIMEFRAMES,
   DEFAULT_PROVIDER,
-  DEFAULT_TIMEFRAME,
   DEFAULT_LIMIT,
   type MarketDataProvider,
   type MarketTimeframe,
@@ -16,40 +14,39 @@ import {
   makeTimeseriesCacheKey,
   type Bar,
 } from './cache/ClientTimeseriesCache';
-import { fetchBinanceTimeseries } from './providers/BinanceProvider';
+import {
+  fetchBinanceTimeseries,
+  searchBinanceSymbols,
+} from './providers/BinanceProvider';
 import {
   fetchMockTimeseries,
   generateMockBarsRaw,
+  searchMockSymbols,
+  type MockSymbolRaw,
 } from './providers/MockProvider';
-import { fetchMoexTimeseries } from './providers/MoexProvider';
-import type { BinanceKline } from '@/shared/api/marketApi';
-
-// zod-схемы и типы из shared
 import {
-  zProvider,
-  zTimeframe,
-  zSymbol,
-  zBars,
-} from '@shared/schemas/market.schema';
+  fetchMoexTimeseries,
+  searchMoexSymbols,
+} from './providers/MoexProvider';
+import type { BinanceKline } from '@/shared/api/marketApi';
+import type { CatalogItem } from '@shared/types/market';
+import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
+import type { ProviderRequestBase } from './providers/types';
 
-// ---------- schema запроса ----------
+// ---- SCHEMAS for timeseries ----
 
-// провайдеры из shared + фронтовый MOCK
-const providerSchema = z.union([zProvider, z.literal('MOCK')]);
+const providerSchema = zProvider.or(z.literal('MOCK'));
 const timeframeSchema = zTimeframe;
-const symbolSchema = zSymbol;
 const limitSchema = z.number().int().positive().max(2000);
 
 export const marketAdapterRequestSchema = z.object({
-  symbol: symbolSchema,
+  symbol: zSymbol,
   provider: providerSchema.optional(),
   timeframe: timeframeSchema.optional(),
   limit: limitSchema.optional(),
 });
 
 export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
-
-// ---------- типы результата ----------
 
 export type MarketAdapterSource = 'CACHE' | 'NETWORK' | 'LOCAL';
 
@@ -71,7 +68,7 @@ export interface MarketAdapterError {
   provider?: MarketDataProvider;
 }
 
-// ---------- нормализация данных ----------
+// ---- NORMALIZATION: TIMESERIES ----
 
 function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
   try {
@@ -93,54 +90,27 @@ function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
 function normalizeRawBars(raw: unknown): Bar[] {
   try {
     if (!Array.isArray(raw)) return [];
-
-    // приводим всё к числам
-    const tuples = raw.map((b: any) => {
+    return raw.map((b: any) => {
       const [ts, o, h, l, c, v] = b;
-
-      if (v == null) {
-        return [Number(ts), Number(o), Number(h), Number(l), Number(c)] as [
-          number,
-          number,
-          number,
-          number,
-          number,
-        ];
-      }
-
       return [
         Number(ts),
         Number(o),
         Number(h),
         Number(l),
         Number(c),
-        Number(v),
-      ] as [number, number, number, number, number, number];
+        v != null ? Number(v) : undefined,
+      ];
     });
-
-    // валидация реальной схемой из shared
-    zBars.parse(tuples);
-
-    // обратно в Bar[] (Bar = [ts, o, h, l, c, v?])
-    const bars: Bar[] = tuples.map((t) =>
-      t.length === 5
-        ? ([t[0], t[1], t[2], t[3], t[4]] as unknown as Bar)
-        : ([t[0], t[1], t[2], t[3], t[4], (t as any)[5]] as unknown as Bar),
-    );
-
-    return bars;
   } catch (e) {
     console.error('[MarketAdapter] Failed to normalize raw bars', e);
     throw new Error('NORMALIZATION_ERROR');
   }
 }
 
-// ---------- выбор провайдера ----------
-
 async function resolveProviderData(
   dispatch: AppDispatch,
   provider: MarketDataProvider,
-  params: { symbol: string; timeframe: MarketTimeframe; limit: number },
+  params: ProviderRequestBase,
 ): Promise<{ raw: unknown; normalized: Bar[] }> {
   switch (provider) {
     case 'BINANCE': {
@@ -156,33 +126,32 @@ async function resolveProviderData(
     }
 
     case 'CUSTOM': {
-      // кастомный провайдер = чисто фронтовый mock
+      // На будущее: кастомный провайдер можно считать фронтовым mock’ом
       const raw = generateMockBarsRaw(params);
       const normalized = normalizeRawBars(raw);
       return { raw, normalized };
     }
 
     case 'MOCK': {
-      // для единообразия берём мок через RTK-query и нормализуем
+      // generateMockBarsRaw можно использовать локально,
+      // но для единообразия берём данные через RTK-query и нормализуем
       const raw = await fetchMockTimeseries(dispatch, params);
       const normalized = normalizeRawBars(raw);
       return { raw, normalized };
     }
 
-    default: {
+    default:
       throw new Error('UNSUPPORTED_PROVIDER');
-    }
   }
 }
 
-// ---------- публичная функция ----------
+// ---- PUBLIC API: TIMESERIES ----
 
 export async function getMarketTimeseries(
   dispatch: AppDispatch,
   rawRequest: MarketAdapterRequest,
 ): Promise<MarketAdapterSuccess | MarketAdapterError> {
   const parseResult = marketAdapterRequestSchema.safeParse(rawRequest);
-
   if (!parseResult.success) {
     console.error('[MarketAdapter] Invalid params', parseResult.error);
     return {
@@ -192,9 +161,9 @@ export async function getMarketTimeseries(
   }
 
   const parsed = parseResult.data;
-
-  const provider = (parsed.provider ?? DEFAULT_PROVIDER) as MarketDataProvider;
-  const timeframe = (parsed.timeframe ?? DEFAULT_TIMEFRAME) as MarketTimeframe;
+  const provider: MarketDataProvider = parsed.provider ?? DEFAULT_PROVIDER;
+  const timeframe: MarketTimeframe =
+    (parsed.timeframe as MarketTimeframe) ?? SUPPORTED_TIMEFRAMES[0];
   const limit = parsed.limit ?? DEFAULT_LIMIT;
   const symbol = parsed.symbol;
 
@@ -205,6 +174,8 @@ export async function getMarketTimeseries(
       provider,
     };
   }
+
+  const params: ProviderRequestBase = { symbol, timeframe, limit };
 
   const cacheKey = makeTimeseriesCacheKey(provider, symbol, timeframe, limit);
   const cachedBars = clientTimeseriesCache.get(cacheKey);
@@ -220,11 +191,11 @@ export async function getMarketTimeseries(
   }
 
   try {
-    const { normalized } = await resolveProviderData(dispatch, provider, {
-      symbol,
-      timeframe,
-      limit,
-    });
+    const { normalized } = await resolveProviderData(
+      dispatch,
+      provider,
+      params,
+    );
 
     clientTimeseriesCache.set(cacheKey, normalized);
 
@@ -259,4 +230,137 @@ export async function getMarketTimeseries(
       provider,
     };
   }
+}
+
+// ============================================================================
+//                           ASSET CATALOG SEARCH
+// ============================================================================
+
+type SearchAssetsRequest = {
+  query: string;
+  provider: MarketDataProvider;
+};
+
+type SearchCacheEntry = {
+  items: CatalogItem[];
+  expiresAt: number;
+};
+
+const searchCache = new Map<string, SearchCacheEntry>();
+const SEARCH_TTL_MS = 30_000; // 30 секунд, потом перечитываем
+
+function makeSearchCacheKey(provider: MarketDataProvider, query: string) {
+  return `${provider}:${query.trim().toLowerCase()}`;
+}
+
+// ---- NORMALIZATION: RAW → CatalogItem[] ----
+
+function normalizeMockSymbols(raw: unknown): CatalogItem[] {
+  if (!Array.isArray(raw)) return [];
+
+  return (raw as MockSymbolRaw[])
+    .map((item) => {
+      if (!item.symbol || !item.name) return null;
+
+      const assetClass = item.class ?? 'other';
+
+      const result: CatalogItem = {
+        symbol: item.symbol,
+        name: item.name,
+        exchange: item.exchange,
+        assetClass,
+        currency: item.currency,
+        provider: 'MOCK',
+      };
+
+      return result;
+    })
+    .filter((x): x is CatalogItem => x !== null);
+}
+
+// Заглушки для реальных провайдеров — пока ничего не знаем о формате ответа.
+function normalizeBinanceSymbols(_raw: unknown): CatalogItem[] {
+  // TODO: как только будет описание ответа, сюда добавим реальную нормализацию
+  return [];
+}
+
+function normalizeMoexSymbols(_raw: unknown): CatalogItem[] {
+  // TODO: как только будет описание ответа, сюда добавим реальную нормализацию
+  return [];
+}
+
+function normalizeCustomSymbols(_raw: unknown): CatalogItem[] {
+  return [];
+}
+
+function normalizeSearchResult(
+  provider: MarketDataProvider,
+  raw: unknown,
+): CatalogItem[] {
+  switch (provider) {
+    case 'MOCK':
+      return normalizeMockSymbols(raw);
+    case 'BINANCE':
+      return normalizeBinanceSymbols(raw);
+    case 'MOEX':
+      return normalizeMoexSymbols(raw);
+    case 'CUSTOM':
+      return normalizeCustomSymbols(raw);
+    default:
+      return [];
+  }
+}
+
+// ---- RAW FETCH по провайдеру ----
+
+async function fetchSearchRaw(
+  dispatch: AppDispatch,
+  provider: MarketDataProvider,
+  query: string,
+): Promise<unknown> {
+  switch (provider) {
+    case 'MOCK':
+      return searchMockSymbols(query);
+    case 'BINANCE':
+      return searchBinanceSymbols(dispatch, query);
+    case 'MOEX':
+      return searchMoexSymbols(dispatch, query);
+    case 'CUSTOM':
+      // пока нет реального кастомного поиска — возвращаем пустой список
+      return [];
+    default:
+      return [];
+  }
+}
+
+// ---- PUBLIC API: SEARCH ----
+
+export async function searchAssets(
+  dispatch: AppDispatch,
+  params: SearchAssetsRequest,
+): Promise<CatalogItem[]> {
+  const query = params.query.trim();
+  const provider = params.provider;
+
+  if (!query) {
+    return [];
+  }
+
+  const cacheKey = makeSearchCacheKey(provider, query);
+  const now = Date.now();
+  const cached = searchCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.items;
+  }
+
+  const raw = await fetchSearchRaw(dispatch, provider, query);
+  const normalized = normalizeSearchResult(provider, raw);
+
+  searchCache.set(cacheKey, {
+    items: normalized,
+    expiresAt: now + SEARCH_TTL_MS,
+  });
+
+  return normalized;
 }

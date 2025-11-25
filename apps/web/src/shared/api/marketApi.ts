@@ -36,6 +36,11 @@ export interface MoexTimeseriesRequest {
   limit: number;
 }
 
+// ---- SEARCH ----
+
+// для простоты поисковые эндпоинты принимают просто строку запроса (q)
+export type SearchQuery = string;
+
 export const marketApi = createApi({
   reducerPath: 'marketApi',
   baseQuery: fetchBaseQuery({
@@ -68,6 +73,33 @@ export const marketApi = createApi({
         params: { symbol, timeframe, limit },
       }),
     }),
+
+    // ---- SEARCH ENDPOINTS (сырой ответ провайдера, без нормализации) ----
+
+    // GET /api/market/binance/search-symbols?q=...
+    searchBinanceSymbols: builder.query<unknown, SearchQuery>({
+      query: (q) => ({
+        url: 'binance/search-symbols',
+        params: { q },
+      }),
+    }),
+
+    // GET /api/market/moex/search-symbols?q=...
+    searchMoexSymbols: builder.query<unknown, SearchQuery>({
+      query: (q) => ({
+        url: 'moex/search-symbols',
+        params: { q },
+      }),
+    }),
+
+    // GET /api/market/mock/search-symbols?q=...
+    // пока что можно не использовать, т.к. MOCK будет читать из статического массива
+    searchMockSymbols: builder.query<unknown, SearchQuery>({
+      query: (q) => ({
+        url: 'mock/search-symbols',
+        params: { q },
+      }),
+    }),
   }),
 });
 
@@ -78,4 +110,10 @@ export const {
   useLazyGetMoexTimeseriesQuery,
   useGetMockTimeseriesQuery,
   useLazyGetMockTimeseriesQuery,
+  useSearchBinanceSymbolsQuery,
+  useLazySearchBinanceSymbolsQuery,
+  useSearchMoexSymbolsQuery,
+  useLazySearchMoexSymbolsQuery,
+  useSearchMockSymbolsQuery,
+  useLazySearchMockSymbolsQuery,
 } = marketApi;
