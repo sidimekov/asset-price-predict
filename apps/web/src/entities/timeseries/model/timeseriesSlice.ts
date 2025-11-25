@@ -1,9 +1,10 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/shared/store';
 import type { Bar } from '@shared/types/market';
 import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+import type { TimeseriesCacheKey } from '@/shared/lib/cacheKey';
 
-export type TimeseriesKey = string; // "provider:symbol:timeframe"
+export type TimeseriesKey = TimeseriesCacheKey;
 
 export const buildTimeseriesKey = (
   provider: MarketDataProvider,
@@ -11,8 +12,13 @@ export const buildTimeseriesKey = (
   timeframe: MarketTimeframe,
 ): TimeseriesKey => `${provider}:${symbol}:${timeframe}`;
 
+interface TimeseriesEntry {
+  bars: Bar[];
+  fetchedAt: string;
+}
+
 interface TimeseriesState {
-  byKey: Record<TimeseriesKey, Bar[]>;
+  byKey: Record<TimeseriesKey, TimeseriesEntry>;
   loadingByKey: Record<TimeseriesKey, boolean>;
   errorByKey: Record<TimeseriesKey, string | null>;
 }
@@ -30,6 +36,7 @@ interface TimeseriesRequestedPayload {
 interface TimeseriesReceivedPayload {
   key: TimeseriesKey;
   bars: Bar[];
+  fetchedAt: string;
 }
 
 interface TimeseriesFailedPayload {
@@ -49,31 +56,48 @@ const timeseriesSlice = createSlice({
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
     },
+
     timeseriesReceived(
       state,
       action: PayloadAction<TimeseriesReceivedPayload>,
     ) {
-      const { key, bars } = action.payload;
-      state.byKey[key] = bars;
+      const { key, bars, fetchedAt } = action.payload;
+      state.byKey[key] = { bars, fetchedAt };
       state.loadingByKey[key] = false;
       state.errorByKey[key] = null;
     },
+
     timeseriesFailed(state, action: PayloadAction<TimeseriesFailedPayload>) {
       const { key, error } = action.payload;
       state.loadingByKey[key] = false;
       state.errorByKey[key] = error;
     },
+
+    clearTimeseries(state, action: PayloadAction<TimeseriesKey>) {
+      const key = action.payload;
+      delete state.byKey[key];
+      delete state.loadingByKey[key];
+      delete state.errorByKey[key];
+    },
+
+    clearAllTimeseries() {
+      return initialState;
+    },
   },
 });
 
-export const { timeseriesRequested, timeseriesReceived, timeseriesFailed } =
-  timeseriesSlice.actions;
+export const {
+  timeseriesRequested,
+  timeseriesReceived,
+  timeseriesFailed,
+  clearTimeseries,
+  clearAllTimeseries,
+} = timeseriesSlice.actions;
 
 export const timeseriesReducer = timeseriesSlice.reducer;
 
-// selectors
 export const selectTimeseriesByKey = (state: RootState, key: TimeseriesKey) =>
-  state.timeseries.byKey[key] ?? null;
+  state.timeseries.byKey[key]?.bars ?? null;
 
 export const selectTimeseriesLoadingByKey = (
   state: RootState,

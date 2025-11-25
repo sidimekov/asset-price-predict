@@ -29,9 +29,10 @@ describe('fetchMockTimeseries', () => {
   it('вызывает getMockTimeseries и возвращает данные', async () => {
     const mockDispatch = vi.fn((action: any) => action);
 
+    // 👇 Параметры, которые реально пойдут в initiate
     const params = {
       symbol: 'TEST',
-      timeframe: '1h',
+      timeframe: '1h' as const,
       limit: 10,
     };
 
@@ -44,7 +45,10 @@ describe('fetchMockTimeseries', () => {
 
     mockMockInitiate.mockReturnValue(mockQueryResult);
 
-    const result = await fetchMockTimeseries(mockDispatch as any, params);
+    const result = await fetchMockTimeseries(
+      mockDispatch as any,
+      params as any,
+    );
 
     expect(mockMockInitiate).toHaveBeenCalledTimes(1);
     expect(mockMockInitiate).toHaveBeenCalledWith({
@@ -65,11 +69,11 @@ describe('generateMockBarsRaw', () => {
   it('генерирует массив нужной длины и формата [ts, o, h, l, c, v]', () => {
     const params = {
       symbol: 'TEST',
-      timeframe: '1h',
+      timeframe: '1h' as const,
       limit: 5,
     };
 
-    const result = generateMockBarsRaw(params);
+    const result = generateMockBarsRaw(params as any);
 
     expect(result).toHaveLength(5);
 

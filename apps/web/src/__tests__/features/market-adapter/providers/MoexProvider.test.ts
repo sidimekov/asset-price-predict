@@ -28,7 +28,7 @@ describe('fetchMoexTimeseries', () => {
 
     const params = {
       symbol: 'SBER',
-      timeframe: '1d',
+      timeframe: '1d' as const,
       limit: 20,
     };
 
@@ -41,7 +41,10 @@ describe('fetchMoexTimeseries', () => {
 
     mockMoexInitiate.mockReturnValue(mockQueryResult);
 
-    const result = await fetchMoexTimeseries(mockDispatch as any, params);
+    const result = await fetchMoexTimeseries(
+      mockDispatch as any,
+      params as any,
+    );
 
     expect(mockMoexInitiate).toHaveBeenCalledTimes(1);
     expect(mockMoexInitiate).toHaveBeenCalledWith({
