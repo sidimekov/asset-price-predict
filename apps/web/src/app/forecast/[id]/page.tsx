@@ -8,12 +8,9 @@ import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import FactorsTable from '@/features/factors/FactorsTable';
-import mockAssets from '@/mocks/recentAssets.json';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
-
-type Asset = { symbol: string; price: string };
 
 export default function ForecastPage() {
   const router = useRouter();
@@ -26,22 +23,8 @@ export default function ForecastPage() {
   const selectedModel = searchParams.get('model') ?? '';
   const selectedDate = searchParams.get('to') ?? '';
 
-  const assets = mockAssets as Asset[];
-
-  const index = Number(id);
-  const assetByIndex =
-    Number.isFinite(index) && index >= 0 && index < assets.length
-      ? assets[index]
-      : undefined;
-
-  const assetByTicker = ticker
-    ? assets.find((a) => a.symbol === ticker)
-    : undefined;
-
-  const selectedAsset = assetByTicker ?? assetByIndex;
-
-  const displaySymbol = selectedAsset?.symbol ?? ticker ?? String(id);
-  const selectedPrice = selectedAsset?.price ?? '—';
+  const displaySymbol = ticker || String(id);
+  const selectedPrice = '—'; // Цена остается фиксированной как в оригинале
 
   const [chartState, setChartState] = React.useState<State>('idle');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
