@@ -18,6 +18,12 @@ import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 import { inferForecast } from './mlWorkerClient';
 
+import {
+  forecastRequested,
+  forecastReceived,
+  forecastFailed,
+} from '@/entities/forecast/model/forecastSlice';
+
 export type OrchestratorInput = {
   symbol: Symbol; // символ актива (например SBER, APPL)
   provider: MarketDataProvider | 'MOCK'; // (MOEX, BINANCE, CUSTOM, MOCK)
@@ -68,49 +74,118 @@ export class ForecastManager {
       });
     }
 
-    // 1. Загружаем / берём из кэша таймсерии
-    const bars = await ForecastManager.ensureTimeseries(
-      { tsKey, symbol, provider, tf, window },
-      { dispatch, getState, signal },
-    );
+    try {
+      // 0. запрашиваем прогноз
+      dispatch(forecastRequested(fcKey));
 
-    // 2. Если прогноз уже есть в локальном кэше - используем его и завершаем
-    const existingForecast = getLocalForecast(fcKey);
-    if (existingForecast) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Orchestrator] using cached forecast', { fcKey });
+      // 1. Загружаем / берём из кэша таймсерии
+      const bars = await ForecastManager.ensureTimeseries(
+        { tsKey, symbol, provider, tf, window },
+        { dispatch, getState, signal },
+      );
+
+      if (signal?.aborted) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Orchestrator] aborted after timeseries', { fcKey });
+        }
+        return;
       }
-      orchestratorState.status = 'idle';
-      return;
-    }
 
-    // 3. Формируем хвост для воркера
-    const tail = ForecastManager.buildTailForWorker(bars, horizon);
+      const lastTs = bars.length ? bars[bars.length - 1][0] : Date.now();
 
-    // 4. Вызов ML-воркера
-    const inferResult = await inferForecast(tail, horizon, model ?? undefined);
+      // 2. Если прогноз уже есть в локальном кэше - используем его и завершаем
+      const existingForecast = getLocalForecast(fcKey);
+      if (existingForecast) {
+        const storeEntry = ForecastManager.buildStoreForecastEntry(
+          existingForecast,
+          tf,
+          lastTs,
+        );
 
-    const entry: LocalForecastEntry = {
-      series: {
-        p10: inferResult.p10,
-        p50: inferResult.p50,
-        p90: inferResult.p90,
-      },
-      meta: inferResult.diag,
-    };
+        dispatch(
+          forecastReceived({
+            key: fcKey,
+            entry: storeEntry,
+          }),
+        );
 
-    // 5. Кладём в локальный кэш прогнозов
-    setLocalForecast(fcKey, entry);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Orchestrator] using cached forecast', {
+            fcKey,
+          });
+        }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Orchestrator] forecast ready', {
-        fcKey,
+        return;
+      }
+
+      // 3. Формируем хвост для воркера
+      const tail = ForecastManager.buildTailForWorker(bars, horizon);
+
+      // 4. Вызов ML-воркера
+      const inferResult = await inferForecast(
+        tail,
         horizon,
-        points: inferResult.p50.length,
-      });
-    }
+        model ?? undefined,
+      );
 
-    orchestratorState.status = 'idle';
+      const entry: LocalForecastEntry = {
+        series: {
+          p10: inferResult.p10,
+          p50: inferResult.p50,
+          p90: inferResult.p90,
+        },
+        meta: inferResult.diag,
+      };
+
+      // 5. Кладём в локальный кэш прогнозов
+      setLocalForecast(fcKey, entry);
+
+      // и кладём в Forecast Store в формате [ts, value]
+      const storeEntry = ForecastManager.buildStoreForecastEntry(
+        entry,
+        tf,
+        lastTs,
+      );
+
+      dispatch(
+        forecastReceived({
+          key: fcKey,
+          entry: storeEntry,
+        }),
+      );
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Orchestrator] forecast ready', {
+          fcKey,
+          horizon,
+          points: inferResult.p50.length,
+        });
+      }
+    } catch (err: any) {
+      const message = err?.message || 'Failed to run forecast orchestrator';
+
+      orchestratorState.status = 'error';
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[Orchestrator] forecast error', {
+          fcKey,
+          message,
+        });
+      }
+
+      dispatch(
+        forecastFailed({
+          key: fcKey,
+          error: message,
+        }),
+      );
+
+      throw err;
+    } finally {
+      if (orchestratorState.status !== 'error') {
+        orchestratorState.status = 'idle';
+      }
+    }
   }
 
   private static async ensureTimeseries(
@@ -197,5 +272,48 @@ export class ForecastManager {
       const close = b[4];
       return [ts, close] as [number, number];
     });
+  }
+
+  private static buildStoreForecastEntry(
+    entry: LocalForecastEntry,
+    tf: MarketTimeframe,
+    lastTs: number,
+  ) {
+    const stepMs = ForecastManager.timeframeToMs(tf);
+
+    const makeSeries = (values: number[]) =>
+      values.map((value, index) => {
+        const ts = lastTs + stepMs * (index + 1);
+        return [ts, value] as [number, number];
+      });
+
+    const { series, meta } = entry;
+
+    return {
+      // Формат ForecastSeries = Array<[number, number]>
+      p50: makeSeries(series.p50),
+      p10: series.p10?.length ? makeSeries(series.p10) : undefined,
+      p90: series.p90?.length ? makeSeries(series.p90) : undefined,
+      meta,
+      // explain пока нет - добавим, когда воркер/бэкенд начнут отдавать факторы
+    };
+  }
+
+  private static timeframeToMs(tf: MarketTimeframe): number {
+    switch (tf) {
+      case '1h':
+        return 60 * 60 * 1000;
+      case '8h':
+        return 8 * 60 * 60 * 1000;
+      case '1d':
+        return 24 * 60 * 60 * 1000;
+      case '7d':
+        return 7 * 24 * 60 * 60 * 1000;
+      case '1mo':
+        // пока грубая аппроксимация — 30 дней
+        return 30 * 24 * 60 * 60 * 1000;
+      default:
+        return 0;
+    }
   }
 }
