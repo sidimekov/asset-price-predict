@@ -26,7 +26,10 @@ function ensureFile(relPath, expectedHash) {
 }
 
 function main() {
-  const manifestPath = path.join(rootDir, 'apps/web/src/config/ml.manifest.json');
+  const manifestPath = path.join(
+    rootDir,
+    'apps/web/src/config/ml.manifest.json',
+  );
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
   const modelPath = path.join(
