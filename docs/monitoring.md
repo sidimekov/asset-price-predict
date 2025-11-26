@@ -7,14 +7,22 @@
 
 ## env
 
-- NEXT_PUBLIC_SENTRY_DSN dsn проекта sentry для браузера
-- NEXT_PUBLIC_SENTRY_ENABLED включает отправку с клиента при true
-- NEXT_PUBLIC_SENTRY_ENVIRONMENT тег environment для событий браузера
-- NEXT_PUBLIC_SENTRY_RELEASE тег release для событий браузера
-- SENTRY_DSN dsn проекта sentry для api
-- SENTRY_ENABLED включает отправку на api при true
-- SENTRY_ENVIRONMENT тег environment для событий api
-- SENTRY_RELEASE тег release для событий api
+- NEXT_PUBLIC_SENTRY_DSN
+  - dsn проекта sentry для браузера
+- NEXT_PUBLIC_SENTRY_ENABLED
+  - включает отправку с клиента при true
+- NEXT_PUBLIC_SENTRY_ENVIRONMENT
+  - тег environment для событий браузера
+- NEXT_PUBLIC_SENTRY_RELEASE
+  - тег release для событий браузера
+- SENTRY_DSN
+  - dsn проекта sentry для api
+- SENTRY_ENABLED
+  - включает отправку на api при true
+- SENTRY_ENVIRONMENT
+  - тег environment для событий api
+- SENTRY_RELEASE
+  - тег release для событий api
 
 ## frontend flow
 
