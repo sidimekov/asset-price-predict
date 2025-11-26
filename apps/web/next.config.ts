@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 import * as path from 'path';
 
-const basePath = '/asset-price-predict';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 const nextConfig: NextConfig = {
   output: 'export',
@@ -10,8 +10,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  basePath,
-  assetPrefix: `${basePath}/`,
+  basePath: basePath || undefined,
+  assetPrefix: basePath ? `${basePath}/` : undefined,
 
   webpack(config) {
     const projectRoot = __dirname;
@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
       '@': path.resolve(projectRoot, 'src'),
       '@shared': path.resolve(projectRoot, '../../packages/shared/src'),
     };
+
     return config;
   },
 };
