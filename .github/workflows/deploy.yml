@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build @assetpredict/shared
+        run: pnpm -F @assetpredict/shared build
+
       - name: Run deploy script (build static site)
         env:
           DEPLOY_TARGET: github-pages
