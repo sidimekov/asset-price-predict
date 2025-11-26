@@ -22,7 +22,8 @@ describe('monitoring sentry client', () => {
     process.env = originalEnv;
   });
 
-  const loadModule = async (): Promise<MonitoringModule> => import('../../../shared/monitoring/sentry');
+  const loadModule = async (): Promise<MonitoringModule> =>
+    import('../../../shared/monitoring/sentry');
 
   it('skips setup when env flags are missing', async () => {
     process.env.NODE_ENV = 'production';
@@ -70,14 +71,18 @@ describe('monitoring sentry client', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, firstRequest] = fetchMock.mock.calls[0];
-    const firstPayload = JSON.parse((firstRequest?.body as string).split('\n')[2]);
+    const firstPayload = JSON.parse(
+      (firstRequest?.body as string).split('\n')[2],
+    );
 
     expect(firstPayload.event_id).toBe('uuid-abc');
     expect(firstPayload.level).toBe('info');
     expect(firstPayload.environment).toBe('staging');
     expect(firstPayload.release).toBe('1.0.0');
     expect(firstPayload.extra).toEqual({ foo: 'bar' });
-    expect(firstRequest?.headers).toMatchObject({ 'X-Sentry-Auth': expect.stringContaining('sentry_key=public') });
+    expect(firstRequest?.headers).toMatchObject({
+      'X-Sentry-Auth': expect.stringContaining('sentry_key=public'),
+    });
   });
 
   it('falls back to default environment when env values are missing', async () => {
@@ -125,11 +130,16 @@ describe('monitoring sentry client', () => {
     vi.spyOn(Math, 'random').mockReturnValue(fallbackRandom);
     const errorHandlers: Array<(event: ErrorEvent) => void> = [];
     const rejectionHandlers: Array<(event: PromiseRejectionEvent) => void> = [];
-    vi.spyOn(window, 'addEventListener').mockImplementation((type, listener) => {
-      if (type === 'error') errorHandlers.push(listener as (event: ErrorEvent) => void);
-      if (type === 'unhandledrejection')
-        rejectionHandlers.push(listener as (event: PromiseRejectionEvent) => void);
-    });
+    vi.spyOn(window, 'addEventListener').mockImplementation(
+      (type, listener) => {
+        if (type === 'error')
+          errorHandlers.push(listener as (event: ErrorEvent) => void);
+        if (type === 'unhandledrejection')
+          rejectionHandlers.push(
+            listener as (event: PromiseRejectionEvent) => void,
+          );
+      },
+    );
     window.history.pushState({}, '', '/report');
     const module = await loadModule();
 
@@ -166,7 +176,9 @@ describe('monitoring sentry client', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(4);
     const [, firstRequest] = fetchMock.mock.calls[0];
-    const firstPayload = JSON.parse((firstRequest?.body as string).split('\n')[2]);
+    const firstPayload = JSON.parse(
+      (firstRequest?.body as string).split('\n')[2],
+    );
     const frames = firstPayload.exception.values[0].stacktrace.frames;
 
     expect(firstPayload.event_id).toBe(fallbackId);

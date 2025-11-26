@@ -37,7 +37,9 @@ describe('MonitoringBoundary', () => {
       </MonitoringBoundary>,
     );
 
-    await waitFor(() => expect(screen.getByText('something went wrong')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText('something went wrong')).toBeInTheDocument(),
+    );
     expect(captureException).toHaveBeenCalledWith(expect.any(Error), {
       componentStack: expect.stringContaining('Boom'),
     });
