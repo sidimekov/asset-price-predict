@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
 import * as path from 'path';
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 const nextConfig: NextConfig = {
   output: 'export',
 
@@ -8,8 +10,10 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
+  basePath: basePath || undefined,
+  assetPrefix: basePath ? `${basePath}/` : undefined,
+
   webpack(config) {
-    // eslint-disable-next-line no-undef
     const projectRoot = __dirname;
 
     config.resolve = config.resolve || {};
