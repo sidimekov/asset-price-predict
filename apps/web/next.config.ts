@@ -2,6 +2,12 @@ import type { NextConfig } from 'next';
 import * as path from 'path';
 
 const nextConfig: NextConfig = {
+  output: 'export',
+
+  images: {
+    unoptimized: true,
+  },
+
   webpack(config) {
     // eslint-disable-next-line no-undef
     const projectRoot = __dirname;
