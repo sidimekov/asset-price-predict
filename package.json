@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
+    "start": "pnpm --filter web serve",
     "lint": "eslint . && prettier --check . && stylelint \"**/*.{css,scss}\"",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
