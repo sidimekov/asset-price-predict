@@ -2,7 +2,8 @@ name: Deploy Web to GitHub Pages
 
 on:
   push:
-    branches: ['main']
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -11,7 +12,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'github-pages'
+  group: github-pages
   cancel-in-progress: false
 
 jobs:
@@ -25,7 +26,6 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
           run_install: false
 
       - name: Setup Node.js
@@ -42,10 +42,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build @assetpredict/shared
+        run: pnpm -F @assetpredict/shared build
+
       - name: Run deploy script (build static site)
         env:
           DEPLOY_TARGET: github-pages
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_BASE_PATH: /asset-price-predict
         run: bash scripts/deploy.sh
 
       - name: Upload static site artifact
