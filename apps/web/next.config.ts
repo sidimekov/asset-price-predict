@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
 import * as path from 'path';
 
+const basePath = '/asset-price-predict';
+
 const nextConfig: NextConfig = {
   output: 'export',
 
@@ -8,8 +10,10 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
+  basePath,
+  assetPrefix: `${basePath}/`,
+
   webpack(config) {
-    // eslint-disable-next-line no-undef
     const projectRoot = __dirname;
 
     config.resolve = config.resolve || {};
