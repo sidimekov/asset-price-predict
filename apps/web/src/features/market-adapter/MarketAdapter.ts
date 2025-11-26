@@ -1,9 +1,8 @@
 // apps/web/src/features/market-adapter/MarketAdapter.ts
+
 import { z } from 'zod';
 import type { AppDispatch } from '@/shared/store';
 import {
-  SUPPORTED_PROVIDERS,
-  SUPPORTED_TIMEFRAMES,
   DEFAULT_PROVIDER,
   DEFAULT_LIMIT,
   type MarketDataProvider,
@@ -14,26 +13,23 @@ import {
   makeTimeseriesCacheKey,
   type Bar,
 } from './cache/ClientTimeseriesCache';
-import {
-  fetchBinanceTimeseries,
-  searchBinanceSymbols,
-} from './providers/BinanceProvider';
+
+import { fetchBinanceTimeseries } from './providers/BinanceProvider';
 import {
   fetchMockTimeseries,
   generateMockBarsRaw,
-  searchMockSymbols,
-  type MockSymbolRaw,
 } from './providers/MockProvider';
-import {
-  fetchMoexTimeseries,
-  searchMoexSymbols,
-} from './providers/MoexProvider';
+import { fetchMoexTimeseries } from './providers/MoexProvider';
+
 import type { BinanceKline } from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
+import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
 import type { ProviderRequestBase } from './providers/types';
 
-// ---- SCHEMAS for timeseries ----
+// ============================================================================
+// TIMESERIES
+// ============================================================================
 
 const providerSchema = zProvider.or(z.literal('MOCK'));
 const timeframeSchema = zTimeframe;
@@ -48,63 +44,44 @@ export const marketAdapterRequestSchema = z.object({
 
 export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
 
-export type MarketAdapterSource = 'CACHE' | 'NETWORK' | 'LOCAL';
-
 export interface MarketAdapterSuccess {
   bars: Bar[];
   symbol: string;
   provider: MarketDataProvider;
   timeframe: MarketTimeframe;
-  source: MarketAdapterSource;
+  source: 'CACHE' | 'NETWORK' | 'LOCAL';
 }
 
 export interface MarketAdapterError {
-  code:
-    | 'INVALID_PARAMS'
-    | 'UNSUPPORTED_PROVIDER'
-    | 'PROVIDER_ERROR'
-    | 'NORMALIZATION_ERROR';
+  code: 'INVALID_PARAMS' | 'UNSUPPORTED_PROVIDER' | 'PROVIDER_ERROR';
   message: string;
-  provider?: MarketDataProvider;
 }
 
-// ---- NORMALIZATION: TIMESERIES ----
-
+// Нормализация баров
 function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
-  try {
-    return klines.map((k) => {
-      const ts = k[0]; // openTime
-      const open = Number(k[1]);
-      const high = Number(k[2]);
-      const low = Number(k[3]);
-      const close = Number(k[4]);
-      const volume = Number(k[5]);
-      return [ts, open, high, low, close, volume];
-    });
-  } catch (e) {
-    console.error('[MarketAdapter] Failed to normalize Binance klines', e);
-    throw new Error('NORMALIZATION_ERROR');
-  }
+  return klines.map((k) => [
+    k[0],
+    Number(k[1]),
+    Number(k[2]),
+    Number(k[3]),
+    Number(k[4]),
+    Number(k[5]),
+  ]);
 }
 
 function normalizeRawBars(raw: unknown): Bar[] {
-  try {
-    if (!Array.isArray(raw)) return [];
-    return raw.map((b: any) => {
-      const [ts, o, h, l, c, v] = b;
-      return [
-        Number(ts),
-        Number(o),
-        Number(h),
-        Number(l),
-        Number(c),
-        v != null ? Number(v) : undefined,
-      ];
-    });
-  } catch (e) {
-    console.error('[MarketAdapter] Failed to normalize raw bars', e);
-    throw new Error('NORMALIZATION_ERROR');
-  }
+  if (!Array.isArray(raw)) return [];
+  return raw.map((b: any) => {
+    const [ts, o, h, l, c, v] = b;
+    return [
+      Number(ts),
+      Number(o),
+      Number(h),
+      Number(l),
+      Number(c),
+      v != null ? Number(v) : undefined,
+    ];
+  });
 }
 
 async function resolveProviderData(
@@ -113,254 +90,142 @@ async function resolveProviderData(
   params: ProviderRequestBase,
 ): Promise<{ raw: unknown; normalized: Bar[] }> {
   switch (provider) {
-    case 'BINANCE': {
+    case 'BINANCE':
       const klines = await fetchBinanceTimeseries(dispatch, params);
-      const normalized = normalizeBinanceKlines(klines);
-      return { raw: klines, normalized };
-    }
+      return { raw: klines, normalized: normalizeBinanceKlines(klines) };
 
-    case 'MOEX': {
-      const raw = await fetchMoexTimeseries(dispatch, params);
-      const normalized = normalizeRawBars(raw);
-      return { raw, normalized };
-    }
+    case 'MOEX':
+      const moexRaw = await fetchMoexTimeseries(dispatch, params);
+      return { raw: moexRaw, normalized: normalizeRawBars(moexRaw) };
 
-    case 'CUSTOM': {
-      // На будущее: кастомный провайдер можно считать фронтовым mock’ом
-      const raw = generateMockBarsRaw(params);
-      const normalized = normalizeRawBars(raw);
-      return { raw, normalized };
-    }
+    case 'MOCK':
+      const mockRaw = await fetchMockTimeseries(dispatch, params);
+      return { raw: mockRaw, normalized: normalizeRawBars(mockRaw) };
 
-    case 'MOCK': {
-      // generateMockBarsRaw можно использовать локально,
-      // но для единообразия берём данные через RTK-query и нормализуем
-      const raw = await fetchMockTimeseries(dispatch, params);
-      const normalized = normalizeRawBars(raw);
-      return { raw, normalized };
-    }
+    case 'CUSTOM':
+      const customRaw = generateMockBarsRaw(params);
+      return { raw: customRaw, normalized: normalizeRawBars(customRaw) };
 
     default:
-      throw new Error('UNSUPPORTED_PROVIDER');
+      throw new Error('Unsupported provider');
   }
 }
-
-// ---- PUBLIC API: TIMESERIES ----
 
 export async function getMarketTimeseries(
   dispatch: AppDispatch,
-  rawRequest: MarketAdapterRequest,
+  request: MarketAdapterRequest,
 ): Promise<MarketAdapterSuccess | MarketAdapterError> {
-  const parseResult = marketAdapterRequestSchema.safeParse(rawRequest);
-  if (!parseResult.success) {
-    console.error('[MarketAdapter] Invalid params', parseResult.error);
-    return {
-      code: 'INVALID_PARAMS',
-      message: 'Invalid market adapter request params',
-    };
+  const result = marketAdapterRequestSchema.safeParse(request);
+  if (!result.success) {
+    return { code: 'INVALID_PARAMS', message: 'Invalid request' };
   }
 
-  const parsed = parseResult.data;
-  const provider: MarketDataProvider = parsed.provider ?? DEFAULT_PROVIDER;
-  const timeframe: MarketTimeframe =
-    (parsed.timeframe as MarketTimeframe) ?? SUPPORTED_TIMEFRAMES[0];
-  const limit = parsed.limit ?? DEFAULT_LIMIT;
-  const symbol = parsed.symbol;
-
-  if (!SUPPORTED_PROVIDERS.includes(provider)) {
-    return {
-      code: 'UNSUPPORTED_PROVIDER',
-      message: `Provider ${provider} is not supported`,
-      provider,
-    };
-  }
-
-  const params: ProviderRequestBase = { symbol, timeframe, limit };
+  const {
+    symbol,
+    provider = DEFAULT_PROVIDER,
+    timeframe = '1h' as MarketTimeframe,
+    limit = DEFAULT_LIMIT,
+  } = result.data;
 
   const cacheKey = makeTimeseriesCacheKey(provider, symbol, timeframe, limit);
-  const cachedBars = clientTimeseriesCache.get(cacheKey);
-
-  if (cachedBars) {
-    return {
-      bars: cachedBars,
-      symbol,
-      provider,
-      timeframe,
-      source: 'CACHE',
-    };
+  const cached = clientTimeseriesCache.get(cacheKey);
+  if (cached) {
+    return { bars: cached, symbol, provider, timeframe, source: 'CACHE' };
   }
 
   try {
-    const { normalized } = await resolveProviderData(
-      dispatch,
-      provider,
-      params,
-    );
+    const { normalized } = await resolveProviderData(dispatch, provider, {
+      symbol,
+      timeframe,
+      limit,
+    });
 
     clientTimeseriesCache.set(cacheKey, normalized);
-
-    return {
-      bars: normalized,
-      symbol,
-      provider,
-      timeframe,
-      source: 'NETWORK',
-    };
-  } catch (e: any) {
-    if (e?.message === 'NORMALIZATION_ERROR') {
-      return {
-        code: 'NORMALIZATION_ERROR',
-        message: 'Failed to normalize provider data',
-        provider,
-      };
-    }
-
-    if (e?.message === 'UNSUPPORTED_PROVIDER') {
-      return {
-        code: 'UNSUPPORTED_PROVIDER',
-        message: 'Unsupported provider',
-        provider,
-      };
-    }
-
-    console.error('[MarketAdapter] Provider error', e);
+    return { bars: normalized, symbol, provider, timeframe, source: 'NETWORK' };
+  } catch (err: any) {
     return {
       code: 'PROVIDER_ERROR',
-      message: 'Failed to fetch data from provider',
-      provider,
+      message: err.message || 'Failed to fetch',
     };
   }
 }
 
 // ============================================================================
-//                           ASSET CATALOG SEARCH
+// ASSET CATALOG SEARCH — РАБОЧАЯ ВЕРСИЯ
 // ============================================================================
 
-type SearchAssetsRequest = {
-  query: string;
-  provider: MarketDataProvider;
-};
+// Моковые данные
+const BINANCE_MOCK = [
+  { symbol: 'BTCUSDT', baseAsset: 'BTC', quoteAsset: 'USDT' },
+  { symbol: 'ETHUSDT', baseAsset: 'ETH', quoteAsset: 'USDT' },
+  { symbol: 'BNBUSDT', baseAsset: 'BNB', quoteAsset: 'USDT' },
+  { symbol: 'SOLUSDT', baseAsset: 'SOL', quoteAsset: 'USDT' },
+  { symbol: 'XRPUSDT', baseAsset: 'XRP', quoteAsset: 'USDT' },
+  { symbol: 'ADAUSDT', baseAsset: 'ADA', quoteAsset: 'USDT' },
+];
 
-type SearchCacheEntry = {
-  items: CatalogItem[];
-  expiresAt: number;
-};
+const MOEX_MOCK = [
+  { SECID: 'SBER', SHORTNAME: 'Сбербанк', CURRENCYID: 'RUB', TYPE: 'stock' },
+  { SECID: 'GAZP', SHORTNAME: 'Газпром', CURRENCYID: 'RUB', TYPE: 'stock' },
+  { SECID: 'YNDX', SHORTNAME: 'Яндекс', CURRENCYID: 'RUB', TYPE: 'stock' },
+  { SECID: 'LKOH', SHORTNAME: 'Лукойл', CURRENCYID: 'RUB', TYPE: 'stock' },
+  { SECID: 'ROSN', SHORTNAME: 'Роснефть', CURRENCYID: 'RUB', TYPE: 'stock' },
+  { SECID: 'VTBR', SHORTNAME: 'ВТБ', CURRENCYID: 'RUB', TYPE: 'stock' },
+];
 
-const searchCache = new Map<string, SearchCacheEntry>();
-const SEARCH_TTL_MS = 30_000; // 30 секунд, потом перечитываем
+const searchCache = new Map<string, { items: CatalogItem[]; ts: number }>();
+const SEARCH_TTL_MS = 30_000;
 
-function makeSearchCacheKey(provider: MarketDataProvider, query: string) {
+function makeSearchCacheKey(
+  provider: MarketDataProvider,
+  query: string,
+): string {
   return `${provider}:${query.trim().toLowerCase()}`;
 }
 
-// ---- NORMALIZATION: RAW → CatalogItem[] ----
-
-function normalizeMockSymbols(raw: unknown): CatalogItem[] {
-  if (!Array.isArray(raw)) return [];
-
-  return (raw as MockSymbolRaw[])
-    .map((item) => {
-      if (!item.symbol || !item.name) return null;
-
-      const assetClass = item.class ?? 'other';
-
-      const result: CatalogItem = {
-        symbol: item.symbol,
-        name: item.name,
-        exchange: item.exchange,
-        assetClass,
-        currency: item.currency,
-        provider: 'MOCK',
-      };
-
-      return result;
-    })
-    .filter((x): x is CatalogItem => x !== null);
-}
-
-// Заглушки для реальных провайдеров — пока ничего не знаем о формате ответа.
-function normalizeBinanceSymbols(_raw: unknown): CatalogItem[] {
-  // TODO: как только будет описание ответа, сюда добавим реальную нормализацию
-  return [];
-}
-
-function normalizeMoexSymbols(_raw: unknown): CatalogItem[] {
-  // TODO: как только будет описание ответа, сюда добавим реальную нормализацию
-  return [];
-}
-
-function normalizeCustomSymbols(_raw: unknown): CatalogItem[] {
-  return [];
-}
-
-function normalizeSearchResult(
-  provider: MarketDataProvider,
-  raw: unknown,
-): CatalogItem[] {
-  switch (provider) {
-    case 'MOCK':
-      return normalizeMockSymbols(raw);
-    case 'BINANCE':
-      return normalizeBinanceSymbols(raw);
-    case 'MOEX':
-      return normalizeMoexSymbols(raw);
-    case 'CUSTOM':
-      return normalizeCustomSymbols(raw);
-    default:
-      return [];
-  }
-}
-
-// ---- RAW FETCH по провайдеру ----
-
 async function fetchSearchRaw(
-  dispatch: AppDispatch,
+  _dispatch: AppDispatch,
   provider: MarketDataProvider,
   query: string,
-): Promise<unknown> {
-  switch (provider) {
-    case 'MOCK':
-      return searchMockSymbols(query);
-    case 'BINANCE':
-      return searchBinanceSymbols(dispatch, query);
-    case 'MOEX':
-      return searchMoexSymbols(dispatch, query);
-    case 'CUSTOM':
-      // пока нет реального кастомного поиска — возвращаем пустой список
-      return [];
-    default:
-      return [];
-  }
-}
+): Promise<unknown[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
 
-// ---- PUBLIC API: SEARCH ----
+  if (provider === 'BINANCE') {
+    return BINANCE_MOCK.filter(
+      (i) =>
+        i.symbol.toLowerCase().includes(q) ||
+        i.baseAsset.toLowerCase().includes(q),
+    );
+  }
+
+  if (provider === 'MOEX') {
+    return MOEX_MOCK.filter(
+      (i) =>
+        i.SECID.toLowerCase().includes(q) ||
+        (i.SHORTNAME && i.SHORTNAME.toLowerCase().includes(q)),
+    );
+  }
+
+  return [];
+}
 
 export async function searchAssets(
   dispatch: AppDispatch,
-  params: SearchAssetsRequest,
+  { query, provider }: { query: string; provider: MarketDataProvider },
 ): Promise<CatalogItem[]> {
-  const query = params.query.trim();
-  const provider = params.provider;
+  const q = query.trim();
+  if (q.length < 2) return [];
 
-  if (!query) {
-    return [];
-  }
-
-  const cacheKey = makeSearchCacheKey(provider, query);
-  const now = Date.now();
+  const cacheKey = makeSearchCacheKey(provider, q);
   const cached = searchCache.get(cacheKey);
-
-  if (cached && cached.expiresAt > now) {
+  if (cached && Date.now() - cached.ts < SEARCH_TTL_MS) {
     return cached.items;
   }
 
-  const raw = await fetchSearchRaw(dispatch, provider, query);
-  const normalized = normalizeSearchResult(provider, raw);
+  const raw = await fetchSearchRaw(dispatch, provider, q);
+  const items = normalizeCatalogResponse(raw as any[], provider);
 
-  searchCache.set(cacheKey, {
-    items: normalized,
-    expiresAt: now + SEARCH_TTL_MS,
-  });
-
-  return normalized;
+  searchCache.set(cacheKey, { items, ts: Date.now() });
+  return items;
 }

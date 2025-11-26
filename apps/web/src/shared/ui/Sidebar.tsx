@@ -16,7 +16,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="sidebar" aria-label="Боковая панель">
+    <aside className="sidebar" aria-label="Боковая панель" role="complementary">
       <div className="sidebar-content">
         <h1 className="sidebar-brand">
           <span className="brand-gradient">Asset</span>
@@ -30,7 +30,7 @@ export const Sidebar: React.FC = () => {
         >
           <Image
             src={profile.avatarUrl}
-            alt=""
+            alt="Profile avatar"
             width={64}
             height={64}
             className="sidebar-profile-avatar"
@@ -41,9 +41,19 @@ export const Sidebar: React.FC = () => {
           </div>
         </Link>
 
-        <nav className="sidebar-nav" aria-label="Основная навигация">
+        <nav
+          className="sidebar-nav"
+          aria-label="Основная навигация"
+          role="navigation"
+        >
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            // Безопасная проверка pathname
+            const isActive =
+              item.href === '/dashboard'
+                ? pathname === '/dashboard' ||
+                  (pathname && pathname.startsWith('/forecast'))
+                : pathname === item.href;
+
             return (
               <Link
                 key={item.href}

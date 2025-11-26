@@ -19,9 +19,6 @@ export type Symbol = string;
 
 /**
  * Один бар (свеча) - кортеж [timestamp, open, high, low, close, volume?]
- * timestamp - Unix timestamp в миллисекундах
- * open, high, low, close - цены открытия, максимум, минимум, закрытия
- * volume - объем (опционально)
  */
 export type Bar = [
   ts: number,
@@ -33,12 +30,12 @@ export type Bar = [
 ];
 
 /**
- * Массив баров, отсортированный от старых к новым (по возрастанию timestamp)
+ * Массив баров
  */
 export type Bars = Bar[];
 
 /**
- * Константы поддерживаемых таймфреймов
+ * Константы
  */
 export const SUPPORTED_TIMEFRAMES: readonly Timeframe[] = [
   '1h',
@@ -48,13 +45,11 @@ export const SUPPORTED_TIMEFRAMES: readonly Timeframe[] = [
   '1mo',
 ] as const;
 
-/**
- * Константы поддерживаемых провайдеров
- */
 export const SUPPORTED_PROVIDERS: readonly Provider[] = [
   'MOEX',
   'BINANCE',
   'CUSTOM',
+  'MOCK',
 ] as const;
 
 // Провайдеры данных рынка: базовые + фронтовый MOCK

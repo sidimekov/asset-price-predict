@@ -10,7 +10,6 @@ export async function fetchBinanceTimeseries(
 ): Promise<BinanceKline[]> {
   const { symbol, timeframe, limit } = params;
 
-  // при необходимости тут можно сделать маппинг timeframe → interval
   const queryResult = dispatch(
     marketApi.endpoints.getBinanceTimeseries.initiate({
       symbol,

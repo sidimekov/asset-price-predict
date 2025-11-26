@@ -8,97 +8,123 @@ import ParamsPanel from '@/features/params/ParamsPanel';
 import FactorsTable from '@/features/factors/FactorsTable';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
+import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
+import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
+import {
+  addRecent,
+  setSelected,
+  removeRecent,
+  selectRecent,
+  selectSelectedAsset,
+} from '@/features/asset-catalog/model/catalogSlice';
+import {
+  timeseriesRequested,
+  buildTimeseriesKey,
+} from '@/entities/timeseries/model/timeseriesSlice';
+import { DEFAULT_TIMEFRAME } from '@/config/market';
 import mockAssets from '@/mocks/recentAssets.json';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
-type Asset = { symbol: string; price: string };
 
 export default function Dashboard() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
-  const [assets, setAssets] = React.useState<Asset[]>(mockAssets as Asset[]);
-  const [selected, setSelected] = React.useState<string | null>(null);
-  const [assetState, setAssetState] = React.useState<State>('idle');
+  const recentAssets = useAppSelector(selectRecent);
+  const selectedAsset = useAppSelector(selectSelectedAsset);
 
+  const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
+  const [modalQuery, setModalQuery] = React.useState('');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
   const [factorsState, setFactorsState] = React.useState<State>('idle');
 
-  const getTodayDate = () => {
+  const [selectedModel, setSelectedModel] = React.useState('');
+  const [selectedDate, setSelectedDate] = React.useState(() => {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const [selectedModel, setSelectedModel] = React.useState<string>('');
-  const [selectedDate, setSelectedDate] =
-    React.useState<string>(getTodayDate());
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
 
   React.useEffect(() => {
-    setAssetState('loading');
-    setParamsState('loading');
-    setFactorsState('loading');
-
-    const t = setTimeout(() => {
-      setAssetState('ready');
+    const timer = setTimeout(() => {
       setParamsState('success');
       setFactorsState('ready');
     }, 1200);
-
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, []);
 
-  React.useEffect(() => {
-    if (!selected && assets.length > 0) {
-      setSelected(assets[0].symbol);
-    }
-  }, [assets, selected]);
+  const selectedSymbol = selectedAsset?.symbol ?? null;
 
-  React.useEffect(() => {
-    if (selected && !assets.find((a) => a.symbol === selected)) {
-      setSelected(assets[0]?.symbol ?? null);
-    }
-  }, [assets, selected]);
+  const derivedAssetState: State = !selectedSymbol
+    ? 'empty'
+    : recentAssets.length === 0
+      ? 'empty'
+      : 'ready';
 
-  const derivedAssetState: State =
-    assetState === 'loading' ? 'loading' : assets.length ? 'ready' : 'empty';
+  const handleAssetSelect = ({
+    symbol,
+    provider,
+  }: {
+    symbol: string;
+    provider: 'binance' | 'moex';
+  }) => {
+    const normalizedProvider = provider.toUpperCase() as 'BINANCE' | 'MOEX';
 
-  const handleAddAsset = () => {
-    const id = `ASSET${Math.floor(Math.random() * 1000)}`;
-    setAssets((prev) => {
-      const updated = [{ symbol: id, price: '0.00' }, ...prev];
-      return updated.slice(0, 10);
-    });
-  };
+    dispatch(addRecent({ symbol, provider }));
+    dispatch(setSelected({ symbol, provider }));
 
-  const handleRemoveAsset = (symbol: string) => {
-    setAssets((prev) => prev.filter((a) => a.symbol !== symbol));
+    const key = buildTimeseriesKey(
+      normalizedProvider,
+      symbol,
+      DEFAULT_TIMEFRAME,
+    );
+    dispatch(timeseriesRequested({ key }));
+
+    setIsCatalogOpen(false);
+    setModalQuery('');
   };
 
   const handlePredict = () => {
-    if (!selected) return;
+    if (!selectedSymbol || !selectedAsset) return;
 
-    const assetIndex = assets.findIndex((a) => a.symbol === selected);
-    const id = assetIndex === -1 ? 0 : assetIndex;
+    const parts = [`ticker=${encodeURIComponent(selectedAsset.symbol)}`];
+    if (selectedModel) parts.push(`model=${encodeURIComponent(selectedModel)}`);
+    if (selectedDate) parts.push(`to=${encodeURIComponent(selectedDate)}`);
 
-    const queryParts: string[] = [`ticker=${encodeURIComponent(selected)}`];
-
-    if (selectedModel) {
-      queryParts.push(`model=${encodeURIComponent(selectedModel)}`);
-    }
-    if (selectedDate) {
-      queryParts.push(`to=${encodeURIComponent(selectedDate)}`);
-    }
-
-    const query = queryParts.length ? `?${queryParts.join('&')}` : '';
-    router.push(`/forecast/${id}${query}`);
+    const query = parts.length > 0 ? `?${parts.join('&')}` : '';
+    router.push(`/forecast/0${query}`);
   };
 
-  const visibleAssets = assets.slice(0, 10);
+  const handleRemoveAsset = (symbol: string, provider?: string) => {
+    const asset = recentAssets.find((a) => a.symbol === symbol);
+    if (asset) {
+      dispatch(
+        removeRecent({
+          symbol: asset.symbol,
+          provider: asset.provider,
+        }),
+      );
+    }
+  };
+
+  const handleRecentSelect = (symbol: string) => {
+    const asset = recentAssets.find((a) => a.symbol === symbol);
+    if (asset) {
+      dispatch(setSelected(asset));
+
+      const normalizedProvider = asset.provider.toUpperCase() as
+        | 'BINANCE'
+        | 'MOEX';
+      const key = buildTimeseriesKey(
+        normalizedProvider,
+        asset.symbol,
+        DEFAULT_TIMEFRAME,
+      );
+      dispatch(timeseriesRequested({ key }));
+    }
+  };
 
   useOrchestrator();
 
@@ -109,11 +135,15 @@ export default function Dashboard() {
         <div className="col-span-12">
           <RecentAssetsBar
             state={derivedAssetState}
-            assets={visibleAssets}
-            selected={selected}
-            onSelect={setSelected}
+            assets={recentAssets.map((a) => ({
+              symbol: a.symbol,
+              price: '—', // Цена остается "—" как в оригинале
+              provider: a.provider,
+            }))}
+            selected={selectedSymbol}
+            onSelect={handleRecentSelect}
             onRemove={handleRemoveAsset}
-            onAdd={handleAddAsset}
+            onAdd={() => setIsCatalogOpen(true)}
           />
         </div>
 
@@ -134,7 +164,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
           <div className="h-8" />
         </div>
 
@@ -164,7 +193,37 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="h-10" />
+      {/* Asset Catalog Modal */}
+      {isCatalogOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[1050] bg-[rgba(32,29,71,0.75)] backdrop-blur-xs transition-all duration-300"
+            onClick={() => setIsCatalogOpen(false)}
+          />
+
+          <div className="fixed inset-0 z-[1100] flex items-center justify-center pointer-events-none">
+            <div
+              className="find-assets-card pointer-events-auto animate-in fade-in zoom-in-95 duration-400 max-w-2xl w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setIsCatalogOpen(false)}
+                className="find-assets-close-button"
+                aria-label="Close"
+              >
+                ×
+              </button>
+
+              <AssetCatalogPanel
+                query={modalQuery}
+                onQueryChange={setModalQuery}
+                onSelect={handleAssetSelect}
+                onClose={() => setIsCatalogOpen(false)}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

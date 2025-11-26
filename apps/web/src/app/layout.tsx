@@ -12,7 +12,7 @@ const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const mockAuth = true; // или false для теста
+    const mockAuth = true;
     setIsAuthenticated(mockAuth);
   }, []);
 
@@ -47,6 +47,7 @@ export default function RootLayout({
 
   return (
     <html lang="ru">
+      {/* ←←← ВОТ ЗДЕСЬ ОБЕРНУЛИ В PROVIDER — всё остальное без изменений */}
       <body className="bg-primary text-ink font-sans antialiased min-h-screen">
         <StoreProvider>
           {showAppLayout ? (

@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { marketApi } from '@/shared/api/marketApi';
 import { backendApi } from '@/shared/api/backendApi';
-
+import catalogReducer from '@/features/asset-catalog/model/catalogSlice';
 import { forecastReducer } from '@/entities/forecast/model/forecastSlice';
 import { timeseriesReducer } from '@/entities/timeseries/model/timeseriesSlice';
 
@@ -9,6 +9,7 @@ export const store = configureStore({
   reducer: {
     forecast: forecastReducer,
     timeseries: timeseriesReducer,
+    catalog: catalogReducer,
     [marketApi.reducerPath]: marketApi.reducer,
     [backendApi.reducerPath]: backendApi.reducer,
   },
