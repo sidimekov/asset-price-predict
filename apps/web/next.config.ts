@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
       '@': path.resolve(projectRoot, 'src'),
       '@shared': path.resolve(projectRoot, '../../packages/shared/src'),
     };
+
     return config;
   },
 };
