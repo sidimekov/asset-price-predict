@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
@@ -14,7 +15,7 @@ const nextConfig: NextConfig = {
   assetPrefix: basePath ? `${basePath}/` : undefined,
 
   webpack(config) {
-    const projectRoot = __dirname;
+    const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
     config.resolve = config.resolve || {};
     config.resolve.alias = {

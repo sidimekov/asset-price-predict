@@ -1,0 +1,67 @@
+{
+  "modelName": "forecast_minimal",
+  "modelVer": "min-0-1-0",
+  "path": "/models/forecast_minimal.onnx",
+  "quantPath": "/models/forecast_minimal.quant.onnx",
+  "onnxSha256": "69a5b001b41ec2b56fe01cd331788f71b0340eadcdeafd64d927b406a3d3e26b",
+  "quantSha256": "1218e164d9883633741e24be3211e617b7fc1bfacb6b16ce74f8010d59c1703c",
+  "inputShape": [1, 10],
+  "horizonSteps": 24,
+  "featureWindow": 64,
+  "tailSize": 128,
+  "normalization": {
+    "type": "zscore",
+    "mean": [
+      78.76679229736328, 78.7876205444336, 78.86705017089844,
+      1.0511113405227661, -0.020726416260004044, -0.07333444803953171,
+      78.78337097167969, 78.80610656738281, -9.05634296941571e-5,
+      0.007382345851510763
+    ],
+    "std": [
+      9.699355125427246, 9.70761775970459, 9.732146263122559,
+      0.4197289049625397, 0.8503064513206482, 1.6205174922943115,
+      9.702330589294434, 9.707200050354004, 0.003541243262588978,
+      0.0014764944789931178
+    ],
+    "epsilon": 1e-6
+  },
+  "features": [
+    {
+      "name": "last_close"
+    },
+    {
+      "name": "mean_5"
+    },
+    {
+      "name": "mean_20"
+    },
+    {
+      "name": "std_20"
+    },
+    {
+      "name": "momentum_3"
+    },
+    {
+      "name": "momentum_8"
+    },
+    {
+      "name": "ema_5"
+    },
+    {
+      "name": "ema_10"
+    },
+    {
+      "name": "ret_mean_5"
+    },
+    {
+      "name": "ret_std_20"
+    }
+  ],
+  "outputs": ["delta"],
+  "postprocess": "last_close_plus_delta",
+  "rtol": 0.001,
+  "atol": 0.0001,
+  "val_metrics": {
+    "mape": 0.0233771950006485
+  }
+}
