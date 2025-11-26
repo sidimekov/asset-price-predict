@@ -34,3 +34,5 @@ jobs:
       - name: Run tests with coverage
         run: pnpm -r test-cov
 
+      - name: Verify ML model artifacts
+        run: pnpm verify:model

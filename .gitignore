@@ -76,3 +76,4 @@ docker-compose.override.yml
 # Misc
 *.orig
 *.rej
+.venv
