@@ -187,13 +187,13 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-6">
+      <div className="flex-1 overflow-y-auto pb-6 ">
         {!query && recent.length > 0 && (
           <div className="mb-6">
             <h3 className="text-white text-sm font-semibold mb-3 px-2">
               Recent
             </h3>
-            <div className="space-y-3">
+            <div className="flex flex-col gap-1">
               {recent.map((item) => (
                 <div
                   key={`${item.provider}-${item.symbol}`}
@@ -201,9 +201,9 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                 >
                   <button
                     onClick={() => handleRecentItemClick(item)}
-                    className="w-full text-left px-6 py-5 rounded-2xl bg-surface-dark/40 hover:bg-surface-dark/80 transition-all duration-300 flex justify-between items-center backdrop-blur-sm border border-white/5"
+                    className="w-full text-left px-6 py-5 bg-black/25 rounded-2xl hover:bg-surface-dark/80 transition-all duration-300 flex justify-between items-center backdrop-blur-sm border border-white/5"
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 ">
                       <div className="font-bold text-ink text-lg">
                         {item.symbol}
                       </div>
@@ -251,7 +251,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                 <button
                   key={`${item.symbol}-${item.provider}`}
                   onClick={() => handleItemClick(item)}
-                  className={`w-full text-left px-6 py-5 rounded-2xl transition-all duration-300 flex justify-between items-center group backdrop-blur-sm border ${
+                  className={`w-full text-left px-6 py-5 rounded-2xl transition-all bg-black/25 duration-300 flex justify-between items-center group backdrop-blur-sm border ${
                     isSelected
                       ? 'bg-gradient-primary/20 border-gradient-primary shadow-glow'
                       : 'bg-surface-dark/40 hover:bg-surface-dark/80 border-white/5'
