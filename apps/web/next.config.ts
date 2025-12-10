@@ -1,10 +1,12 @@
 import type { NextConfig } from 'next';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
   output: 'export',
 
   images: {
@@ -28,4 +30,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const sentryWebpackPluginOptions = {
+  silent: true,
+};
+
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
