@@ -50,6 +50,9 @@ jobs:
           DEPLOY_TARGET: github-pages
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_BASE_PATH: /asset-price-predict
+
+          NEXT_PUBLIC_ENABLE_SENTRY: 'false'
+          ENABLE_SENTRY: 'false'
         run: bash scripts/deploy.sh
 
       - name: Upload static site artifact
