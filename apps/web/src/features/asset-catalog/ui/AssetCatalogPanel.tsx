@@ -27,9 +27,108 @@ import debounce from 'lodash.debounce';
 
 const DEBOUNCE_MS = 400;
 
+type CatalogFilters = {
+  categories: {
+    equities: boolean; // Акции
+    indices: boolean; // Индексы (Index CFDs / ETFs)
+    fx: boolean; // Валюты
+    crypto: boolean; // Криптовалюты
+    commodities: boolean; // Сырьё
+    bonds: boolean; // Облигации
+  };
+  order: 'asc' | 'desc';
+};
+
+const CATEGORY_LABELS = {
+  equities: 'Equities',
+  indices: 'Index CFDs / ETFs',
+  fx: 'FX',
+  crypto: 'Crypto',
+  commodities: 'Commodities',
+  bonds: 'Bonds',
+} as const;
+
+const detectAssetCategory = (
+  item: CatalogItem,
+): keyof typeof CATEGORY_LABELS => {
+  const symbol = item.symbol.toUpperCase();
+  const provider = item.provider.toUpperCase();
+  const assetClass = item.assetClass?.toLowerCase() || '';
+
+  if (provider === 'MOEX') {
+    if (
+      item.name?.toLowerCase().includes('облигация') ||
+      item.name?.toLowerCase().includes('bond') ||
+      assetClass.includes('bond')
+    ) {
+      return 'bonds';
+    }
+
+    if (
+      assetClass.includes('stock') ||
+      assetClass.includes('акция') ||
+      (item.name && !item.name.toLowerCase().includes('индекс'))
+    ) {
+      return 'equities';
+    }
+
+    if (
+      assetClass.includes('index') ||
+      item.name?.toLowerCase().includes('индекс')
+    ) {
+      return 'indices';
+    }
+
+    return 'equities';
+  }
+
+  if (provider === 'BINANCE') {
+    if (
+      symbol.endsWith('USDT') ||
+      symbol.endsWith('BTC') ||
+      symbol.endsWith('ETH') ||
+      symbol.endsWith('BUSD') ||
+      symbol.includes('USD')
+    ) {
+      return 'crypto';
+    }
+
+    if (
+      (symbol.includes('USD') && symbol.length === 6) ||
+      assetClass.includes('forex') ||
+      assetClass.includes('fx')
+    ) {
+      return 'fx';
+    }
+
+    if (
+      assetClass.includes('index') ||
+      item.name?.toLowerCase().includes('index') ||
+      symbol.includes('.I')
+    ) {
+      return 'indices';
+    }
+
+    if (
+      assetClass.includes('commodity') ||
+      symbol.includes('XAU') ||
+      symbol.includes('XAG') ||
+      symbol.includes('OIL') ||
+      symbol.includes('BRENT')
+    ) {
+      return 'commodities';
+    }
+
+    return 'crypto';
+  }
+
+  return provider === 'MOEX' ? 'equities' : 'crypto';
+};
+
 const getAllAssetsFromProvider = async (
   dispatch: any,
   provider: 'binance' | 'moex',
+  filters?: CatalogFilters,
 ): Promise<CatalogItem[]> => {
   try {
     const filter = provider === 'binance' ? 'u' : '';
@@ -39,12 +138,47 @@ const getAllAssetsFromProvider = async (
       provider: provider.toUpperCase() as any,
     });
 
-    console.log(`Все активы ${provider}:`, items);
+    console.log(`All assets ${provider}:`, items);
+
+    if (filters) {
+      return applyFiltersToItems(items, filters);
+    }
+
     return items;
   } catch (error) {
     console.error(`Ошибка при получении активов ${provider}:`, error);
     return [];
   }
+};
+
+const applyFiltersToItems = (
+  items: CatalogItem[],
+  filters: CatalogFilters,
+): CatalogItem[] => {
+  let filtered = [...items];
+
+  const activeCategories = Object.entries(filters.categories)
+    .filter(([_, isActive]) => isActive)
+    .map(([category]) => category);
+
+  if (activeCategories.length > 0) {
+    filtered = filtered.filter((item) => {
+      const itemCategory = detectAssetCategory(item);
+      return activeCategories.includes(itemCategory);
+    });
+  }
+
+  filtered.sort((a, b) => {
+    const nameA = a.name || a.symbol;
+    const nameB = b.name || b.symbol;
+    if (filters.order === 'asc') {
+      return nameA.localeCompare(nameB);
+    } else {
+      return nameB.localeCompare(nameA);
+    }
+  });
+
+  return filtered;
 };
 
 interface AssetCatalogPanelProps {
@@ -69,20 +203,57 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const recent = useAppSelector(selectRecent);
 
   const abortRef = useRef<AbortController | null>(null);
+  const filterPopoverRef = useRef<HTMLDivElement>(null);
 
   const [selectedForAdd, setSelectedForAdd] = useState<{
     symbol: string;
     provider: 'binance' | 'moex';
   } | null>(null);
 
+  const [filterClicked, setFilterClicked] = useState(false);
+  const [filters, setFilters] = useState<CatalogFilters>({
+    categories: {
+      equities: false,
+      indices: false,
+      fx: false,
+      crypto: false,
+      commodities: false,
+      bonds: false,
+    },
+    order: 'asc',
+  });
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        filterPopoverRef.current &&
+        !filterPopoverRef.current.contains(event.target as Node)
+      ) {
+        setFilterClicked(false);
+      }
+    }
+
+    if (filterClicked) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [filterClicked]);
+
   const performSearch = useCallback(
     async (q: string) => {
-      console.log(`Поиск: "${q}", провайдер: ${provider}`);
+      console.log(`Поиск: "${q}", провайдер: ${provider}, фильтры:`, filters);
 
       if (q.length < 2) {
         try {
-          const all = await getAllAssetsFromProvider(dispatch, provider);
-          console.log(`Получено активов: ${all.length}`, all);
+          const all = await getAllAssetsFromProvider(
+            dispatch,
+            provider,
+            filters,
+          );
+          console.log(`Получено активов после фильтрации: ${all.length}`, all);
           dispatch(searchSucceeded(all));
           setSelectedForAdd(null);
         } catch (error) {
@@ -105,8 +276,10 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
 
         console.log(`Результаты поиска "${q}":`, items);
 
+        const filteredItems = applyFiltersToItems(items, filters);
+
         if (!abortRef.current?.signal.aborted) {
-          dispatch(searchSucceeded(items));
+          dispatch(searchSucceeded(filteredItems));
         }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
@@ -115,7 +288,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         }
       }
     },
-    [dispatch, provider],
+    [dispatch, provider, filters],
   );
 
   const debouncedSearch = useMemo(
@@ -133,6 +306,31 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
       abortRef.current?.abort();
     };
   }, [debouncedSearch]);
+
+  const handleFilterClick = () => {
+    setFilterClicked((v) => !v);
+  };
+
+  const applyFiltersHandler = () => {
+    console.log('Применяем фильтры:', filters);
+    // Триггерим новый поиск с текущим запросом
+    performSearch(query);
+    setFilterClicked(false);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      categories: {
+        equities: false,
+        indices: false,
+        fx: false,
+        crypto: false,
+        commodities: false,
+        bonds: false,
+      },
+      order: 'asc',
+    });
+  };
 
   const handleItemClick = (item: CatalogItem) => {
     setSelectedForAdd({
@@ -164,48 +362,181 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const showAllAssets = !query || query.length < 2;
   const displayItems = results;
 
+  const activeFilterCount = Object.values(filters.categories).filter(
+    Boolean,
+  ).length;
+
   return (
     <div className="px-6 pt-6 pb-6 flex flex-col h-full">
       <h1 className="find-assets-title text-center mb-6">Find Assets</h1>
 
-      {/* Search */}
-      <div className="find-assets-search-wrapper mb-6">
-        <svg
-          className="find-assets-search-icon"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Search for asset..."
-          className="find-assets-search-input"
-          autoFocus
-        />
-
-        <button
-          className="find-assets-filter-icon"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Search with filter */}
+      <div className="relative">
+        <div className="find-assets-search-wrapper mb-6">
+          <svg
+            className="find-assets-search-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
-        </button>
+
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search for asset..."
+            className="find-assets-search-input"
+            autoFocus
+          />
+
+          <button
+            className={`find-assets-filter-icon relative ${activeFilterCount < 6 ? 'text-gradient-primary' : ''}`}
+            onClick={handleFilterClick}
+            aria-label="Фильтры"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Filter Popover */}
+        {filterClicked && (
+          <div
+            ref={filterPopoverRef}
+            role="dialog"
+            aria-label="Asset filters"
+            className="absolute left-1/2 transform -translate-x-1/2 mt-2 z-50 w-96"
+          >
+            <div className="bg-surface-dark/95 backdrop-blur-xl rounded-2xl p-6 border border-white/50 shadow-2xl">
+              <div className="filter-popover-content">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-white text-lg font-bold">Filters</h3>
+                  <div className="flex gap-6">
+                    <button
+                      onClick={() => {
+                        const allTrue = Object.keys(filters.categories).reduce(
+                          (acc, key) => ({
+                            ...acc,
+                            [key]: true,
+                          }),
+                          {},
+                        );
+                        setFilters((f) => ({
+                          ...f,
+                          categories: allTrue as any,
+                        }));
+                      }}
+                      className="text-med text-white/60 hover:text-white transition-colors"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      onClick={resetFilters}
+                      className="text-med text-white/60 hover:text-white transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="filter-section mb-6 gap-3">
+                  <div className="text-white/70 text-sm font-semibold mb-3 ">
+                    Categories
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="filter-label flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-white/10"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            filters.categories[
+                              key as keyof typeof CATEGORY_LABELS
+                            ]
+                          }
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setFilters((f) => ({
+                              ...f,
+                              categories: {
+                                ...f.categories,
+                                [key]: checked,
+                              },
+                            }));
+                          }}
+                          className="filter-checkbox w-6 h-8 rounded border-white/20 bg-white/10 checked:bg-gradient-primary focus:ring-0"
+                        />
+                        <span className="text-white flex-1">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filter-section mb-8 gap-3">
+                  <div className="text-white/70 text-sm font-semibold mb-3">
+                    Sorting
+                  </div>
+                  <div className="filter-options space-y-2">
+                    <label className="filter-label flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+                      <input
+                        type="radio"
+                        name="order"
+                        value="asc"
+                        checked={filters.order === 'asc'}
+                        onChange={() =>
+                          setFilters((f) => ({ ...f, order: 'asc' }))
+                        }
+                        className="filter-radio w-6 h-8 border-white/20 bg-white/10 checked:bg-gradient-primary focus:ring-0"
+                      />
+                      <span className="text-white">
+                        The direct order (A → Z)
+                      </span>
+                    </label>
+                    <label className="filter-label flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+                      <input
+                        type="radio"
+                        name="order"
+                        value="desc"
+                        checked={filters.order === 'desc'}
+                        onChange={() =>
+                          setFilters((f) => ({ ...f, order: 'desc' }))
+                        }
+                        className="filter-radio w-6 h-8 border-white/20 bg-white/10 checked:bg-gradient-primary focus:ring-0"
+                      />
+                      <span className="text-white">
+                        The reverse order (Z → A)
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={applyFiltersHandler}
+                    className="flex-1 py-3 bg-gradient-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity"
+                  >
+                    Apply ({activeFilterCount})
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Provider tabs */}
@@ -240,7 +571,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         {/* Recent */}
         {!query && recent.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-white text-sm font-semibold mb-3 px-2">
+            <h3 className="text-white text-med font-semibold mb-3 px-2">
               Recently used
             </h3>
 
@@ -298,15 +629,28 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         {!loading && !error && displayItems.length > 0 && (
           <div className="flex flex-col gap-1">
             {showAllAssets && !query && (
-              <h3 className="text-white text-sm font-semibold mb-3 px-2">
-                All Assets ({provider.toUpperCase()})
-              </h3>
+              <div className="flex justify-between items-center mb-3 px-2">
+                <h3 className="text-white text-med font-semibold">
+                  All assets ({provider.toUpperCase()})
+                </h3>
+                <div className="flex items-center gap-2">
+                  {activeFilterCount < 6 && (
+                    <span className="text-sm text-white/50">
+                      {activeFilterCount} filters
+                    </span>
+                  )}
+                  <span className="text-sm bg-white/10 text-white/70 px-2 py-1 rounded">
+                    {displayItems.length} found
+                  </span>
+                </div>
+              </div>
             )}
 
             {displayItems.map((item) => {
               const lowerProvider = item.provider.toLowerCase() as
                 | 'binance'
                 | 'moex';
+              const category = detectAssetCategory(item);
 
               const isSelected =
                 selectedForAdd?.symbol === item.symbol &&
@@ -322,9 +666,14 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                       : 'bg-surface-dark/40 hover:bg-surface-dark/80 border-white/5'
                   }`}
                 >
-                  <div className="min-w-0">
-                    <div className="font-bold text-ink text-lg truncate">
-                      {item.symbol}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="font-bold text-ink text-lg truncate">
+                        {item.symbol}
+                      </div>
+                      <span className="text-xs px-2 py-1 bg-white/10 rounded text-white/70">
+                        {CATEGORY_LABELS[category]}
+                      </span>
                     </div>
                     <div className="text-sm text-white/80 truncate mt-1">
                       {item.name || item.symbol}
