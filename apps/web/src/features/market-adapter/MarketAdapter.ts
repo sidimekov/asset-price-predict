@@ -189,22 +189,23 @@ async function fetchSearchRaw(
   query: string,
 ): Promise<unknown[]> {
   const q = query.trim().toLowerCase();
-  if (!q) return [];
 
   if (provider === 'BINANCE') {
-    return BINANCE_MOCK.filter(
+    const filtered = BINANCE_MOCK.filter(
       (i) =>
         i.symbol.toLowerCase().includes(q) ||
         i.baseAsset.toLowerCase().includes(q),
     );
+    return !q ? BINANCE_MOCK : filtered;
   }
 
   if (provider === 'MOEX') {
-    return MOEX_MOCK.filter(
+    const filtered = MOEX_MOCK.filter(
       (i) =>
         i.SECID.toLowerCase().includes(q) ||
         (i.SHORTNAME && i.SHORTNAME.toLowerCase().includes(q)),
     );
+    return !q ? MOEX_MOCK : filtered;
   }
 
   return [];
@@ -215,7 +216,6 @@ export async function searchAssets(
   { query, provider }: { query: string; provider: MarketDataProvider },
 ): Promise<CatalogItem[]> {
   const q = query.trim();
-  if (q.length < 2) return [];
 
   const cacheKey = makeSearchCacheKey(provider, q);
   const cached = searchCache.get(cacheKey);

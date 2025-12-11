@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import {
   setProvider,
@@ -14,13 +20,32 @@ import {
   selectRecent,
   setSelected,
   addRecent,
-  removeRecent,
 } from '../model/catalogSlice';
 import { searchAssets } from '@/features/market-adapter/MarketAdapter';
 import type { CatalogItem } from '@shared/types/market';
 import debounce from 'lodash.debounce';
 
 const DEBOUNCE_MS = 400;
+
+const getAllAssetsFromProvider = async (
+  dispatch: any,
+  provider: 'binance' | 'moex',
+): Promise<CatalogItem[]> => {
+  try {
+    const filter = provider === 'binance' ? 'u' : '';
+
+    const items = await searchAssets(dispatch, {
+      query: filter,
+      provider: provider.toUpperCase() as any,
+    });
+
+    console.log(`Все активы ${provider}:`, items);
+    return items;
+  } catch (error) {
+    console.error(`Ошибка при получении активов ${provider}:`, error);
+    return [];
+  }
+};
 
 interface AssetCatalogPanelProps {
   query: string;
@@ -40,10 +65,11 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const results = useAppSelector(selectCatalogResults);
   const loading = useAppSelector(selectIsSearching);
   const error = useAppSelector(selectCatalogError);
-  const provider = useAppSelector(selectCurrentProvider); // 'binance' | 'moex'
+  const provider = useAppSelector(selectCurrentProvider);
   const recent = useAppSelector(selectRecent);
 
   const abortRef = useRef<AbortController | null>(null);
+
   const [selectedForAdd, setSelectedForAdd] = useState<{
     symbol: string;
     provider: 'binance' | 'moex';
@@ -51,9 +77,18 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
 
   const performSearch = useCallback(
     async (q: string) => {
+      console.log(`Поиск: "${q}", провайдер: ${provider}`);
+
       if (q.length < 2) {
-        dispatch(searchSucceeded([]));
-        setSelectedForAdd(null);
+        try {
+          const all = await getAllAssetsFromProvider(dispatch, provider);
+          console.log(`Получено активов: ${all.length}`, all);
+          dispatch(searchSucceeded(all));
+          setSelectedForAdd(null);
+        } catch (error) {
+          console.error('Ошибка при получении всех активов:', error);
+          dispatch(searchFailed('Failed to load assets'));
+        }
         return;
       }
 
@@ -65,14 +100,17 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
       try {
         const items = await searchAssets(dispatch, {
           query: q,
-          provider: provider === 'binance' ? 'BINANCE' : 'MOEX',
+          provider: provider.toUpperCase() as any,
         });
+
+        console.log(`Результаты поиска "${q}":`, items);
 
         if (!abortRef.current?.signal.aborted) {
           dispatch(searchSucceeded(items));
         }
       } catch (err: any) {
         if (err.name !== 'AbortError') {
+          console.error('Ошибка поиска:', err);
           dispatch(searchFailed('Search failed'));
         }
       }
@@ -80,7 +118,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     [dispatch, provider],
   );
 
-  const debouncedSearch = React.useMemo(
+  const debouncedSearch = useMemo(
     () => debounce(performSearch, DEBOUNCE_MS),
     [performSearch],
   );
@@ -97,36 +135,40 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   }, [debouncedSearch]);
 
   const handleItemClick = (item: CatalogItem) => {
-    const lowerProvider = item.provider.toLowerCase() as 'binance' | 'moex';
     setSelectedForAdd({
       symbol: item.symbol,
-      provider: lowerProvider,
+      provider: item.provider.toLowerCase() as 'binance' | 'moex',
     });
   };
 
   const handleAddClick = () => {
-    if (selectedForAdd) {
-      dispatch(setSelected(selectedForAdd));
-      dispatch(addRecent(selectedForAdd));
-      onSelect?.(selectedForAdd);
-      onClose();
-    }
-  };
+    if (!selectedForAdd) return;
 
-  const handleRecentItemClick = (item: {
-    symbol: string;
-    provider: 'binance' | 'moex';
-  }) => {
-    dispatch(setSelected(item));
-    dispatch(addRecent(item));
-    onSelect?.(item);
+    dispatch(setSelected(selectedForAdd));
+    dispatch(addRecent(selectedForAdd));
+
+    onSelect?.(selectedForAdd);
     onClose();
   };
 
+  const handleRecentItemClick = (recentItem: {
+    symbol: string;
+    provider: 'binance' | 'moex';
+  }) => {
+    dispatch(setSelected(recentItem));
+    dispatch(addRecent(recentItem));
+    onSelect?.(recentItem);
+    onClose();
+  };
+
+  const showAllAssets = !query || query.length < 2;
+  const displayItems = results;
+
   return (
-    <div className="px-6 pt-6 pb-24 flex flex-col h-full ">
+    <div className="px-6 pt-6 pb-6 flex flex-col h-full">
       <h1 className="find-assets-title text-center mb-6">Find Assets</h1>
 
+      {/* Search */}
       <div className="find-assets-search-wrapper mb-6">
         <svg
           className="find-assets-search-icon"
@@ -141,6 +183,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
+
         <input
           type="text"
           value={query}
@@ -149,6 +192,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
           className="find-assets-search-input"
           autoFocus
         />
+
         <button
           className="find-assets-filter-icon"
           onClick={(e) => e.stopPropagation()}
@@ -164,6 +208,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         </button>
       </div>
 
+      {/* Provider tabs */}
       <div className="flex justify-center -mt-2 mb-5">
         <div className="auth-tabs provider-tabs-under-search" role="tablist">
           {(['binance', 'moex'] as const).map((p) => (
@@ -172,14 +217,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
               role="tab"
               aria-selected={provider === p}
               onClick={() => {
+                console.log(`Переключение на провайдера: ${p}`);
                 dispatch(setProvider(p));
                 setSelectedForAdd(null);
               }}
               className="tab-button"
-              style={{
-                padding: '0.5rem 2.2rem',
-                fontSize: '1.2rem',
-              }}
+              style={{ padding: '0.5rem 2.2rem', fontSize: '1.2rem' }}
             >
               {p.toUpperCase()}
             </button>
@@ -187,38 +230,49 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-6 ">
+      {/* Scrollable content */}
+      <div
+        className="overflow-y-auto pb-2"
+        style={{
+          height: 'calc(60vh - 10rem)',
+        }}
+      >
+        {/* Recent */}
         {!query && recent.length > 0 && (
           <div className="mb-6">
             <h3 className="text-white text-sm font-semibold mb-3 px-2">
-              Recent
+              Recently used
             </h3>
+
             <div className="flex flex-col gap-1">
-              {recent.map((item) => (
-                <div
-                  key={`${item.provider}-${item.symbol}`}
-                  className="relative group"
+              {recent.map((r) => (
+                <button
+                  key={`${r.provider}-${r.symbol}`}
+                  onClick={() => handleRecentItemClick(r)}
+                  className="w-full text-left px-6 py-5 bg-black/25 rounded-2xl hover:bg-surface-dark/80 transition-all duration-300 flex justify-between items-center backdrop-blur-sm border border-white/5"
                 >
-                  <button
-                    onClick={() => handleRecentItemClick(item)}
-                    className="w-full text-left px-6 py-5 bg-black/25 rounded-2xl hover:bg-surface-dark/80 transition-all duration-300 flex justify-between items-center backdrop-blur-sm border border-white/5"
-                  >
-                    <div className="flex-1 min-w-0 ">
-                      <div className="font-bold text-ink text-lg">
-                        {item.symbol}
-                      </div>
-                      <div className="text-sm text-white/50">Recently used</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-ink text-lg truncate">
+                      {r.symbol}
                     </div>
-                    <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
-                      {item.provider.toUpperCase()}
-                    </span>
-                  </button>
-                </div>
+                    <div className="text-sm text-white/80 truncate mt-1">
+                      {r.symbol}
+                    </div>
+                    <div className="text-xs text-white/50 capitalize mt-2 opacity-80">
+                      {r.provider === 'binance' ? 'crypto' : 'stock'}
+                    </div>
+                  </div>
+
+                  <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
+                    {r.provider.toUpperCase()}
+                  </span>
+                </button>
               ))}
             </div>
           </div>
         )}
 
+        {/* States */}
         {loading && (
           <div className="flex items-center justify-center h-32 text-ink-muted text-lg">
             Searching...
@@ -231,18 +285,29 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
           </div>
         )}
 
-        {!loading && !error && query.length >= 2 && results.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-white/50">
-            No assets found for “{query}”
-          </div>
-        )}
+        {!loading &&
+          !error &&
+          query.length >= 2 &&
+          displayItems.length === 0 && (
+            <div className="flex items-center justify-center h-32 text-white/50">
+              No assets found for "{query}"
+            </div>
+          )}
 
-        {results.length > 0 && (
-          <div className="space-y-3">
-            {results.map((item) => {
+        {/* Items */}
+        {!loading && !error && displayItems.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {showAllAssets && !query && (
+              <h3 className="text-white text-sm font-semibold mb-3 px-2">
+                All Assets ({provider.toUpperCase()})
+              </h3>
+            )}
+
+            {displayItems.map((item) => {
               const lowerProvider = item.provider.toLowerCase() as
                 | 'binance'
                 | 'moex';
+
               const isSelected =
                 selectedForAdd?.symbol === item.symbol &&
                 selectedForAdd?.provider === lowerProvider;
@@ -270,6 +335,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                       </div>
                     )}
                   </div>
+
                   <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
                     {item.provider.toUpperCase()}
                   </span>
@@ -280,21 +346,17 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         )}
       </div>
 
-      <div className="absolute inset-x-6 bottom-6 z-10 pointer-events-none">
-        <div className="flex justify-center pointer-events-auto">
+      {/* Add button */}
+      <div className="absolute inset-x-6 bottom-6 z-10">
+        <div className="flex justify-center">
           <button
             onClick={handleAddClick}
             disabled={!selectedForAdd}
             className="find-assets-add-button w-full max-w-md shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {selectedForAdd ? (
-              <>
-                Add {selectedForAdd.symbol} ·{' '}
-                {selectedForAdd.provider.toUpperCase()}
-              </>
-            ) : (
-              'Add'
-            )}
+            {selectedForAdd
+              ? `Add ${selectedForAdd.symbol} · ${selectedForAdd.provider.toUpperCase()}`
+              : 'Add'}
           </button>
         </div>
       </div>

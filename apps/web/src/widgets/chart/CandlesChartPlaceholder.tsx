@@ -16,9 +16,9 @@ export default function CandlesChartPlaceholder({
 
   if (state === 'empty') {
     return (
-        <div className="h-96 flex items-center justify-center text-ink-muted bg-surface-dark rounded-3xl">
-          Select or add asset to view chart
-        </div>
+      <div className="h-96 flex items-center justify-center text-ink-muted bg-surface-dark rounded-3xl">
+        Select or add asset to view chart
+      </div>
     );
   }
 
