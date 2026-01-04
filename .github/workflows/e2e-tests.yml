@@ -45,10 +45,12 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      - name: Запуск статического билда (apps/web/out)
-        run: pnpm dlx serve@latest -l 3000 apps/web/out &
+      - name: Запуск приложения (apps/web)
+        run: pnpm -F @assetpredict/web start &
         env:
+          PORT: 3000
           CI: true
+          NEXT_TELEMETRY_DISABLED: 1
 
       - name: Ожидание доступности приложения
         run: pnpm dlx wait-on http://localhost:3000
