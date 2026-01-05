@@ -5,14 +5,15 @@ function isoNow() {
 }
 
 export class ForecastController {
-  createForecast(req: Partial<ForecastCreateReq>) {
+  createForecast(req: ForecastCreateReq) {
+    // Заглушка - series пустые
     return {
       id: 'mock-forecast-id',
-      symbol: req.symbol ?? 'BTCUSDT',
-      timeframe: req.timeframe ?? '1d',
-      horizon: req.horizon ?? 12,
+      symbol: req.symbol,
+      timeframe: req.timeframe,
+      horizon: req.horizon,
       createdAt: isoNow(),
-      series: { p10: [], p50: [], p90: [], t: [] },
+      series: { p10: [], p50: [], p90: [], t: [] }
     };
   }
 }
