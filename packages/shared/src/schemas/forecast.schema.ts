@@ -3,9 +3,9 @@
  */
 
 import { z } from 'zod';
-import { zTimeframe, zSymbol } from './market.schema';
-import { zISODate, zPagination } from './common.schema';
-import { MAX_HORIZON } from '../types/common';
+import { zTimeframe, zSymbol } from './market.schema.js';
+import { zISODate, zPagination } from './common.schema.js';
+import { MAX_HORIZON } from '../types/common.js';
 
 /**
  * Схема для идентификатора прогноза
