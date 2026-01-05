@@ -5,7 +5,7 @@ import { readEnv } from '../src/config/env.ts';
 
 test('readEnv: defaults in development', () => {
   const env = readEnv({
-    NODE_ENV: 'development'
+    NODE_ENV: 'development',
   } as any);
 
   assert.equal(env.nodeEnv, 'development');
@@ -19,7 +19,7 @@ test('readEnv: parses PORT and CORS_ORIGINS', () => {
   const env = readEnv({
     NODE_ENV: 'production',
     PORT: '9999',
-    CORS_ORIGINS: 'https://a.com, https://b.com'
+    CORS_ORIGINS: 'https://a.com, https://b.com',
   } as any);
 
   assert.equal(env.nodeEnv, 'production');
@@ -30,7 +30,7 @@ test('readEnv: parses PORT and CORS_ORIGINS', () => {
 test('readEnv: invalid PORT falls back to default', () => {
   const env = readEnv({
     NODE_ENV: 'production',
-    PORT: 'nope'
+    PORT: 'nope',
   } as any);
 
   assert.equal(env.port, 8787);
