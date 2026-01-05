@@ -9,7 +9,7 @@ test('GET /health -> 200 and ok', async () => {
   try {
     const res = await app.inject({
       method: 'GET',
-      url: '/health'
+      url: '/health',
     });
 
     assert.equal(res.statusCode, 200);
@@ -30,7 +30,7 @@ test('POST /forecast invalid body -> 400 Validation failed', async () => {
       method: 'POST',
       url: '/forecast',
       headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify({ timeframe: '1d', horizon: 12 }) // нет symbol
+      payload: JSON.stringify({ timeframe: '1d', horizon: 12 }), // нет symbol
     });
 
     assert.equal(res.statusCode, 400);
@@ -51,7 +51,11 @@ test('POST /forecast valid body -> 200 and returns stub forecast', async () => {
       method: 'POST',
       url: '/forecast',
       headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify({ symbol: 'BTCUSDT', timeframe: '1d', horizon: 12 })
+      payload: JSON.stringify({
+        symbol: 'BTCUSDT',
+        timeframe: '1d',
+        horizon: 12,
+      }),
     });
 
     assert.equal(res.statusCode, 200);
@@ -79,7 +83,7 @@ test('GET /forecasts/invalid -> 500 because response validation fails', async ()
   try {
     const res = await app.inject({
       method: 'GET',
-      url: '/forecasts/invalid'
+      url: '/forecasts/invalid',
     });
 
     assert.equal(res.statusCode, 500);
@@ -97,7 +101,7 @@ test('GET /forecasts -> 200 list stub', async () => {
   try {
     const res = await app.inject({
       method: 'GET',
-      url: '/forecasts?page=1&limit=20'
+      url: '/forecasts?page=1&limit=20',
     });
 
     assert.equal(res.statusCode, 200);
