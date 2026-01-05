@@ -4,17 +4,18 @@
   "version": "1.0.0",
   "packageManager": "pnpm@9.0.0",
   "description": "Web-app for forecasting timeseries of asset prices",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "main": "index.js",
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "start": "pnpm --filter web serve",
-
     "api:dev": "pnpm --filter @assetpredict/api dev",
     "api:build": "pnpm --filter @assetpredict/api build",
     "api:start": "pnpm --filter @assetpredict/api start",
-
     "lint": "eslint . && prettier --check . && stylelint \"**/*.{css,scss}\"",
     "verify:model": "node scripts/check_model_artifacts.mjs",
     "format": "prettier -w .",

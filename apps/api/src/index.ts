@@ -14,7 +14,7 @@ export function buildApp() {
 
   const app = Fastify({
     logger: buildLoggerOptions(env.nodeEnv),
-    genReqId: () => randomUUID()
+    genReqId: () => randomUUID(),
   });
 
   // Плагины
@@ -25,7 +25,7 @@ export function buildApp() {
       app.log.warn({ origin }, 'CORS origin rejected');
       return cb(new Error('CORS not allowed'), false);
     },
-    credentials: true
+    credentials: true,
   });
 
   registerErrorHandler(app);

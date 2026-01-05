@@ -20,7 +20,11 @@ function parsePort(v: string | undefined): number {
 function defaultCorsOrigins(nodeEnv: NodeEnv): string[] {
   // dev по умолчанию открываем под Next.js/Vite
   if (nodeEnv !== 'production') {
-    return ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000'];
+    return [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+    ];
   }
   return [];
 }

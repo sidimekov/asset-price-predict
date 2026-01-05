@@ -11,7 +11,7 @@ export async function historyRoutes(app: FastifyInstance) {
 
     return controller.listForecasts({
       page: Number.isFinite(page) && page > 0 ? page : 1,
-      limit: Number.isFinite(limit) && limit > 0 ? limit : 20
+      limit: Number.isFinite(limit) && limit > 0 ? limit : 20,
     });
   });
 

@@ -8,18 +8,18 @@ export function buildLoggerOptions(nodeEnv: NodeEnv): LoggerOptions {
   return {
     level: process.env.LOG_LEVEL ?? (isDev ? 'debug' : 'info'),
     base: {
-      service: 'assetpredict-api'
+      service: 'assetpredict-api',
     },
     // В dev более читабельно (без внешних зависимостей)
     transport: isDev
       ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname'
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+          },
         }
-      }
-      : undefined
+      : undefined,
   };
 }

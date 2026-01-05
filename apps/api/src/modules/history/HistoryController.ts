@@ -18,7 +18,7 @@ export class HistoryController {
       createdAt: isoNow(),
       series: { p10: [], p50: [], p90: [], t: [] },
       factors: [],
-      metrics: {}
+      metrics: {},
     };
   }
 }
