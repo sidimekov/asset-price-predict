@@ -13,7 +13,7 @@ export class ForecastController {
       timeframe: req.timeframe,
       horizon: req.horizon,
       createdAt: isoNow(),
-      series: { p10: [], p50: [], p90: [], t: [] }
+      series: { p10: [], p50: [], p90: [], t: [] },
     };
   }
 }

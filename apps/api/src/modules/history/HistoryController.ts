@@ -18,7 +18,7 @@ export class HistoryController {
         createdAt: isoNow(),
         series: { p10: [1], p50: [], p90: [], t: [] }, // невалидно по zForecastSeries
         factors: [],
-        metrics: {}
+        metrics: {},
       };
     }
 
@@ -30,7 +30,7 @@ export class HistoryController {
       createdAt: isoNow(),
       series: { p10: [], p50: [], p90: [], t: [] },
       factors: [],
-      metrics: {}
+      metrics: {},
     };
   }
 }
