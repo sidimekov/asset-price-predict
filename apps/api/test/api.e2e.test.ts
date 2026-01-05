@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 
-import { buildApp } from '../src';
+import { buildApp } from '../src/index.ts';
 
 test('GET /health -> 200 and ok', async () => {
   const { app } = buildApp();
