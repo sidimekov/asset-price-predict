@@ -5,19 +5,19 @@
  */
 
 // Типы
-export * from './types/market';
-export * from './types/common';
+export * from './types/market.js';
+export * from './types/common.js';
 
 // DTO
-export * from './dto/forecast';
+export * from './dto/forecast.js';
 
 // Zod-схемы
-export * from './schemas/market.schema';
-export * from './schemas/common.schema';
-export * from './schemas/forecast.schema';
+export * from './schemas/market.schema.js';
+export * from './schemas/common.schema.js';
+export * from './schemas/forecast.schema.js';
 
 // Утилиты
-export * from './utils/zodErrors';
+export * from './utils/zodErrors.js';
 
 // Версия
-export * from './version';
+export * from './version.js';
