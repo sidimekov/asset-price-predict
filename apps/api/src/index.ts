@@ -1,42 +1,37 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 
+import { randomUUID } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
+
 import { readEnv } from './config/env.js';
 import { buildLoggerOptions } from './infra/logger.js';
 import { registerErrorHandler } from './infra/errorHandler.js';
+import { registerRouter } from './http/router.js';
 
 export function buildApp() {
   const env = readEnv();
 
   const app = Fastify({
     logger: buildLoggerOptions(env.nodeEnv),
-    // requestId склеивает логи и ответы
-    genReqId: () => crypto.randomUUID(),
+    genReqId: () => randomUUID()
   });
 
-  // Базовые плагины
+  // Плагины
   app.register(cors, {
     origin: (origin, cb) => {
-      // Без Origin (curl/postman)
       if (!origin) return cb(null, true);
-
-      // В dev разрешаем из списка
-      // в prod список задаётся через ENV
       if (env.corsOrigins.includes(origin)) return cb(null, true);
-
-      // логировать отказ
       app.log.warn({ origin }, 'CORS origin rejected');
       return cb(new Error('CORS not allowed'), false);
     },
-    credentials: true,
+    credentials: true
   });
 
   registerErrorHandler(app);
 
-  // жив ли сервер (удобно для dev/CI),
-  app.get('/health', async () => {
-    return { status: 'ok', version: '0.1.0' };
-  });
+  // Роутер
+  registerRouter(app);
 
   return { app, env };
 }
@@ -53,6 +48,12 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isEntrypoint = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return import.meta.url === pathToFileURL(entry).href;
+})();
+
+if (isEntrypoint) {
   void main();
 }
