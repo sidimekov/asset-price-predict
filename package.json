@@ -12,7 +12,10 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
-    "start": "pnpm --filter web serve",
+    "start": "pnpm -r start",
+    "api:dev": "pnpm --filter @assetpredict/api dev",
+    "api:build": "pnpm --filter @assetpredict/api build",
+    "api:start": "pnpm --filter @assetpredict/api start",
     "lint": "eslint . && prettier --check . && stylelint \"**/*.{css,scss}\"",
     "verify:model": "node scripts/check_model_artifacts.mjs",
     "format": "prettier -w .",

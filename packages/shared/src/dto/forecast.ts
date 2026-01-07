@@ -2,8 +2,8 @@
  * DTO для работы с прогнозами цен
  */
 
-import type { BrandedId, ISODate, Pagination } from '../types/common';
-import type { Symbol, Timeframe } from '../types/market';
+import type { BrandedId, ISODate, Pagination } from '../types/common.js';
+import type { Symbol, Timeframe } from '../types/market.js';
 
 /**
  * Идентификатор прогноза
