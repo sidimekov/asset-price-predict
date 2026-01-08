@@ -7,7 +7,6 @@ import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
-import FactorsTable from '@/features/factors/FactorsTable';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
