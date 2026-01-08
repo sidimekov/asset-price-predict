@@ -38,6 +38,8 @@ export default [
         HTMLElement: 'readonly',
         require: 'readonly',
         HTMLDivElement: 'readonly',
+        HTMLSelectElement: 'readonly',
+        HTMLInputElement: 'readonly'
       },
     },
     rules: {

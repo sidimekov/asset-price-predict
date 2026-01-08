@@ -135,17 +135,6 @@ export default function ForecastPage() {
             readOnly
           />
         </div>
-
-        <div className="hidden lg:block col-span-1" />
-
-        {/* Factors table */}
-        <div className="col-span-12 lg:col-span-7">
-          <div className="overflow-x-auto">
-            <div className="min-w-[600px] lg:min-w-0">
-              <FactorsTable state={factorsState} />
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="h-10" />
