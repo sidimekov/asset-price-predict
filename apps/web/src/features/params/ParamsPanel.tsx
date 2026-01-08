@@ -48,8 +48,8 @@ export default function ParamsPanel({
   const modelValue = selectedModel ?? internalModel;
   const dateValue = selectedDate ?? internalDate;
 
-  const handleModelChange = (e: React.ChangeEvent<any>) => {
-    const value = e.target.value as string;
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
     if (readOnly) return;
 
     onModelChange?.(value);
@@ -58,8 +58,8 @@ export default function ParamsPanel({
     }
   };
 
-  const handleDateChange = (e: React.ChangeEvent<any>) => {
-    const value = e.target.value as string;
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     if (readOnly) return;
 
     onDateChange?.(value);
@@ -70,21 +70,20 @@ export default function ParamsPanel({
 
   if (state === 'loading') {
     return (
-      <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
+      <div className="bg-surface-dark rounded-3xl p-6">
         <p className="text-[#8480C9]">Parameters</p>
-        <br />
-        <div className="param-panel-item w-full h-12 pl-4 rounded overflow-hidden relative -mt-2">
-          <Skeleton width="100%" height="100%" />
-        </div>
-        <br />
-        <br />
-        <div className="param-panel-item w-full h-12 pl-4 rounded overflow-hidden relative -mt-2">
-          <Skeleton width="100%" height="100%" />
-        </div>
-        <br />
-        <br />
-        <div className="relative left-10 gradient-button w-60 h-12 rounded overflow-hidden -mt-2">
-          <Skeleton width="100%" height="100%" />
+        <div className="space-y-4 mt-4">
+          <div className="w-full h-12 rounded overflow-hidden">
+            <Skeleton width="100%" height="100%" />
+          </div>
+          <div className="w-full h-12 rounded overflow-hidden">
+            <Skeleton width="100%" height="100%" />
+          </div>
+          <div className="flex justify-center">
+            <div className="w-60 h-12 rounded overflow-hidden">
+              <Skeleton width="100%" height="100%" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -92,53 +91,56 @@ export default function ParamsPanel({
 
   if (state === 'error') {
     return (
-      <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
+      <div className="bg-surface-dark rounded-3xl p-6">
         <p className="text-error">Error loading parameters</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-8 bg-surface-dark rounded-3xl p-6 ">
+    <div className="bg-surface-dark rounded-3xl p-6">
       <p className="text-[#8480C9]">Parameters</p>
-      <br />
-
-      <select
-        className="appearance-none text-center param-panel-item w-full h-12 pl-4 rounded"
-        value={modelValue}
-        onChange={handleModelChange}
-        disabled={readOnly}
-      >
-        <option value="" className="text-center">
-          Select predict model
-        </option>
-        <option value="model-1">Model 1</option>
-        <option value="model-2">Model 2</option>
-        <option value="model-3">Model 3</option>
-      </select>
 
       <br />
-      <br />
 
-      <input
-        type="date"
-        className="text-center param-panel-item w-full h-12 pl-4 rounded"
-        value={dateValue}
-        onChange={handleDateChange}
-        disabled={readOnly}
-      />
+      <div className="space-y-4 mt-4">
+        <select
+          className="w-full h-12 px-4 rounded param-panel-item text-center appearance-none"
+          value={modelValue}
+          onChange={handleModelChange}
+          disabled={readOnly}
+        >
+          <option value="">Select predict model</option>
+          <option value="model-1">Model 1</option>
+          <option value="model-2">Model 2</option>
+          <option value="model-3">Model 3</option>
+        </select>
 
-      <br />
-      <br />
+        <br />
+        <br />
 
-      <button
-        className="relative left-10 gradient-button w-60 h-12 rounded text-ink font-medium transition-smooth scale-on-press"
-        onClick={onPredict}
-        aria-busy={isLoading}
-        disabled={isLoading || !onPredict}
-      >
-        {buttonLabel ?? 'Predict'}
-      </button>
+        <input
+          type="date"
+          className="w-full h-12 px-4 rounded param-panel-item text-center"
+          value={dateValue}
+          onChange={handleDateChange}
+          disabled={readOnly}
+        />
+
+        <br />
+        <br />
+
+        <div className="flex justify-center">
+          <button
+            className="w-60 h-12 rounded gradient-button text-ink font-medium transition-smooth scale-on-press"
+            onClick={onPredict}
+            aria-busy={isLoading}
+            disabled={isLoading || !onPredict}
+          >
+            {buttonLabel ?? 'Predict'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
