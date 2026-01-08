@@ -39,7 +39,7 @@ export default [
         require: 'readonly',
         HTMLDivElement: 'readonly',
         HTMLSelectElement: 'readonly',
-        HTMLInputElement: 'readonly'
+        HTMLInputElement: 'readonly',
       },
     },
     rules: {
