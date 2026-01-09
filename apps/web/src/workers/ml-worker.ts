@@ -1,261 +1,148 @@
-/* global self, MessageEvent, performance */
-
+/// <reference lib="webworker" />
 import * as ort from 'onnxruntime-web';
 import { forecastMinimalConfig } from '@/config/ml';
 
-export type TailPoint = [ts: number, close: number];
+import { buildFeatures } from './featurePipeline';
+import { postprocessDelta } from './postprocess';
+import type {
+  InferRequestMessage,
+  InferDoneMessage,
+  InferErrorMessage,
+} from './types';
 
-export type InferRequest = {
-  id: string;
-  type: 'infer';
-  payload: {
-    tail: TailPoint[];
-    horizon: number;
-    model?: string | null;
-  };
-};
-
-export type InferDoneMessage = {
-  id: string;
-  type: 'onnx:infer:done';
-  payload: {
-    p50: number[];
-    p10: number[];
-    p90: number[];
-    diag: {
-      runtime_ms: number;
-      backend: 'onnx-wasm' | 'mock';
-      model_ver: string;
-    };
-  };
-};
-
-export type InferErrorMessage = {
-  id: string;
-  type: 'error';
-  payload: {
-    message: string;
-  };
-};
-
-const ctx: any = self;
+const ctx = self as DedicatedWorkerGlobalScope;
 const MODEL = forecastMinimalConfig;
-const BAND = 0.01; // +/-1% confidence band from median
+
+// простой доверительный коридор вокруг p50 (пока нет настоящих p10/p90)
+const BAND = 0.01; // +/-1%
 
 let sessionPromise: Promise<ort.InferenceSession> | null = null;
-
-function ema(values: number[], span: number): number {
-  const alpha = 2 / (span + 1);
-  return values.reduce(
-    (acc, v) => alpha * v + (1 - alpha) * acc,
-    values[0] ?? 0,
-  );
-}
-
-function normalize(features: number[]): Float32Array {
-  const norm = MODEL.normalization;
-  if (norm.type !== 'zscore') {
-    return Float32Array.from(features);
-  }
-  return Float32Array.from(
-    features.map((value, idx) => {
-      const std = norm.std[idx] ?? 1;
-      const mean = norm.mean[idx] ?? 0;
-      return (value - mean) / (std + norm.epsilon);
-    }),
-  );
-}
-
-function buildFeatures(tail: TailPoint[]): Float32Array {
-  if (tail.length < MODEL.featureWindow) {
-    throw new Error(
-      `Tail too short: expected ${MODEL.featureWindow}, got ${tail.length}`,
-    );
-  }
-
-  const closes = tail.slice(-MODEL.featureWindow).map(([, close]) => close);
-  const returns: number[] = [];
-  for (let i = 1; i < closes.length; i++) {
-    const prev = closes[i - 1];
-    const curr = closes[i];
-    returns.push(prev === 0 ? 0 : (curr - prev) / prev);
-  }
-
-  const feats: number[] = [];
-  feats.push(closes[closes.length - 1]);
-  feats.push(closes.slice(-5).reduce((a, b) => a + b, 0) / 5);
-  feats.push(closes.slice(-20).reduce((a, b) => a + b, 0) / 20);
-  const std20 = closes.slice(-20);
-  const mean20 = std20.reduce((a, b) => a + b, 0) / 20;
-  feats.push(
-    Math.sqrt(
-      std20.reduce((acc, v) => acc + (v - mean20) * (v - mean20), 0) /
-        std20.length,
-    ),
-  );
-  feats.push(closes[closes.length - 1] - closes[closes.length - 3]);
-  feats.push(closes[closes.length - 1] - closes[closes.length - 8]);
-  feats.push(ema(closes.slice(-5), 5));
-  feats.push(ema(closes.slice(-10), 10));
-  const lastReturns5 = returns.slice(-5);
-  feats.push(lastReturns5.reduce((a, b) => a + b, 0) / 5);
-  const lastReturns20 = returns.slice(-20);
-  const meanRet20 =
-    lastReturns20.reduce((a, b) => a + b, 0) / lastReturns20.length;
-  const varRet20 =
-    lastReturns20.reduce(
-      (acc, v) => acc + (v - meanRet20) * (v - meanRet20),
-      0,
-    ) / lastReturns20.length;
-  feats.push(Math.sqrt(varRet20));
-
-  return normalize(feats);
-}
 
 function setOrtEnv() {
   ort.env.wasm.numThreads = 1;
   ort.env.wasm.simd = true;
+
   ort.env.wasm.wasmPaths =
     ort.env.wasm.wasmPaths ||
     'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
 }
 
-async function getSession(modelPath: string): Promise<ort.InferenceSession> {
+async function getSession(): Promise<ort.InferenceSession> {
   if (sessionPromise) return sessionPromise;
 
   setOrtEnv();
-  const candidates = MODEL.quantPath
-    ? [MODEL.quantPath, MODEL.path]
-    : [MODEL.path];
+
+  const candidates = MODEL.quantPath ? [MODEL.quantPath, MODEL.path] : [MODEL.path];
 
   sessionPromise = (async () => {
     let lastError: unknown;
+
     for (const candidate of candidates) {
       try {
         return await ort.InferenceSession.create(candidate, {
-          executionProviders: ['wasm'],
+          executionProviders: ['wasm'], // webgpu позже
         });
       } catch (err) {
         lastError = err;
       }
     }
+
     throw lastError || new Error('Unable to load ONNX session');
   })();
 
   return sessionPromise;
 }
 
-async function runOnnx(
-  tail: TailPoint[],
-  horizon: number,
-): Promise<InferDoneMessage['payload']> {
-  const session = await getSession(MODEL.path);
-
-  const lastClose = tail[tail.length - 1][1];
-  const features = buildFeatures(tail);
-  const input = new ort.Tensor('float32', features, MODEL.inputShape);
-
-  const t0 = performance.now();
-  const output = await session.run({ input });
-  const t1 = performance.now();
-
-  const delta = Array.from(output.delta.data as Float32Array);
-  const limit = Math.min(horizon, delta.length);
-  const p50 = delta.slice(0, limit).map((d) => d + lastClose);
-  const p10 = p50.map((v) => v * (1 - BAND));
-  const p90 = p50.map((v) => v * (1 + BAND));
-
-  return {
-    p50,
-    p10,
-    p90,
-    diag: {
-      runtime_ms: t1 - t0,
-      backend: 'onnx-wasm',
-      model_ver: MODEL.modelVer,
-    },
+function postError(id: string, code: InferErrorMessage['payload']['code'], message: string) {
+  const msg: InferErrorMessage = {
+    id,
+    type: 'error',
+    payload: { code, message },
   };
+  ctx.postMessage(msg);
 }
 
-function runFallback(
-  tail: TailPoint[],
-  horizon: number,
-): InferDoneMessage['payload'] {
-  const lastClose = tail[tail.length - 1][1];
-  const p50: number[] = [];
-  const p10: number[] = [];
-  const p90: number[] = [];
-  for (let i = 0; i < horizon; i++) {
-    const drift = (i + 1) * 0.05;
-    const base = lastClose + drift;
-    p50.push(base);
-    p10.push(base * (1 - BAND));
-    p90.push(base * (1 + BAND));
-  }
-  return {
-    p50,
-    p10,
-    p90,
-    diag: {
-      runtime_ms: 0,
-      backend: 'mock',
-      model_ver: MODEL.modelVer,
-    },
-  };
-}
-
-ctx.onmessage = async (event: MessageEvent<InferRequest>) => {
+ctx.onmessage = async (event: MessageEvent<InferRequestMessage>) => {
   const { id, type, payload } = event.data;
 
-  if (type !== 'infer') {
-    ctx.postMessage({
-      id,
-      type: 'error',
-      payload: { message: `Unsupported message type: ${type}` },
-    } as InferErrorMessage);
+  // пока что только infer:request
+  if (type !== 'infer:request') {
+    postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
     return;
   }
 
+  const t0 = performance.now();
+
   try {
     const { tail, horizon, model } = payload;
-    if (!tail.length || horizon <= 0) {
-      ctx.postMessage({
-        id,
-        type: 'error',
-        payload: { message: 'Invalid tail or horizon' },
-      } as InferErrorMessage);
+
+    if (!tail || tail.length === 0 || horizon <= 0) {
+      postError(id, 'EBADINPUT', 'Invalid tail or horizon');
       return;
     }
 
     if (model && model !== MODEL.modelVer) {
-      ctx.postMessage({
-        id,
-        type: 'error',
-        payload: { message: `Unsupported model version: ${model}` },
-      } as InferErrorMessage);
+      postError(id, 'EBADINPUT', `Unsupported model version: ${model}`);
+      return;
+    }
+    // 1) features
+    const features = buildFeatures(tail);
+
+    // 2) session
+    const session = await getSession();
+
+    // 3) run
+    const inputName = session.inputNames[0] ?? 'input';
+    const inputTensor = new ort.Tensor('float32', features, MODEL.inputShape);
+
+    const outMap = await session.run({ [inputName]: inputTensor });
+
+    // 4) достаём delta (если нет delta - берём первый output)
+    const outName =
+      (outMap as any).delta ? 'delta' : (session.outputNames[0] ?? Object.keys(outMap)[0]);
+    const raw = outMap[outName]?.data as Float32Array | undefined;
+
+    if (!raw) {
+      postError(id, 'ERUNTIME', `ONNX output "${outName}" is missing`);
       return;
     }
 
-    let result: InferDoneMessage['payload'];
-    try {
-      result = await runOnnx(tail, horizon);
-    } catch (err) {
-      console.error('[ml-worker] ONNX inference failed, fallback to mock', err);
-      result = runFallback(tail, horizon);
-    }
+    // 5) postprocess
+    const lastClose = tail[tail.length - 1][1];
+    const p50 = postprocessDelta(raw, lastClose, horizon);
+
+    // временный p10/p90 (пока модель/постпроцесс не отдают их)
+    const p10 = p50.map((v) => v * (1 - BAND));
+    const p90 = p50.map((v) => v * (1 + BAND));
+
+    const t1 = performance.now();
 
     const msg: InferDoneMessage = {
       id,
-      type: 'onnx:infer:done',
-      payload: result,
+      type: 'infer:done',
+      payload: {
+        p50,
+        p10,
+        p90,
+        diag: {
+          runtime_ms: t1 - t0,
+          backend: 'wasm',
+          model_ver: MODEL.modelVer,
+        },
+      },
     };
 
     ctx.postMessage(msg);
   } catch (e: any) {
-    ctx.postMessage({
-      id,
-      type: 'error',
-      payload: { message: e?.message || 'Worker error' },
-    } as InferErrorMessage);
+    // Ошибки buildFeatures обычно сюда попадают как исключение
+    const message = e?.message || 'ML worker runtime error';
+
+    // различаем загрузку модели vs runtime
+    if (String(message).toLowerCase().includes('load') || String(message).toLowerCase().includes('onnx')) {
+      postError(id, 'ELOAD', message);
+      return;
+    }
+
+    postError(id, 'ERUNTIME', message);
   }
 };
