@@ -1,4 +1,4 @@
-/* global Worker, MessageEvent */
+/* global Worker, MessageEvent, AbortSignal */
 
 import type {
   TailPoint,
@@ -57,9 +57,17 @@ export async function inferForecast(
   tail: TailPoint[],
   horizon: number,
   model?: string | null,
+  opts: { signal?: AbortSignal } = {},
 ): Promise<InferResult> {
   if (!tail.length || horizon <= 0) {
     throw new Error('Invalid tail or horizon for inference');
+  }
+
+  const { signal } = opts;
+  if (signal?.aborted) {
+    const e = new Error('Aborted');
+    (e as any).name = 'AbortError';
+    throw e;
   }
 
   const worker = getWorker();
@@ -77,9 +85,20 @@ export async function inferForecast(
 
   const p = new Promise<InferResult>((resolve, reject) => {
     pendingMap.set(id, { resolve, reject });
+
+    if (signal) {
+      const onAbort = () => {
+        if (pendingMap.has(id)) {
+          pendingMap.delete(id);
+          const e = new Error('Aborted');
+          (e as any).name = 'AbortError';
+          reject(e);
+        }
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
   });
 
   worker.postMessage(req);
-
   return p;
 }
