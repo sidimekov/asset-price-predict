@@ -1,16 +1,74 @@
 // apps/web/src/features/market-adapter/providers/MockProvider.ts
 import type { AppDispatch } from '@/shared/store';
-import { marketApi } from '@/shared/api/marketApi';
 import type { ProviderRequestBase } from './types';
 import type { CatalogItem } from '@shared/types/market';
 
+type FetchOpts = {
+  signal?: AbortSignal;
+};
+
+// Deterministic PRNG (seeded) - stable for UX/tests
+
+function hashSeed(input: string): number {
+  // simple, fast string hash -> uint32
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function timeframeToStepMs(timeframe: string): number {
+  switch (timeframe) {
+    case '1h':
+      return 60 * 60 * 1000;
+    case '8h':
+      return 8 * 60 * 60 * 1000;
+    case '1d':
+      return 24 * 60 * 60 * 1000;
+    case '7d':
+      return 7 * 24 * 60 * 60 * 1000;
+    case '1mo':
+      // приближение - 30 дней, достаточно для моков
+      return 30 * 24 * 60 * 60 * 1000;
+    default:
+      return 60 * 60 * 1000;
+  }
+}
+
 /**
- * Вариант 1 – берём моковые данные с API через RTK Query.
+ * MOCK по умолчанию - полностью локальный генератор свечей без сети
  */
 export async function fetchMockTimeseries(
+  _dispatch: AppDispatch,
+  params: ProviderRequestBase,
+  _opts: FetchOpts = {},
+): Promise<unknown> {
+  return generateMockBarsRaw(params);
+}
+
+/**
+ * (опционально) сетевой мок отдельным режимом
+ * если когда-нибудь понадобится
+ */
+export async function fetchMockTimeseriesViaApi(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
+  opts: FetchOpts = {},
 ): Promise<unknown> {
+  const { marketApi } = await import('@/shared/api/marketApi');
   const { symbol, timeframe, limit } = params;
 
   const queryResult = dispatch(
@@ -30,25 +88,35 @@ export async function fetchMockTimeseries(
 }
 
 /**
- * Вариант 2 – полностью локальный генератор свечей без сети.
- * Используется тем же контрактом ProviderRequestBase.
+ * локальный генератор свечей
+ * Детерминированный seed = symbol+timeframe+limit
  */
 export function generateMockBarsRaw(
   params: ProviderRequestBase,
 ): [number, number, number, number, number, number][] {
-  const { limit } = params;
-  const now = Date.now();
+  const { limit, symbol, timeframe } = params;
+
+  const stepMs = timeframeToStepMs(timeframe);
+  const seed = hashSeed(`${symbol}:${timeframe}:${limit}`);
+  const rnd = mulberry32(seed);
+
+  // текущая точка времени (не Date.now), чтобы не плавали снапшоты
+  const baseEpoch = 1700000000000; // ~2023-11-14
+  const now = baseEpoch + (seed % (365 * 24 * 60 * 60 * 1000));
+  const endTs = Math.floor(now / stepMs) * stepMs;
+
   const res: [number, number, number, number, number, number][] = [];
 
-  let lastClose = 100;
+  // Базовый уровень зависит от seed, чтобы серии отличались по символам.
+  let lastClose = 80 + (seed % 120);
 
   for (let i = limit - 1; i >= 0; i--) {
-    const ts = now - i * 60 * 60 * 1000; // шаг 1h для примера
+    const ts = endTs - i * stepMs;
     const open = lastClose;
-    const high = open + Math.random() * 3;
-    const low = open - Math.random() * 3;
-    const close = low + Math.random() * (high - low);
-    const volume = 10 + Math.random() * 100;
+    const high = open + rnd() * 3;
+    const low = open - rnd() * 3;
+    const close = low + rnd() * (high - low);
+    const volume = 10 + rnd() * 100;
 
     res.push([ts, open, high, low, close, volume]);
     lastClose = close;

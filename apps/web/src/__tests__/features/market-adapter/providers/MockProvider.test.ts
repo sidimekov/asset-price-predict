@@ -1,80 +1,25 @@
 // apps/web/src/__tests__/features/market-adapter/providers/MockProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  fetchMockTimeseries,
-  generateMockBarsRaw,
-} from '@/features/market-adapter/providers/MockProvider';
+import { fetchMockTimeseries } from '@/features/market-adapter/providers/MockProvider';
 
-// hoisted-мок для initiate
-const { mockMockInitiate } = vi.hoisted(() => ({
-  mockMockInitiate: vi.fn(),
-}));
+const dispatch = vi.fn() as any;
 
-vi.mock('@/shared/api/marketApi', () => ({
-  __esModule: true,
-  marketApi: {
-    endpoints: {
-      getMockTimeseries: {
-        initiate: (...args: any[]) => mockMockInitiate(...args),
-      },
-    },
-  },
-}));
-
-describe('fetchMockTimeseries', () => {
+describe('MockProvider', () => {
   beforeEach(() => {
-    mockMockInitiate.mockReset();
+    vi.clearAllMocks();
   });
 
-  it('вызывает getMockTimeseries и возвращает данные', async () => {
-    const mockDispatch = vi.fn((action: any) => action);
-
-    // 👇 Параметры, которые реально пойдут в initiate
-    const params = {
-      symbol: 'TEST',
-      timeframe: '1h' as const,
-      limit: 10,
-    };
-
-    const mockData = [{ foo: 'bar' }] as any;
-
-    const mockQueryResult = {
-      unwrap: vi.fn().mockResolvedValue(mockData),
-      unsubscribe: vi.fn(),
-    };
-
-    mockMockInitiate.mockReturnValue(mockQueryResult);
-
-    const result = await fetchMockTimeseries(
-      mockDispatch as any,
-      params as any,
-    );
-
-    expect(mockMockInitiate).toHaveBeenCalledTimes(1);
-    expect(mockMockInitiate).toHaveBeenCalledWith({
+  it('fetchMockTimeseries генерирует данные локально (без marketApi)', async () => {
+    const result = (await fetchMockTimeseries(dispatch, {
       symbol: 'TEST',
       timeframe: '1h',
-      limit: 10,
-    });
-
-    expect(mockDispatch).toHaveBeenCalledWith(mockQueryResult);
-
-    expect(mockQueryResult.unwrap).toHaveBeenCalledTimes(1);
-    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(result).toBe(mockData);
-  });
-});
-
-describe('generateMockBarsRaw', () => {
-  it('генерирует массив нужной длины и формата [ts, o, h, l, c, v]', () => {
-    const params = {
-      symbol: 'TEST',
-      timeframe: '1h' as const,
       limit: 5,
-    };
+    })) as any[];
 
-    const result = generateMockBarsRaw(params as any);
+    // локальный мок не должен требовать dispatch и не должен трогать сеть
+    expect(dispatch).not.toHaveBeenCalled();
 
+    expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(5);
 
     for (const bar of result) {
@@ -87,5 +32,39 @@ describe('generateMockBarsRaw', () => {
       expect(typeof c).toBe('number');
       expect(typeof v).toBe('number');
     }
+
+    // timestamps должны быть возрастающими и "похожими на ms"
+    for (let i = 1; i < result.length; i++) {
+      expect(result[i][0]).toBeGreaterThan(result[i - 1][0]);
+      expect(result[i][0]).toBeGreaterThan(1_000_000_000_000);
+    }
+  });
+
+  it('генерация детерминированная (одинаковый symbol+timeframe+limit -> одинаковый результат)', async () => {
+    const params = { symbol: 'BTCUSDT', timeframe: '1h', limit: 10 };
+
+    const a = await fetchMockTimeseries(dispatch, params);
+    const b = await fetchMockTimeseries(dispatch, params);
+
+    expect(a).toEqual(b);
+  });
+
+  it('timeframe влияет на шаг времени', async () => {
+    const a = (await fetchMockTimeseries(dispatch, {
+      symbol: 'X',
+      timeframe: '1h',
+      limit: 3,
+    })) as any[];
+
+    const b = (await fetchMockTimeseries(dispatch, {
+      symbol: 'X',
+      timeframe: '1d',
+      limit: 3,
+    })) as any[];
+
+    const stepA = a[1][0] - a[0][0];
+    const stepB = b[1][0] - b[0][0];
+
+    expect(stepB).toBeGreaterThan(stepA);
   });
 });
