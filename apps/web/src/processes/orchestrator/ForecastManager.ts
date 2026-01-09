@@ -50,7 +50,10 @@ function isAbortError(err: any): boolean {
  * Прогноз: через ML воркер, результат в forecastSlice
  */
 export class ForecastManager {
-  static async run(ctx: OrchestratorInput, deps: OrchestratorDeps): Promise<void> {
+  static async run(
+    ctx: OrchestratorInput,
+    deps: OrchestratorDeps,
+  ): Promise<void> {
     const { symbol, provider, tf, window, horizon, model } = ctx;
     const { dispatch, getState, signal } = deps;
 
@@ -100,9 +103,14 @@ export class ForecastManager {
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
       // 3) infer (with abort)
-      const inferResult = await inferForecast(tail, horizon, model ?? undefined, {
-        signal,
-      });
+      const inferResult = await inferForecast(
+        tail,
+        horizon,
+        model ?? undefined,
+        {
+          signal,
+        },
+      );
 
       if (signal?.aborted) {
         dispatch(forecastCancelled(fcKey));
@@ -185,7 +193,11 @@ export class ForecastManager {
 
     // 0) check store cache + TTL
     const state = getState();
-    const isStale = isTimeseriesStaleByKey(state, tsKey as any, TIMESERIES_TTL_MS);
+    const isStale = isTimeseriesStaleByKey(
+      state,
+      tsKey as any,
+      TIMESERIES_TTL_MS,
+    );
 
     const entry = (state as any).timeseries?.byKey?.[tsKey] as
       | { bars: Bar[]; fetchedAt: string }
@@ -250,7 +262,10 @@ export class ForecastManager {
   }
 
   private static buildStoreForecastEntry(
-    entry: { series: { p10: number[]; p50: number[]; p90: number[] }; meta: any },
+    entry: {
+      series: { p10: number[]; p50: number[]; p90: number[] };
+      meta: any;
+    },
     tf: MarketTimeframe,
     lastTs: number,
   ) {
