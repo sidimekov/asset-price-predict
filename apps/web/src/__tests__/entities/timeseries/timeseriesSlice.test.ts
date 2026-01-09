@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { Bar } from '@shared/types/market';
 import type { RootState } from '@/shared/store';
 import { buildTimeseriesCacheKey } from '@/shared/lib/cacheKey';
@@ -14,20 +14,24 @@ import {
 
 import {
   selectBarsByKey,
+  selectFetchedAtByKey,
   selectIsLoading,
   selectError,
   selectTailForFeatures,
   selectIsStale,
 } from '@/entities/timeseries/model/selectors';
 
-const key = buildTimeseriesCacheKey('MOCK' as any, 'BTCUSDT', '1h' as any, 100);
+const key = buildTimeseriesCacheKey('MOCK', 'BTCUSDT', '1h', 120);
 
-const makeRootState = (timeseriesState: any): RootState =>
-  ({ timeseries: timeseriesState }) as unknown as RootState;
+function makeRootState(timeseriesState: any): RootState {
+  return {
+    timeseries: timeseriesState,
+  } as RootState;
+}
 
 describe('timeseriesSlice reducers', () => {
   it('sets loading and clears error on timeseriesRequested', () => {
-    const prevState = timeseriesReducer(undefined, { type: '@@INIT' } as any);
+    const prevState = timeseriesReducer(undefined, { type: 'init' });
 
     const state = timeseriesReducer(prevState, timeseriesRequested({ key }));
 
@@ -37,44 +41,49 @@ describe('timeseriesSlice reducers', () => {
 
   it('stores bars and fetchedAt on timeseriesReceived', () => {
     const bars: Bar[] = [[1, 2, 3, 1, 2, 10]];
-    const fetchedAt = '2024-01-01T00:00:00.000Z';
+    const frozen = new Date('2024-01-01T00:00:00.000Z');
+
+    vi.useFakeTimers();
+    vi.setSystemTime(frozen);
 
     const state = timeseriesReducer(
       undefined,
-      timeseriesReceived({ key, bars, fetchedAt }),
+      timeseriesReceived({ key, bars }),
     );
 
-    expect(state.byKey[key]).toEqual({ bars, fetchedAt });
+    expect(state.byKey[key]).toEqual({ bars, fetchedAt: frozen.toISOString() });
     expect(state.loadingByKey[key]).toBe(false);
     expect(state.errorByKey[key]).toBeNull();
+
+    vi.useRealTimers();
   });
 
   it('overwrites existing entry on repeated timeseriesReceived', () => {
     const firstBars: Bar[] = [[1, 2, 3, 1, 2, 10]];
     const secondBars: Bar[] = [[2, 3, 4, 2, 3, 20]];
 
+    vi.useFakeTimers();
+
+    const t1 = new Date('2024-01-01T00:00:00.000Z');
+    vi.setSystemTime(t1);
     const firstState = timeseriesReducer(
       undefined,
-      timeseriesReceived({
-        key,
-        bars: firstBars,
-        fetchedAt: '2024-01-01T00:00:00.000Z',
-      }),
+      timeseriesReceived({ key, bars: firstBars }),
     );
 
+    const t2 = new Date('2024-01-02T00:00:00.000Z');
+    vi.setSystemTime(t2);
     const secondState = timeseriesReducer(
       firstState,
-      timeseriesReceived({
-        key,
-        bars: secondBars,
-        fetchedAt: '2024-01-02T00:00:00.000Z',
-      }),
+      timeseriesReceived({ key, bars: secondBars }),
     );
 
     expect(secondState.byKey[key]).toEqual({
       bars: secondBars,
-      fetchedAt: '2024-01-02T00:00:00.000Z',
+      fetchedAt: t2.toISOString(),
     });
+
+    vi.useRealTimers();
   });
 
   it('stores error on timeseriesFailed', () => {
@@ -89,40 +98,42 @@ describe('timeseriesSlice reducers', () => {
     expect(state.errorByKey[key]).toBe(error);
   });
 
-  it('clears single key on clearTimeseries', () => {
+  it('clears entry on clearTimeseries', () => {
     const bars: Bar[] = [[1, 2, 3, 1, 2, 10]];
-    const fetchedAt = '2024-01-01T00:00:00.000Z';
+    const fetchedAt = new Date().toISOString();
 
-    const withData = timeseriesReducer(
-      undefined,
-      timeseriesReceived({ key, bars, fetchedAt }),
-    );
+    const prevState = makeRootState({
+      byKey: { [key]: { bars, fetchedAt } },
+      loadingByKey: { [key]: false },
+      errorByKey: { [key]: null },
+    }).timeseries;
 
-    const cleared = timeseriesReducer(withData, clearTimeseries(key));
+    const state = timeseriesReducer(prevState, clearTimeseries(key));
 
-    expect(cleared.byKey[key]).toBeUndefined();
-    expect(cleared.loadingByKey[key]).toBeUndefined();
-    expect(cleared.errorByKey[key]).toBeUndefined();
+    expect(state.byKey[key]).toBeUndefined();
+    expect(state.loadingByKey[key]).toBeUndefined();
+    expect(state.errorByKey[key]).toBeUndefined();
   });
 
-  it('resets whole slice on clearAllTimeseries', () => {
+  it('resets state on clearAllTimeseries', () => {
     const bars: Bar[] = [[1, 2, 3, 1, 2, 10]];
-    const fetchedAt = '2024-01-01T00:00:00.000Z';
+    const fetchedAt = new Date().toISOString();
 
-    const withData = timeseriesReducer(
-      undefined,
-      timeseriesReceived({ key, bars, fetchedAt }),
-    );
+    const prevState = makeRootState({
+      byKey: { [key]: { bars, fetchedAt } },
+      loadingByKey: { [key]: false },
+      errorByKey: { [key]: null },
+    }).timeseries;
 
-    const cleared = timeseriesReducer(withData, clearAllTimeseries());
+    const state = timeseriesReducer(prevState, clearAllTimeseries());
 
-    expect(cleared.byKey).toEqual({});
-    expect(cleared.loadingByKey).toEqual({});
-    expect(cleared.errorByKey).toEqual({});
+    expect(state.byKey).toEqual({});
+    expect(state.loadingByKey).toEqual({});
+    expect(state.errorByKey).toEqual({});
   });
 });
 
-describe('timeseries selectors', () => {
+describe('timeseriesSlice selectors', () => {
   it('selectBarsByKey returns bars or undefined', () => {
     const bars: Bar[] = [
       [1000, 1, 2, 0.5, 1.5, 10],
@@ -137,24 +148,45 @@ describe('timeseries selectors', () => {
     });
 
     expect(selectBarsByKey(rootState, key)).toEqual(bars);
-    expect(selectBarsByKey(rootState, 'UNKNOWN_KEY')).toBeUndefined();
+    expect(selectBarsByKey(rootState, 'missing')).toBeUndefined();
   });
 
-  it('selectIsLoading and selectError work correctly', () => {
+  it('selectFetchedAtByKey returns fetchedAt or undefined', () => {
+    const fetchedAt = new Date().toISOString();
+
+    const rootState = makeRootState({
+      byKey: { [key]: { bars: [], fetchedAt } },
+      loadingByKey: {},
+      errorByKey: {},
+    });
+
+    expect(selectFetchedAtByKey(rootState, key)).toBe(fetchedAt);
+    expect(selectFetchedAtByKey(rootState, 'missing')).toBeUndefined();
+  });
+
+  it('selectIsLoading returns loading or false', () => {
     const rootState = makeRootState({
       byKey: {},
       loadingByKey: { [key]: true },
-      errorByKey: { [key]: 'boom' },
+      errorByKey: {},
     });
 
     expect(selectIsLoading(rootState, key)).toBe(true);
-    expect(selectIsLoading(rootState, 'UNKNOWN_KEY')).toBe(false);
-
-    expect(selectError(rootState, key)).toBe('boom');
-    expect(selectError(rootState, 'UNKNOWN_KEY')).toBeNull();
+    expect(selectIsLoading(rootState, 'missing')).toBe(false);
   });
 
-  it('selectTailForFeatures returns last n [ts, close] points', () => {
+  it('selectError returns error or null', () => {
+    const rootState = makeRootState({
+      byKey: {},
+      loadingByKey: {},
+      errorByKey: { [key]: 'oops' },
+    });
+
+    expect(selectError(rootState, key)).toBe('oops');
+    expect(selectError(rootState, 'missing')).toBeNull();
+  });
+
+  it('selectTailForFeatures returns last N bars', () => {
     const bars: Bar[] = [
       [1000, 1, 2, 0.5, 1.5, 10],
       [2000, 2, 3, 1, 2.5, 20],
@@ -168,40 +200,28 @@ describe('timeseries selectors', () => {
       errorByKey: {},
     });
 
-    const tail = selectTailForFeatures(rootState, { key, n: 2 });
-    expect(tail).toEqual([
-      [2000, 2.5],
-      [3000, 3.5],
+    expect(selectTailForFeatures(rootState, key, 2)).toEqual([
+      bars[1],
+      bars[2],
     ]);
-
-    const fullTail = selectTailForFeatures(rootState, { key, n: 10 });
-    expect(fullTail).toEqual([
-      [1000, 1.5],
-      [2000, 2.5],
-      [3000, 3.5],
-    ]);
-
-    const emptyTail = selectTailForFeatures(rootState, {
-      key: 'UNKNOWN_KEY',
-      n: 2,
-    });
-    expect(emptyTail).toEqual([]);
+    expect(selectTailForFeatures(rootState, key, 10)).toEqual(bars);
+    expect(selectTailForFeatures(rootState, 'missing', 2)).toBeUndefined();
   });
 
-  it('selectIsStale returns false for fresh data and true for stale or missing', () => {
-    const freshFetchedAt = new Date().toISOString();
-    const staleFetchedAt = new Date(Date.now() - 11 * 60 * 1000).toISOString();
+  it('selectIsStale uses TTL and fetchedAt', () => {
+    const now = 1_000_000;
+    const ttlMs = 1000;
 
-    const bars: Bar[] = [];
+    const bars: Bar[] = [[1000, 1, 2, 0.5, 1.5, 10]];
 
     const stateFresh = makeRootState({
-      byKey: { [key]: { bars, fetchedAt: freshFetchedAt } },
+      byKey: { [key]: { bars, fetchedAt: new Date(now - 500).toISOString() } },
       loadingByKey: {},
       errorByKey: {},
     });
 
     const stateStale = makeRootState({
-      byKey: { [key]: { bars, fetchedAt: staleFetchedAt } },
+      byKey: { [key]: { bars, fetchedAt: new Date(now - 5000).toISOString() } },
       loadingByKey: {},
       errorByKey: {},
     });
@@ -212,8 +232,8 @@ describe('timeseries selectors', () => {
       errorByKey: {},
     });
 
-    expect(selectIsStale(stateFresh, key)).toBe(false);
-    expect(selectIsStale(stateStale, key)).toBe(true);
-    expect(selectIsStale(stateEmpty, key)).toBe(true);
+    expect(selectIsStale(stateFresh, key, ttlMs, now)).toBe(false);
+    expect(selectIsStale(stateStale, key, ttlMs, now)).toBe(true);
+    expect(selectIsStale(stateEmpty, key, ttlMs, now)).toBe(true);
   });
 });
