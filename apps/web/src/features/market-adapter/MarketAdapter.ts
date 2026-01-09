@@ -44,10 +44,16 @@ export const marketAdapterRequestSchema = z.object({
 
 export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
 
+export type MarketAdapterProvider = MarketDataProvider | 'MOCK';
+
+export type AdapterCallOpts = {
+  signal?: AbortSignal;
+};
+
 export interface MarketAdapterSuccess {
   bars: Bar[];
   symbol: string;
-  provider: MarketDataProvider;
+  provider: MarketAdapterProvider;
   timeframe: MarketTimeframe;
   source: 'CACHE' | 'NETWORK' | 'LOCAL';
 }
@@ -84,36 +90,126 @@ function normalizeRawBars(raw: unknown): Bar[] {
   });
 }
 
+// Приводим timestamp к ms, сортируем и чистим ряд
+function normalizeBarsFinal(bars: Bar[]): Bar[] {
+  const msBars = bars
+    .map((b) => {
+      const ts = Number(b[0]);
+      const tsMs = ts < 1_000_000_000_000 ? ts * 1000 : ts;
+      return [tsMs, b[1], b[2], b[3], b[4], b[5]] as Bar;
+    })
+    .filter((b) => Number.isFinite(b[0]));
+
+  // Bars должны быть строго возрастающими по времени
+  msBars.sort((a, b) => a[0] - b[0]);
+
+  const deduped: Bar[] = [];
+  let lastTs = -Infinity;
+  for (const b of msBars) {
+    if (b[0] <= lastTs) continue;
+    deduped.push(b);
+    lastTs = b[0];
+  }
+
+  return deduped;
+}
+
+type ProviderResolveOk = {
+  ok: true;
+  raw: unknown;
+  normalized: Bar[];
+  source: MarketAdapterSuccess['source'];
+};
+
+type ProviderResolveErr = {
+  ok: false;
+  error: MarketAdapterError;
+};
+
+type ProviderResolveResult = ProviderResolveOk | ProviderResolveErr;
+
 async function resolveProviderData(
   dispatch: AppDispatch,
-  provider: MarketDataProvider,
+  provider: MarketAdapterProvider,
   params: ProviderRequestBase,
-): Promise<{ raw: unknown; normalized: Bar[] }> {
-  switch (provider) {
-    case 'BINANCE':
-      const klines = await fetchBinanceTimeseries(dispatch, params);
-      return { raw: klines, normalized: normalizeBinanceKlines(klines) };
+  opts: AdapterCallOpts = {},
+): Promise<ProviderResolveResult> {
+  const paramsWithSignal = {
+    ...params,
+    signal: opts.signal,
+  } as ProviderRequestBase & AdapterCallOpts;
 
-    case 'MOEX':
-      const moexRaw = await fetchMoexTimeseries(dispatch, params);
-      return { raw: moexRaw, normalized: normalizeRawBars(moexRaw) };
+  try {
+    switch (provider) {
+      case 'BINANCE': {
+        const klines = await fetchBinanceTimeseries(dispatch, paramsWithSignal);
+        return {
+          ok: true,
+          raw: klines,
+          normalized: normalizeBarsFinal(normalizeBinanceKlines(klines)),
+          source: 'NETWORK',
+        };
+      }
 
-    case 'MOCK':
-      const mockRaw = await fetchMockTimeseries(dispatch, params);
-      return { raw: mockRaw, normalized: normalizeRawBars(mockRaw) };
+      case 'MOEX': {
+        const moexRaw = await fetchMoexTimeseries(dispatch, paramsWithSignal);
+        return {
+          ok: true,
+          raw: moexRaw,
+          normalized: normalizeBarsFinal(normalizeRawBars(moexRaw)),
+          source: 'NETWORK',
+        };
+      }
 
-    case 'CUSTOM':
-      const customRaw = generateMockBarsRaw(params);
-      return { raw: customRaw, normalized: normalizeRawBars(customRaw) };
+      case 'MOCK': {
+        const mockRaw = await fetchMockTimeseries(
+          dispatch,
+          paramsWithSignal,
+          opts,
+        );
+        return {
+          ok: true,
+          raw: mockRaw,
+          normalized: normalizeBarsFinal(normalizeRawBars(mockRaw)),
+          source: 'LOCAL',
+        };
+      }
 
-    default:
-      throw new Error('Unsupported provider');
+      case 'CUSTOM': {
+        const customRaw = generateMockBarsRaw(params);
+        return {
+          ok: true,
+          raw: customRaw,
+          normalized: normalizeBarsFinal(normalizeRawBars(customRaw)),
+          source: 'LOCAL',
+        };
+      }
+
+      default:
+        return {
+          ok: false,
+          error: {
+            code: 'UNSUPPORTED_PROVIDER',
+            message: `Unsupported provider: ${String(provider)}`,
+          },
+        };
+    }
+  } catch (err: any) {
+    // Никаких throw наружу
+    return {
+      ok: false,
+      error: {
+        code: 'PROVIDER_ERROR',
+        message: err?.message || 'Failed to fetch',
+      },
+    };
   }
 }
 
 export async function getMarketTimeseries(
   dispatch: AppDispatch,
   request: MarketAdapterRequest,
+  opts: AdapterCallOpts = {},
 ): Promise<MarketAdapterSuccess | MarketAdapterError> {
   const result = marketAdapterRequestSchema.safeParse(request);
   if (!result.success) {
@@ -133,21 +229,23 @@ export async function getMarketTimeseries(
     return { bars: cached, symbol, provider, timeframe, source: 'CACHE' };
   }
 
-  try {
-    const { normalized } = await resolveProviderData(dispatch, provider, {
-      symbol,
-      timeframe,
-      limit,
-    });
+  const resolved = await resolveProviderData(
+    dispatch,
+    provider as MarketAdapterProvider,
+    { symbol, timeframe, limit },
+    opts,
+  );
 
-    clientTimeseriesCache.set(cacheKey, normalized);
-    return { bars: normalized, symbol, provider, timeframe, source: 'NETWORK' };
-  } catch (err: any) {
-    return {
-      code: 'PROVIDER_ERROR',
-      message: err.message || 'Failed to fetch',
-    };
-  }
+  if (!resolved.ok) return resolved.error;
+
+  clientTimeseriesCache.set(cacheKey, resolved.normalized);
+  return {
+    bars: resolved.normalized,
+    symbol,
+    provider: provider as MarketAdapterProvider,
+    timeframe,
+    source: resolved.source,
+  };
 }
 
 // ============================================================================
