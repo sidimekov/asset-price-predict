@@ -1,8 +1,8 @@
 import type { RootState } from '@/shared/store';
 import type { Bar } from '@shared/types/market';
-import type { TimeseriesKey } from './timeseriesSlice';
+import { type TimeseriesKey, isTimeseriesStaleByKey } from './timeseriesSlice';
 
-const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 минут
+export const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 минут
 
 export const selectTimeseriesState = (state: RootState) => state.timeseries;
 
@@ -11,45 +11,44 @@ export const selectBarsByKey = (
   key: TimeseriesKey,
 ): Bar[] | undefined => selectTimeseriesState(state).byKey[key]?.bars;
 
+export const selectFetchedAtByKey = (
+  state: RootState,
+  key: TimeseriesKey,
+): string | undefined => selectTimeseriesState(state).byKey[key]?.fetchedAt;
+
 export const selectIsLoading = (
   state: RootState,
   key: TimeseriesKey,
-): boolean => !!selectTimeseriesState(state).loadingByKey[key];
+): boolean => selectTimeseriesState(state).loadingByKey[key] ?? false;
 
 export const selectError = (
   state: RootState,
   key: TimeseriesKey,
 ): string | null => selectTimeseriesState(state).errorByKey[key] ?? null;
 
-export type TailPoint = [ts: number, close: number];
-
+/**
+ * Хвост ряда под feature pipeline (последние N баров)
+ * Если нет данных - undefined
+ */
 export const selectTailForFeatures = (
   state: RootState,
-  params: { key: TimeseriesKey; n: number },
-): TailPoint[] => {
-  const { key, n } = params;
-  if (n <= 0) return [];
-
-  const entry = selectTimeseriesState(state).byKey[key];
-  if (!entry?.bars?.length) return [];
-
-  const tail = entry.bars.slice(-n);
-  return tail.map(([ts, _o, _h, _l, c]) => [ts, c]);
+  key: TimeseriesKey,
+  tailSize: number,
+): Bar[] | undefined => {
+  const bars = selectBarsByKey(state, key);
+  if (!bars) return undefined;
+  if (tailSize <= 0) return [];
+  if (bars.length <= tailSize) return bars;
+  return bars.slice(bars.length - tailSize);
 };
 
+/**
+ * TTL staleness (по умолчанию 10 минут)
+ * nowMs передаётся для тестов
+ */
 export const selectIsStale = (
   state: RootState,
   key: TimeseriesKey,
   ttlMs: number = DEFAULT_TTL_MS,
-): boolean => {
-  const entry = selectTimeseriesState(state).byKey[key];
-  if (!entry) return true;
-
-  const fetchedAtTs = Date.parse(entry.fetchedAt);
-  if (Number.isNaN(fetchedAtTs)) return true;
-
-  const age = Date.now() - fetchedAtTs;
-  return age > ttlMs;
-};
-
-export { DEFAULT_TTL_MS };
+  nowMs: number = Date.now(),
+): boolean => isTimeseriesStaleByKey(state, key, ttlMs, nowMs);
