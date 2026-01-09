@@ -68,91 +68,94 @@ function postError(
   ctx.postMessage(msg);
 }
 
-ctx.onmessage = async (event: MessageEvent<InferRequestMessage>) => {
-  const { id, type, payload } = event.data;
+ctx.addEventListener('message', (event: MessageEvent<InferRequestMessage>) => {
+  void (async () => {
+    const { id, type, payload } = event.data;
 
-  // пока что только infer:request
-  if (type !== 'infer:request') {
-    postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
-    return;
-  }
-
-  const t0 = performance.now();
-
-  try {
-    const { tail, horizon, model } = payload;
-
-    if (!tail || tail.length === 0 || horizon <= 0) {
-      postError(id, 'EBADINPUT', 'Invalid tail or horizon');
+    // пока что только infer:request
+    if (type !== 'infer:request') {
+      postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
       return;
     }
 
-    if (model && model !== MODEL.modelVer) {
-      postError(id, 'EBADINPUT', `Unsupported model version: ${model}`);
-      return;
-    }
-    // 1) features
-    const features = buildFeatures(tail);
+    const t0 = performance.now();
 
-    // 2) session
-    const session = await getSession();
+    try {
+      const { tail, horizon, model } = payload;
 
-    // 3) run
-    const inputName = session.inputNames[0] ?? 'input';
-    const inputTensor = new ort.Tensor('float32', features, MODEL.inputShape);
+      if (!tail || tail.length === 0 || horizon <= 0) {
+        postError(id, 'EBADINPUT', 'Invalid tail or horizon');
+        return;
+      }
 
-    const outMap = await session.run({ [inputName]: inputTensor });
+      if (model && model !== MODEL.modelVer) {
+        postError(id, 'EBADINPUT', `Unsupported model version: ${model}`);
+        return;
+      }
+      // 1) features
+      const features = buildFeatures(tail);
 
-    // 4) достаём delta (если нет delta - берём первый output)
-    const outName = (outMap as any).delta
-      ? 'delta'
-      : (session.outputNames[0] ?? Object.keys(outMap)[0]);
-    const raw = outMap[outName]?.data as Float32Array | undefined;
+      // 2) session
+      const session = await getSession();
 
-    if (!raw) {
-      postError(id, 'ERUNTIME', `ONNX output "${outName}" is missing`);
-      return;
-    }
+      // 3) run
+      const inputName = (session as any).inputNames?.[0] ?? 'input';
+      const inputTensor = new ort.Tensor('float32', features, MODEL.inputShape);
 
-    // 5) postprocess
-    const lastClose = tail[tail.length - 1][1];
-    const p50 = postprocessDelta(raw, lastClose, horizon);
+      const outMap = await session.run({ [inputName]: inputTensor });
 
-    // временный p10/p90 (пока модель/постпроцесс не отдают их)
-    const p10 = p50.map((v) => v * (1 - BAND));
-    const p90 = p50.map((v) => v * (1 + BAND));
+      // 4) достаём delta (если нет delta - берём первый output)
+      const outName = (outMap as any).delta
+        ? 'delta'
+        : ((session as any).outputNames?.[0] ?? Object.keys(outMap)[0]);
 
-    const t1 = performance.now();
+      const raw = outMap[outName]?.data as Float32Array | undefined;
 
-    const msg: InferDoneMessage = {
-      id,
-      type: 'infer:done',
-      payload: {
-        p50,
-        p10,
-        p90,
-        diag: {
-          runtime_ms: t1 - t0,
-          backend: 'wasm',
-          model_ver: MODEL.modelVer,
+      if (!raw) {
+        postError(id, 'ERUNTIME', `ONNX output "${outName}" is missing`);
+        return;
+      }
+
+      // 5) postprocess
+      const lastClose = tail[tail.length - 1][1];
+      const p50 = postprocessDelta(raw, lastClose, horizon);
+
+      // временный p10/p90 (пока модель/постпроцесс не отдают их)
+      const p10 = p50.map((v) => v * (1 - BAND));
+      const p90 = p50.map((v) => v * (1 + BAND));
+
+      const t1 = performance.now();
+
+      const msg: InferDoneMessage = {
+        id,
+        type: 'infer:done',
+        payload: {
+          p50,
+          p10,
+          p90,
+          diag: {
+            runtime_ms: t1 - t0,
+            backend: 'wasm',
+            model_ver: MODEL.modelVer,
+          },
         },
-      },
-    };
+      };
 
-    ctx.postMessage(msg);
-  } catch (e: any) {
-    // Ошибки buildFeatures обычно сюда попадают как исключение
-    const message = e?.message || 'ML worker runtime error';
+      ctx.postMessage(msg);
+    } catch (e: any) {
+      // Ошибки buildFeatures обычно сюда попадают как исключение
+      const message = e?.message || 'ML worker runtime error';
 
-    // различаем загрузку модели vs runtime
-    if (
-      String(message).toLowerCase().includes('load') ||
-      String(message).toLowerCase().includes('onnx')
-    ) {
-      postError(id, 'ELOAD', message);
-      return;
+      // различаем загрузку модели vs runtime
+      if (
+        String(message).toLowerCase().includes('load') ||
+        String(message).toLowerCase().includes('onnx')
+      ) {
+        postError(id, 'ELOAD', message);
+        return;
+      }
+
+      postError(id, 'ERUNTIME', message);
     }
-
-    postError(id, 'ERUNTIME', message);
-  }
-};
+  })();
+});
