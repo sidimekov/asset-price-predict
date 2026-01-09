@@ -28,8 +28,22 @@ export const selectForecastError = (
 ): string | null => state.forecast.errorByKey[key] ?? null;
 
 /**
+ * Параметры прогноза для оркестратора
+ * если params нет в типах ForecastState, читаем через any
+ */
+export const selectForecastParams = (
+  state: RootState,
+):
+  | {
+  tf: string;
+  window: string | number;
+  horizon: number;
+  model?: string | null;
+}
+  | undefined => (state as any).forecast?.params as any;
+
+/**
  * селектор для графика: сразу отдаёт только ряды
- * { p50, p10, p90 }, даже если записи ещё нет.
  */
 export const selectForecastSeries = (
   state: RootState,
