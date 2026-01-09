@@ -11,7 +11,8 @@ function mean(values: number[]): number {
 function std(values: number[]): number {
   if (values.length < 2) return 0;
   const m = mean(values);
-  const v = values.reduce((acc, x) => acc + (x - m) * (x - m), 0) / values.length;
+  const v =
+    values.reduce((acc, x) => acc + (x - m) * (x - m), 0) / values.length;
   return Math.sqrt(v);
 }
 

@@ -32,7 +32,9 @@ async function getSession(): Promise<ort.InferenceSession> {
 
   setOrtEnv();
 
-  const candidates = MODEL.quantPath ? [MODEL.quantPath, MODEL.path] : [MODEL.path];
+  const candidates = MODEL.quantPath
+    ? [MODEL.quantPath, MODEL.path]
+    : [MODEL.path];
 
   sessionPromise = (async () => {
     let lastError: unknown;
@@ -53,7 +55,11 @@ async function getSession(): Promise<ort.InferenceSession> {
   return sessionPromise;
 }
 
-function postError(id: string, code: InferErrorMessage['payload']['code'], message: string) {
+function postError(
+  id: string,
+  code: InferErrorMessage['payload']['code'],
+  message: string,
+) {
   const msg: InferErrorMessage = {
     id,
     type: 'error',
@@ -98,8 +104,9 @@ ctx.onmessage = async (event: MessageEvent<InferRequestMessage>) => {
     const outMap = await session.run({ [inputName]: inputTensor });
 
     // 4) достаём delta (если нет delta - берём первый output)
-    const outName =
-      (outMap as any).delta ? 'delta' : (session.outputNames[0] ?? Object.keys(outMap)[0]);
+    const outName = (outMap as any).delta
+      ? 'delta'
+      : (session.outputNames[0] ?? Object.keys(outMap)[0]);
     const raw = outMap[outName]?.data as Float32Array | undefined;
 
     if (!raw) {
@@ -138,7 +145,10 @@ ctx.onmessage = async (event: MessageEvent<InferRequestMessage>) => {
     const message = e?.message || 'ML worker runtime error';
 
     // различаем загрузку модели vs runtime
-    if (String(message).toLowerCase().includes('load') || String(message).toLowerCase().includes('onnx')) {
+    if (
+      String(message).toLowerCase().includes('load') ||
+      String(message).toLowerCase().includes('onnx')
+    ) {
       postError(id, 'ELOAD', message);
       return;
     }
