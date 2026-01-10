@@ -3,7 +3,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Bar } from '@assetpredict/shared';
 
-// Мокаем MarketAdapter и mlWorkerClient
+// --- mocks ---
+
 vi.mock('@/features/market-adapter/MarketAdapter', () => ({
   getMarketTimeseries: vi.fn(),
 }));
@@ -12,24 +13,72 @@ vi.mock('@/processes/orchestrator/mlWorkerClient', () => ({
   inferForecast: vi.fn(),
 }));
 
-import {
-  ForecastManager,
-  type OrchestratorInput,
-} from '@/processes/orchestrator/ForecastManager';
-import {
-  orchestratorState,
-  setLocalTimeseries,
-  getLocalTimeseries,
-  setLocalForecast,
-  getLocalForecast,
-  type LocalForecastEntry,
-} from '@/processes/orchestrator/state';
-import {
-  makeTimeseriesKey,
-  makeForecastKey,
-} from '@/processes/orchestrator/keys';
+// ForecastManager теперь читает/пишет через slices
+// Мокаем action creators и helpers, чтобы тест был unit-level
+vi.mock('@/entities/timeseries/model/timeseriesSlice', () => {
+  return {
+    buildTimeseriesKey: vi.fn(
+      (provider: string, symbol: string, tf: string, limit: number) =>
+        `${provider}:${symbol}:${tf}:${limit}`,
+    ),
+    isTimeseriesStaleByKey: vi.fn(),
+    timeseriesRequested: vi.fn((payload: any) => ({
+      type: 'timeseries/requested',
+      payload,
+    })),
+    timeseriesReceived: vi.fn((payload: any) => ({
+      type: 'timeseries/received',
+      payload,
+    })),
+    timeseriesFailed: vi.fn((payload: any) => ({
+      type: 'timeseries/failed',
+      payload,
+    })),
+  };
+});
+
+vi.mock('@/entities/forecast/model/forecastSlice', () => {
+  return {
+    forecastRequested: vi.fn((key: string) => ({
+      type: 'forecast/requested',
+      payload: key,
+    })),
+    forecastReceived: vi.fn((payload: any) => ({
+      type: 'forecast/received',
+      payload,
+    })),
+    forecastFailed: vi.fn((payload: any) => ({
+      type: 'forecast/failed',
+      payload,
+    })),
+    forecastCancelled: vi.fn((key: string) => ({
+      type: 'forecast/cancelled',
+      payload: key,
+    })),
+  };
+});
+
+import { ForecastManager, type OrchestratorInput } from '@/processes/orchestrator/ForecastManager';
+import { orchestratorState, TIMESERIES_TTL_MS } from '@/processes/orchestrator/state';
+import { makeForecastKey } from '@/processes/orchestrator/keys';
+
 import { getMarketTimeseries } from '@/features/market-adapter/MarketAdapter';
 import { inferForecast } from '@/processes/orchestrator/mlWorkerClient';
+
+import {
+  buildTimeseriesKey,
+  isTimeseriesStaleByKey,
+  timeseriesRequested,
+  timeseriesReceived,
+  timeseriesFailed,
+} from '@/entities/timeseries/model/timeseriesSlice';
+
+import {
+  forecastRequested,
+  forecastReceived,
+  forecastFailed,
+  forecastCancelled,
+} from '@/entities/forecast/model/forecastSlice';
 
 // @ts-ignore
 const getMarketTimeseriesMock = getMarketTimeseries as unknown as vi.Mock;
@@ -39,57 +88,61 @@ const inferForecastMock = inferForecast as unknown as vi.Mock;
 const mockDispatch = vi.fn();
 const mockGetState = vi.fn(() => ({}) as any);
 
-const makeDeps = () => ({
+const makeDeps = (signal?: AbortSignal) => ({
   dispatch: mockDispatch,
   getState: mockGetState,
-  signal: undefined as AbortSignal | undefined,
+  signal,
 });
 
-describe('ForecastManager', () => {
+describe('ForecastManager (new orchestrator)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     orchestratorState.status = 'idle';
   });
 
-  it('uses local timeseries cache when fresh and calls inferForecast once', async () => {
+  it('uses timeseries from store when fresh (no MarketAdapter call), then calls inferForecast and stores forecast', async () => {
     const ctx: OrchestratorInput = {
-      symbol: 'SBER1' as any,
-      provider: 'MOCK',
+      symbol: 'SBER' as any,
+      provider: 'MOEX' as any,
       tf: '1h',
       window: 200,
-      horizon: 24,
+      horizon: 2,
       model: null,
     };
 
-    const tsKey = makeTimeseriesKey({
-      provider: ctx.provider,
-      symbol: ctx.symbol,
-      tf: ctx.tf,
-      window: ctx.window,
-    });
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
 
     const bars: Bar[] = [
-      [0, 1, 2, 0.5, 1.5, 100],
-      [1, 1.5, 2.5, 1, 2, 120],
+      [1_000_000, 1, 2, 0.5, 1.5, 100],
+      [2_000_000, 1.5, 2.5, 1, 2, 120],
     ];
-    setLocalTimeseries(tsKey, bars);
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: {
+          [tsKey]: { bars, fetchedAt: new Date().toISOString() },
+        },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
 
     inferForecastMock.mockResolvedValue({
-      p50: [1, 2],
-      p10: [0.9, 1.9],
-      p90: [1.1, 2.1],
-      diag: {
-        runtime_ms: 10,
-        backend: 'mock',
-        model_ver: 'mock-v0',
-      },
+      p50: [10, 20],
+      p10: [9, 19],
+      p90: [11, 21],
+      diag: { runtime_ms: 10, backend: 'mock', model_ver: 'v1' },
     });
 
     await ForecastManager.run(ctx, makeDeps());
 
+    // no network timeseries
     expect(getMarketTimeseriesMock).not.toHaveBeenCalled();
-    expect(inferForecastMock).toHaveBeenCalledTimes(1);
+    expect(timeseriesRequested).not.toHaveBeenCalled();
+    expect(timeseriesReceived).not.toHaveBeenCalled();
 
+    // forecast actions
     const fcKey = makeForecastKey({
       symbol: ctx.symbol,
       tf: ctx.tf,
@@ -97,25 +150,36 @@ describe('ForecastManager', () => {
       model: ctx.model ?? undefined,
     });
 
-    const forecast = getLocalForecast(fcKey);
-    expect(forecast).toBeDefined();
-    expect(forecast?.series.p50).toEqual([1, 2]);
+    expect(forecastRequested).toHaveBeenCalledWith(fcKey);
+    expect(inferForecastMock).toHaveBeenCalledTimes(1);
+    expect(forecastReceived).toHaveBeenCalledTimes(1);
+
+    // status back to idle
     expect(orchestratorState.status).toBe('idle');
   });
 
-  it('calls MarketAdapter when no local timeseries, then caches bars and forecast', async () => {
+  it('loads timeseries via MarketAdapter when missing/stale, dispatches timeseries actions, then infers and stores forecast', async () => {
     const ctx: OrchestratorInput = {
-      symbol: 'SBER2' as any,
-      provider: 'MOCK',
+      symbol: 'GAZP' as any,
+      provider: 'MOEX' as any,
       tf: '1h',
       window: 200,
-      horizon: 24,
+      horizon: 2,
       model: null,
     };
 
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(true);
+
+    mockGetState.mockReturnValue({
+      timeseries: { byKey: {} },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
     const bars: Bar[] = [
-      [0, 1, 2, 0.5, 1.5, 100],
-      [1, 1.5, 2.5, 1, 2, 120],
+      [1_000_000, 1, 2, 0.5, 1.5, 100],
+      [2_000_000, 1.5, 2.5, 1, 2, 120],
     ];
 
     getMarketTimeseriesMock.mockResolvedValue({
@@ -127,115 +191,107 @@ describe('ForecastManager', () => {
     });
 
     inferForecastMock.mockResolvedValue({
-      p50: [10, 20],
-      p10: [9, 19],
-      p90: [11, 21],
-      diag: {
-        runtime_ms: 15,
-        backend: 'mock',
-        model_ver: 'mock-v1',
-      },
+      p50: [1, 2],
+      p10: [0.9, 1.9],
+      p90: [1.1, 2.1],
+      diag: { runtime_ms: 12, backend: 'mock', model_ver: 'v2' },
     });
 
     await ForecastManager.run(ctx, makeDeps());
 
+    // timeseries flow
+    expect(timeseriesRequested).toHaveBeenCalledWith({ key: tsKey });
     expect(getMarketTimeseriesMock).toHaveBeenCalledTimes(1);
+    expect(getMarketTimeseriesMock).toHaveBeenCalledWith(
+      mockDispatch,
+      expect.objectContaining({
+        symbol: ctx.symbol,
+        provider: ctx.provider,
+        timeframe: ctx.tf,
+        limit: ctx.window,
+      }),
+      expect.objectContaining({ signal: undefined }),
+    );
 
-    const tsKey = makeTimeseriesKey({
-      provider: ctx.provider,
-      symbol: ctx.symbol,
-      tf: ctx.tf,
-      window: ctx.window,
+    expect(timeseriesReceived).toHaveBeenCalledWith({
+      key: tsKey,
+      bars,
     });
 
-    const tsEntry = getLocalTimeseries(tsKey);
-    expect(tsEntry).toBeDefined();
-    expect(tsEntry?.bars).toEqual(bars);
+    // forecast flow
+    expect(inferForecastMock).toHaveBeenCalledTimes(1);
+    expect(forecastReceived).toHaveBeenCalledTimes(1);
 
-    const fcKey = makeForecastKey({
-      symbol: ctx.symbol,
-      tf: ctx.tf,
-      horizon: ctx.horizon,
-      model: ctx.model ?? undefined,
-    });
-
-    const forecast = getLocalForecast(fcKey);
-    expect(forecast).toBeDefined();
-    expect(forecast?.series.p50).toEqual([10, 20]);
     expect(orchestratorState.status).toBe('idle');
   });
 
-  it('uses cached forecast when present and does not call inferForecast again', async () => {
+  it('handles MarketAdapter error (code in response): dispatches timeseriesFailed + forecastFailed and does NOT throw', async () => {
     const ctx: OrchestratorInput = {
-      symbol: 'SBER3' as any,
-      provider: 'MOCK',
+      symbol: 'ERR' as any,
+      provider: 'MOEX' as any,
       tf: '1h',
       window: 200,
-      horizon: 24,
+      horizon: 2,
       model: null,
     };
 
-    const tsKey = makeTimeseriesKey({
-      provider: ctx.provider,
-      symbol: ctx.symbol,
-      tf: ctx.tf,
-      window: ctx.window,
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(true);
+
+    mockGetState.mockReturnValue({
+      timeseries: { byKey: {} },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    getMarketTimeseriesMock.mockResolvedValue({
+      code: 'PROVIDER_ERROR',
+      message: 'fail',
     });
-
-    const bars: Bar[] = [
-      [0, 1, 2, 0.5, 1.5, 100],
-      [1, 1.5, 2.5, 1, 2, 120],
-    ];
-    setLocalTimeseries(tsKey, bars);
-
-    const fcKey = makeForecastKey({
-      symbol: ctx.symbol,
-      tf: ctx.tf,
-      horizon: ctx.horizon,
-      model: ctx.model ?? undefined,
-    });
-
-    const entry: LocalForecastEntry = {
-      series: {
-        p10: [90],
-        p50: [100],
-        p90: [110],
-      },
-      meta: {
-        runtime_ms: 1,
-        backend: 'mock',
-        model_ver: 'mock-v0',
-      },
-    };
-    setLocalForecast(fcKey, entry);
 
     await ForecastManager.run(ctx, makeDeps());
 
-    expect(getMarketTimeseriesMock).not.toHaveBeenCalled();
+    expect(timeseriesRequested).toHaveBeenCalledWith({ key: tsKey });
+    expect(timeseriesFailed).toHaveBeenCalledWith({ key: tsKey, error: 'fail' });
     expect(inferForecastMock).not.toHaveBeenCalled();
 
-    const forecast = getLocalForecast(fcKey);
-    expect(forecast).toBeDefined();
-    expect(forecast?.series.p50).toEqual([100]);
-    expect(orchestratorState.status).toBe('idle');
+    // forecast should fail (no throw)
+    const fcKey = makeForecastKey({
+      symbol: ctx.symbol,
+      tf: ctx.tf,
+      horizon: ctx.horizon,
+      model: ctx.model ?? undefined,
+    });
+
+    expect(forecastFailed).toHaveBeenCalledWith({
+      key: fcKey,
+      error: 'fail',
+    });
   });
 
-  it('propagates errors from MarketAdapter (rejected promise)', async () => {
+  it('supports abort: if signal aborted, dispatches forecastCancelled and does not call inferForecast', async () => {
     const ctx: OrchestratorInput = {
-      symbol: 'ERR1' as any,
-      provider: 'MOCK',
+      symbol: 'ABRT' as any,
+      provider: 'MOEX' as any,
       tf: '1h',
       window: 200,
-      horizon: 24,
+      horizon: 2,
       model: null,
     };
 
-    getMarketTimeseriesMock.mockRejectedValue(new Error('fail'));
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(true);
 
-    await expect(ForecastManager.run(ctx, makeDeps())).rejects.toThrow('fail');
+    mockGetState.mockReturnValue({
+      timeseries: { byKey: {} },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
 
-    expect(getMarketTimeseriesMock).toHaveBeenCalledTimes(1);
-    expect(inferForecastMock).not.toHaveBeenCalled();
+    const ac = new AbortController();
+    ac.abort();
+
+    await ForecastManager.run(ctx, makeDeps(ac.signal));
 
     const fcKey = makeForecastKey({
       symbol: ctx.symbol,
@@ -244,7 +300,13 @@ describe('ForecastManager', () => {
       model: ctx.model ?? undefined,
     });
 
-    const forecast = getLocalForecast(fcKey);
-    expect(forecast).toBeUndefined();
+    expect(forecastCancelled).toHaveBeenCalledWith(fcKey);
+    expect(inferForecastMock).not.toHaveBeenCalled();
+  });
+
+  it('state.ts is minimal: exports TTL and orchestratorState', () => {
+    expect(typeof TIMESERIES_TTL_MS).toBe('number');
+    expect(orchestratorState).toBeDefined();
+    expect(['idle', 'running', 'error']).toContain(orchestratorState.status);
   });
 });
