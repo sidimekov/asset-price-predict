@@ -1,7 +1,8 @@
 /* global MessageEvent */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TailPoint } from '@/workers/ml-worker';
+
+type TailPoint = [number, number];
 
 // мок Worker
 class MockWorker {
@@ -17,11 +18,12 @@ class MockWorker {
       this.onmessage({ data } as MessageEvent<any>);
     }
   }
+
+  terminate() {}
 }
 
 describe('mlWorkerClient.inferForecast', () => {
   let workerInstance: MockWorker;
-  // @ts-ignore
   let WorkerCtorMock: vi.Mock;
 
   beforeEach(async () => {
@@ -31,10 +33,11 @@ describe('mlWorkerClient.inferForecast', () => {
     // подменяем глобальный Worker
     vi.stubGlobal('Worker', WorkerCtorMock);
 
-    vi.resetModules(); // убедиться, что mlWorkerClient подхватит новый Worker
+    // чтобы mlWorkerClient подхватил новый Worker
+    vi.resetModules();
   });
 
-  it('sends infer request to worker and resolves on onnx:infer:done', async () => {
+  it('sends infer:request to worker and resolves on infer:done', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
     );
@@ -47,29 +50,31 @@ describe('mlWorkerClient.inferForecast', () => {
 
     const promise = inferForecast(tail, horizon, 'my-model');
 
-    // даём коду возможность вызвать postMessage
+    // микротаскf выполняется, чтобы postMessage был вызван
     await Promise.resolve();
 
     expect(WorkerCtorMock).toHaveBeenCalledTimes(1);
     expect(workerInstance.lastMessage).toBeDefined();
 
     const sent = workerInstance.lastMessage;
-    expect(sent.type).toBe('infer');
+
+    // новый протокол
+    expect(sent.type).toBe('infer:request');
     expect(sent.payload.tail).toEqual(tail);
     expect(sent.payload.horizon).toBe(horizon);
     expect(sent.payload.model).toBe('my-model');
 
-    // эмулируем успешный ответ воркера
+    // успешный ответ воркера
     workerInstance.emitMessage({
       id: sent.id,
-      type: 'onnx:infer:done',
+      type: 'infer:done',
       payload: {
         p50: [1, 2, 3],
         p10: [0.9, 1.9, 2.9],
         p90: [1.1, 2.1, 3.1],
         diag: {
           runtime_ms: 12.34,
-          backend: 'mock',
+          backend: 'wasm',
           model_ver: 'mock-v0',
         },
       },
@@ -80,7 +85,7 @@ describe('mlWorkerClient.inferForecast', () => {
     expect(result.p50).toEqual([1, 2, 3]);
     expect(result.p10).toEqual([0.9, 1.9, 2.9]);
     expect(result.p90).toEqual([1.1, 2.1, 3.1]);
-    expect(result.diag.backend).toBe('mock');
+    expect(result.diag.backend).toBe('wasm');
   });
 
   it('rejects when worker sends error message', async () => {
@@ -101,7 +106,10 @@ describe('mlWorkerClient.inferForecast', () => {
     workerInstance.emitMessage({
       id: sent.id,
       type: 'error',
-      payload: { message: 'Worker failed' },
+      payload: {
+        code: 'ERUNTIME',
+        message: 'Worker failed',
+      },
     });
 
     await expect(promise).rejects.toThrow('Worker failed');

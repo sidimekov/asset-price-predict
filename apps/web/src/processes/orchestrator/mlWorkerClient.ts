@@ -2,10 +2,10 @@
 
 import type {
   TailPoint,
-  InferRequest,
+  InferRequestMessage,
   InferDoneMessage,
   InferErrorMessage,
-} from '@/workers/ml-worker';
+} from '@/workers/types';
 
 type InferResult = InferDoneMessage['payload'];
 
@@ -28,10 +28,11 @@ function createWorker(): Worker {
     const pending = pendingMap.get(id);
     if (!pending) return;
 
-    if (type === 'onnx:infer:done') {
+    if (type === 'infer:done') {
       pending.resolve((msg as InferDoneMessage).payload);
     } else if (type === 'error') {
-      pending.reject(new Error((msg as InferErrorMessage).payload.message));
+      const err = msg as InferErrorMessage;
+      pending.reject(new Error(err.payload.message));
     } else {
       pending.reject(new Error(`Unknown worker message type: ${type}`));
     }
@@ -53,6 +54,9 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+/**
+ * tf пока прокидываем дефолтом (оркестратор пока не передаёт tf сюда)
+ */
 export async function inferForecast(
   tail: TailPoint[],
   horizon: number,
@@ -73,13 +77,14 @@ export async function inferForecast(
   const worker = getWorker();
   const id = generateRequestId();
 
-  const req: InferRequest = {
+  const req: InferRequestMessage = {
     id,
-    type: 'infer',
+    type: 'infer:request',
     payload: {
       tail,
+      tf: '1h',
       horizon,
-      model,
+      model: model ?? undefined,
     },
   };
 
