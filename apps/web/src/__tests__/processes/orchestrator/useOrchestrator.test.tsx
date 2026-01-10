@@ -14,7 +14,10 @@ vi.mock('@/processes/orchestrator/ForecastManager', () => ({
 import { ForecastManager } from '@/processes/orchestrator/ForecastManager';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
-const catalogReducer = (state = { selected: undefined as any }, action: any) => {
+const catalogReducer = (
+  state = { selected: undefined as any },
+  action: any,
+) => {
   switch (action.type) {
     case 'SET_SELECTED':
       return { ...state, selected: action.payload };

@@ -58,8 +58,14 @@ vi.mock('@/entities/forecast/model/forecastSlice', () => {
   };
 });
 
-import { ForecastManager, type OrchestratorInput } from '@/processes/orchestrator/ForecastManager';
-import { orchestratorState, TIMESERIES_TTL_MS } from '@/processes/orchestrator/state';
+import {
+  ForecastManager,
+  type OrchestratorInput,
+} from '@/processes/orchestrator/ForecastManager';
+import {
+  orchestratorState,
+  TIMESERIES_TTL_MS,
+} from '@/processes/orchestrator/state';
 import { makeForecastKey } from '@/processes/orchestrator/keys';
 
 import { getMarketTimeseries } from '@/features/market-adapter/MarketAdapter';
@@ -252,7 +258,10 @@ describe('ForecastManager (new orchestrator)', () => {
     await ForecastManager.run(ctx, makeDeps());
 
     expect(timeseriesRequested).toHaveBeenCalledWith({ key: tsKey });
-    expect(timeseriesFailed).toHaveBeenCalledWith({ key: tsKey, error: 'fail' });
+    expect(timeseriesFailed).toHaveBeenCalledWith({
+      key: tsKey,
+      error: 'fail',
+    });
     expect(inferForecastMock).not.toHaveBeenCalled();
 
     // forecast should fail (no throw)
