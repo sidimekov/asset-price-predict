@@ -2,16 +2,34 @@
 /* global AbortController */
 
 import { useEffect, useRef } from 'react';
+import { useStore } from 'react-redux';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
-import { store } from '@/shared/store';
+import type { RootState } from '@/shared/store';
+
 import { ForecastManager } from './ForecastManager';
-import { selectSelectedAsset, selectForecastParams } from './state';
+
+import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
+
 import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
+function mapProviderToMarket(provider: string): MarketDataProvider | null {
+  switch (provider) {
+    case 'binance':
+      return 'BINANCE';
+    case 'moex':
+      return 'MOEX';
+    default:
+      return null;
+  }
+}
+
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
+
   const selected = useAppSelector(selectSelectedAsset);
   const params = useAppSelector(selectForecastParams);
 
@@ -27,12 +45,12 @@ export function useOrchestrator() {
 
     if (!symbol || !provider || !tf || !horizon) return;
 
-    // нормализуем provider и window под ожидания ForecastManager
-    const providerNorm = provider as MarketDataProvider;
+    const providerNorm = mapProviderToMarket(provider);
+    if (!providerNorm) return;
+
     const windowNum = typeof window === 'string' ? Number(window) : window;
 
     if (!Number.isFinite(windowNum) || windowNum <= 0) {
-      // некорректное окно - просто не запускаем оркестратор
       return;
     }
 
@@ -40,12 +58,9 @@ export function useOrchestrator() {
       model ?? 'client'
     }`;
 
-    if (signature === lastSignatureRef.current) {
-      return;
-    }
+    if (signature === lastSignatureRef.current) return;
     lastSignatureRef.current = signature;
 
-    // отменяем предыдущий запуск
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -73,11 +88,8 @@ export function useOrchestrator() {
           getState: store.getState,
           signal: abortController.signal,
         },
-      ).catch((err) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('[Orchestrator] run error', err);
-        }
-      });
+      );
+      // ForecastManager.run больше не бросает ошибки наружу
     }, ORCHESTRATOR_DEBOUNCE_MS);
 
     return () => {
@@ -90,5 +102,5 @@ export function useOrchestrator() {
         abortRef.current = null;
       }
     };
-  }, [dispatch, selected, params]);
+  }, [dispatch, store, selected, params]);
 }

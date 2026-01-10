@@ -11,21 +11,12 @@ const forecastSlice = createSlice({
   name: 'forecast',
   initialState,
   reducers: {
-    /**
-     * Начало загрузки/расчёта прогноза для ключа
-     * вызываем как: dispatch(forecastRequested(key))
-     */
     forecastRequested(state, action: PayloadAction<ForecastKey>) {
       const key = action.payload;
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
-      // byKey не трогаем — старый прогноз остаётся, пока идёт новый
     },
 
-    /**
-     * Успешно получили прогноз
-     * dispatch(forecastReceived({ key, entry }))
-     */
     forecastReceived(
       state,
       action: PayloadAction<{ key: ForecastKey; entry: ForecastEntry }>,
@@ -36,10 +27,6 @@ const forecastSlice = createSlice({
       state.errorByKey[key] = null;
     },
 
-    /**
-     * Ошибка при расчёте/загрузке прогноза
-     * dispatch(forecastFailed({ key, error }))
-     */
     forecastFailed(
       state,
       action: PayloadAction<{ key: ForecastKey; error: string }>,
@@ -50,9 +37,14 @@ const forecastSlice = createSlice({
     },
 
     /**
-     * Очистить конкретный прогноз
-     * dispatch(clearForecast(key))
+     * Отмена расчёта: снимаем loading, не ставим error
+     * Старый прогноз (если был) остаётся
      */
+    forecastCancelled(state, action: PayloadAction<ForecastKey>) {
+      const key = action.payload;
+      state.loadingByKey[key] = false;
+    },
+
     clearForecast(state, action: PayloadAction<ForecastKey>) {
       const key = action.payload;
       delete state.byKey[key];
@@ -60,10 +52,6 @@ const forecastSlice = createSlice({
       delete state.errorByKey[key];
     },
 
-    /**
-     * Полностью очистить все прогнозы
-     * dispatch(clearAllForecasts())
-     */
     clearAllForecasts() {
       return initialState;
     },
@@ -74,6 +62,7 @@ export const {
   forecastRequested,
   forecastReceived,
   forecastFailed,
+  forecastCancelled,
   clearForecast,
   clearAllForecasts,
 } = forecastSlice.actions;

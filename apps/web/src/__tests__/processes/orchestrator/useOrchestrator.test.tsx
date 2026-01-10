@@ -82,7 +82,7 @@ describe('useOrchestrator', () => {
 
     store.dispatch({
       type: 'SET_SELECTED',
-      payload: { symbol: 'SBER', provider: 'MOCK' },
+      payload: { symbol: 'SBER', provider: 'binance' }, // важно: как в catalogSlice
     });
     store.dispatch({
       type: 'SET_PARAMS',
@@ -100,14 +100,19 @@ describe('useOrchestrator', () => {
     const runMock = (ForecastManager as any).run as Mock;
     expect(runMock).toHaveBeenCalledTimes(1);
 
-    const [ctxArg] = runMock.mock.calls[0];
+    const [ctxArg, depsArg] = runMock.mock.calls[0];
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'MOCK',
+      provider: 'BINANCE', // маппинг
       tf: '1h',
       window: 200,
       horizon: 24,
     });
+
+    // deps should include getState + signal
+    expect(depsArg).toHaveProperty('dispatch');
+    expect(depsArg).toHaveProperty('getState');
+    expect(depsArg).toHaveProperty('signal');
   });
 
   it('does not rerun ForecastManager for the same signature on rerender', () => {
@@ -115,7 +120,7 @@ describe('useOrchestrator', () => {
 
     store.dispatch({
       type: 'SET_SELECTED',
-      payload: { symbol: 'SBER', provider: 'MOCK' },
+      payload: { symbol: 'SBER', provider: 'binance' },
     });
     store.dispatch({
       type: 'SET_PARAMS',
@@ -133,15 +138,14 @@ describe('useOrchestrator', () => {
     const runMock = (ForecastManager as any).run as Mock;
     expect(runMock).toHaveBeenCalledTimes(1);
 
-    // Ререндер с теми же данными
+    // rerender with same state
     rerender(
       <Provider store={store}>
         <TestComponent />
       </Provider>,
     );
-    vi.advanceTimersByTime(300);
 
-    // всё равно один вызов
+    vi.advanceTimersByTime(300);
     expect(runMock).toHaveBeenCalledTimes(1);
   });
 });
