@@ -74,7 +74,10 @@ vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
 
 vi.mock('@/features/asset-catalog/ui/AssetCatalogPanel', () => ({
   AssetCatalogPanel: ({ onSelect }: any) => (
-    <button type="button" onClick={() => onSelect({ symbol: 'ETH', provider: 'moex' })}>
+    <button
+      type="button"
+      onClick={() => onSelect({ symbol: 'ETH', provider: 'moex' })}
+    >
       select asset
     </button>
   ),

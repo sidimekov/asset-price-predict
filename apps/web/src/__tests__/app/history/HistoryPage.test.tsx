@@ -40,9 +40,7 @@ describe('HistoryPage', () => {
 
   test('passes loading=false to HistoryTable by default', () => {
     render(<HistoryPage />);
-    expect(screen.getByTestId('history-table')).toHaveTextContent(
-      'Rows:0',
-    );
+    expect(screen.getByTestId('history-table')).toHaveTextContent('Rows:0');
   });
 
   test('initial loading state is false', () => {

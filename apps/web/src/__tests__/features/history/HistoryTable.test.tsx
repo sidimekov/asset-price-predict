@@ -88,9 +88,7 @@ describe('HistoryTable', () => {
     expect(headerRow).toHaveTextContent(/Factors/i);
 
     expect(screen.getByText('BTC')).toBeInTheDocument();
-    expect(
-      screen.getByText('2025-10-28T10:00:00.000Z'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('2025-10-28T10:00:00.000Z')).toBeInTheDocument();
     expect(screen.getByText('v1')).toBeInTheDocument();
     expect(screen.getByText('MOEX')).toBeInTheDocument();
 

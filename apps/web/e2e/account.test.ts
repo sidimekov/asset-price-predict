@@ -13,7 +13,9 @@ test.describe('Account Page', () => {
     page,
   }) => {
     await page.goto(withBasePath('/account'));
-    await expect(page.getByRole('button', { name: 'Edit photo' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit photo' }),
+    ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Change password' }),
     ).toBeVisible();
@@ -25,7 +27,9 @@ test.describe('Account Page', () => {
   }) => {
     await page.goto(withBasePath('/account'));
 
-    await expect(page.getByRole('button', { name: 'Edit photo' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit photo' }),
+    ).toBeVisible();
     const dialogPromise = page.waitForEvent('dialog');
 
     await page.getByRole('button', { name: 'Edit photo' }).click();

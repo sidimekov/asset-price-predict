@@ -16,9 +16,7 @@ const seedHistory = [
       [2, 101],
     ],
     meta: { runtime_ms: 12, backend: 'client', model_ver: 'v1' },
-    explain: [
-      { name: 'Factor A', group: 'g1', impact_abs: 0.12, sign: '+' },
-    ],
+    explain: [{ name: 'Factor A', group: 'g1', impact_abs: 0.12, sign: '+' }],
   },
 ];
 
