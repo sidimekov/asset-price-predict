@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || '').replace(/\/$/, '');
-const withBasePath = (path: string) => `${basePath}${path}`;
+import { withBasePath } from './utils/basePath';
 
 const seedHistory = [
   {

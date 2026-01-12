@@ -348,10 +348,11 @@ export class ForecastManager {
 
   private static generateHistoryId(): string {
     if (
-      typeof crypto !== 'undefined' &&
-      typeof crypto.randomUUID === 'function'
+      typeof globalThis !== 'undefined' &&
+      typeof globalThis.crypto !== 'undefined' &&
+      typeof globalThis.crypto.randomUUID === 'function'
     ) {
-      return crypto.randomUUID();
+      return globalThis.crypto.randomUUID();
     }
     return `fc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   }

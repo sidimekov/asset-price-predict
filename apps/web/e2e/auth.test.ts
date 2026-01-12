@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || '').replace(/\/$/, '');
-const withBasePath = (path: string) => `${basePath}${path}`;
+import { withBasePath } from './utils/basePath';
 
 test.describe('Auth Page', () => {
   test('should load and show signup form', async ({ page }) => {
