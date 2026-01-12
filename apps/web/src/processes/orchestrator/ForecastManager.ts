@@ -25,6 +25,9 @@ import {
   isTimeseriesStaleByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 
+import { historyRepository } from '@/entities/history/repository';
+import type { HistoryEntry } from '@/entities/history/model';
+
 export type OrchestratorInput = {
   symbol: Symbol;
   provider: MarketDataProvider | 'MOCK';
@@ -137,6 +140,28 @@ export class ForecastManager {
           entry: storeEntry,
         }),
       );
+
+      try {
+        const historyEntry = ForecastManager.buildHistoryEntry(
+          {
+            id: ForecastManager.generateHistoryId(),
+            created_at: new Date().toISOString(),
+          },
+          {
+            symbol,
+            tf,
+            horizon,
+            provider,
+          },
+          storeEntry,
+          inferResult,
+        );
+        await historyRepository.save(historyEntry);
+      } catch (err) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[Orchestrator] history save failed', err);
+        }
+      }
 
       if (process.env.NODE_ENV !== 'production') {
         console.log('[Orchestrator] forecast ready', {
@@ -285,6 +310,50 @@ export class ForecastManager {
       p90: series.p90?.length ? makeSeries(series.p90) : undefined,
       meta,
     };
+  }
+
+  private static buildHistoryEntry(
+    base: { id: string; created_at: string },
+    ctx: {
+      symbol: Symbol;
+      tf: MarketTimeframe;
+      horizon: number;
+      provider: MarketDataProvider | 'MOCK';
+    },
+    storeEntry: {
+      p50: Array<[number, number]>;
+      p10?: Array<[number, number]>;
+      p90?: Array<[number, number]>;
+      meta: any;
+    },
+    inferResult: { diag: { runtime_ms: number; model_ver?: string } },
+  ): HistoryEntry {
+    return {
+      id: base.id,
+      created_at: base.created_at,
+      symbol: String(ctx.symbol),
+      tf: String(ctx.tf),
+      horizon: ctx.horizon,
+      provider: String(ctx.provider),
+      p50: storeEntry.p50,
+      p10: storeEntry.p10,
+      p90: storeEntry.p90,
+      meta: {
+        runtime_ms: inferResult.diag.runtime_ms,
+        backend: 'client',
+        model_ver: inferResult.diag.model_ver,
+      },
+    };
+  }
+
+  private static generateHistoryId(): string {
+    if (
+      typeof crypto !== 'undefined' &&
+      typeof crypto.randomUUID === 'function'
+    ) {
+      return crypto.randomUUID();
+    }
+    return `fc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   }
 
   private static timeframeToMs(tf: MarketTimeframe): number {

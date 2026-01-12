@@ -1,28 +1,30 @@
 'use client';
 
+import Link from 'next/link';
 import Skeleton from '@/shared/ui/Skeleton';
-import data from '@/mocks/history.json';
+import type { HistoryEntry } from '@/entities/history/model';
 
-export type HistoryRow = {
-  asset: string;
-  date: string;
-  model: string;
-  input: string;
-  period: string;
-  factors_top5: string[];
-};
+function formatDate(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString();
+}
 
-function normalize(raw: any): HistoryRow {
-  if ('asset' in raw) return raw as HistoryRow;
-  return {
-    asset: raw.Asset,
-    date: raw.Data,
-    model: raw.Model,
-    input: raw.Input,
-    period: (raw.Period || '').trim(),
-    factors_top5:
-      raw['Factors (TOP 5): impact, SHAP, Conf.'] ?? raw.factors_top5 ?? [],
-  } as HistoryRow;
+function formatFactor(
+  factor: NonNullable<HistoryEntry['explain']>[number],
+): string {
+  const impact = `${factor.sign}${factor.impact_abs.toFixed(3)}`;
+  const shap = factor.shap !== undefined ? `, shap ${factor.shap}` : '';
+  const conf =
+    factor.confidence !== undefined
+      ? `, conf ${(factor.confidence * 100).toFixed(0)}%`
+      : '';
+  return `${factor.name} (${impact}${shap}${conf})`;
+}
+
+function toFactors(entry: HistoryEntry): string[] {
+  if (!entry.explain?.length) return [];
+  return entry.explain.slice(0, 5).map(formatFactor);
 }
 
 export default function HistoryTable({
@@ -30,15 +32,9 @@ export default function HistoryTable({
   items,
 }: {
   loading?: boolean;
-  items?: HistoryRow[];
+  items?: HistoryEntry[];
 }) {
-  // если items переданы – используем их, иначе падаем обратно на mocks
-  const rows: HistoryRow[] =
-    items && items.length
-      ? items
-      : Array.isArray(data)
-        ? (data as any[]).map(normalize)
-        : [];
+  const rows = items ?? [];
 
   if (loading) {
     return (
@@ -63,24 +59,31 @@ export default function HistoryTable({
               <th>Asset</th>
               <th>Date</th>
               <th>Model</th>
-              <th>Input</th>
+              <th>Provider</th>
               <th>Period</th>
               <th colSpan={5}>Factors (TOP 5): impact, SHAP, Conf.</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, idx) => (
-              <tr key={idx}>
-                <td>{r.asset}</td>
-                <td>{r.date}</td>
-                <td>{r.model}</td>
-                <td>{r.input}</td>
-                <td style={{ whiteSpace: 'pre-line' }}>{r.period}</td>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <td key={i}>{r.factors_top5?.[i] ?? '—'}</td>
-                ))}
-              </tr>
-            ))}
+            {rows.map((entry) => {
+              const factors = toFactors(entry);
+              return (
+                <tr key={entry.id}>
+                  <td>
+                    <Link href={`/forecast/${entry.id}`}>{entry.symbol}</Link>
+                  </td>
+                  <td>{formatDate(entry.created_at)}</td>
+                  <td>{entry.meta.model_ver ?? '—'}</td>
+                  <td>{entry.provider}</td>
+                  <td style={{ whiteSpace: 'pre-line' }}>
+                    {entry.tf} / {entry.horizon}
+                  </td>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <td key={i}>{factors[i] ?? '—'}</td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
