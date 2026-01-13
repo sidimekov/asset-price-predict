@@ -3,6 +3,7 @@
 import './globals.css';
 import { Sidebar } from '@/shared/ui/Sidebar';
 import { Container } from '@/shared/ui/Container';
+import { YandexMetrika } from '@/shared/ui/YandexMetrika';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
@@ -78,6 +79,8 @@ export default function RootLayout({
                     <div className="py-8">{children}</div>
                   </Container>
                 </main>
+
+                <YandexMetrika />
               </div>
             </div>
           ) : (
