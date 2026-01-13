@@ -1,5 +1,19 @@
 export default [
   {
+    files: ['src/workers/**/*.{ts,tsx,js}'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        DedicatedWorkerGlobalScope: 'readonly',
+        MessageEvent: 'readonly',
+        performance: 'readonly',
+      },
+    },
+    rules: {
+      'no-undef': 'error',
+    },
+  },
+  {
     files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
