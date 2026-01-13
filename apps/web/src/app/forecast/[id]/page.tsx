@@ -1,13 +1,16 @@
 'use client';
 
 import React from 'react';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
 import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import FactorsTable from '@/features/factors/FactorsTable';
+import type { FactorRow } from '@/features/factors/FactorsTable';
+import { historyRepository } from '@/entities/history/repository';
+import type { HistoryEntry } from '@/entities/history/model';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -15,30 +18,43 @@ type ParamsState = 'idle' | 'loading' | 'error' | 'success';
 export default function ForecastPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
 
   const id = params.id;
 
-  const ticker = searchParams.get('ticker');
-  const selectedModel = searchParams.get('model') ?? '';
-  const selectedDate = searchParams.get('to') ?? '';
+  const [entry, setEntry] = React.useState<HistoryEntry | null>(null);
+  const [entryLoading, setEntryLoading] = React.useState(true);
 
-  const displaySymbol = ticker || String(id);
+  React.useEffect(() => {
+    let active = true;
+    setEntry(null);
+    setEntryLoading(true);
+    historyRepository
+      .getById(String(id))
+      .then((found) => {
+        if (active) setEntry(found);
+      })
+      .finally(() => {
+        if (active) setEntryLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const displaySymbol = entry?.symbol || String(id);
   const selectedPrice = '—'; // Цена остается фиксированной как в оригинале
 
   const [chartState, setChartState] = React.useState<State>('idle');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
-  const [factorsState, setFactorsState] = React.useState<State>('idle');
 
   React.useEffect(() => {
     setChartState('loading');
     setParamsState('loading');
-    setFactorsState('loading');
+    // chart and params placeholders are loaded by timeout
 
     const t = setTimeout(() => {
       setChartState('ready');
       setParamsState('success');
-      setFactorsState('ready');
     }, 1200);
 
     return () => clearTimeout(t);
@@ -64,6 +80,33 @@ export default function ForecastPage() {
     '6:00AM',
     '12:00AM',
   ];
+
+  const factors: FactorRow[] =
+    entry?.explain?.map((f) => ({
+      name: f.name,
+      impact: `${f.sign}${f.impact_abs.toFixed(3)}`,
+      shap: f.shap !== undefined ? String(f.shap) : undefined,
+      conf:
+        f.confidence !== undefined
+          ? `${(f.confidence * 100).toFixed(0)}%`
+          : undefined,
+    })) ?? [];
+
+  const factorsState: State = entryLoading
+    ? 'loading'
+    : factors.length
+      ? 'ready'
+      : 'empty';
+
+  const seriesRows = entry
+    ? entry.p50.map((point, index) => {
+        const ts = point[0];
+        const p50 = point[1];
+        const p10 = entry.p10?.[index]?.[1];
+        const p90 = entry.p90?.[index]?.[1];
+        return { ts, p50, p10, p90 };
+      })
+    : [];
 
   return (
     <div className="min-h-screen bg-primary">
@@ -130,8 +173,8 @@ export default function ForecastPage() {
             state={paramsState}
             onPredict={handleBackToAssets}
             buttonLabel="Back to asset selection"
-            selectedModel={selectedModel}
-            selectedDate={selectedDate}
+            selectedModel={entry?.meta.model_ver ?? ''}
+            selectedDate={entry?.created_at ?? ''}
             readOnly
           />
         </div>
@@ -142,8 +185,42 @@ export default function ForecastPage() {
         <div className="col-span-12 lg:col-span-7">
           <div className="overflow-x-auto">
             <div className="min-w-[600px] lg:min-w-0">
-              <FactorsTable state={factorsState} />
+              <FactorsTable state={factorsState} items={factors} />
             </div>
+          </div>
+        </div>
+
+        <div className="col-span-12 lg:col-span-8">
+          <div className="bg-surface-dark rounded-3xl p-6">
+            <div className="text-sm text-ink-tertiary">Forecast series</div>
+            {entryLoading ? (
+              <div className="mt-4 text-ink-tertiary">Loading forecast...</div>
+            ) : entry ? (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm text-white">
+                  <thead>
+                    <tr className="text-ink-tertiary">
+                      <th className="text-left">Timestamp</th>
+                      <th className="text-left">P50</th>
+                      <th className="text-left">P10</th>
+                      <th className="text-left">P90</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seriesRows.slice(0, 12).map((row, idx) => (
+                      <tr key={`${row.ts}-${idx}`}>
+                        <td>{row.ts}</td>
+                        <td>{row.p50}</td>
+                        <td>{row.p10 ?? '—'}</td>
+                        <td>{row.p90 ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="mt-4 text-ink-tertiary">Forecast not found.</div>
+            )}
           </div>
         </div>
       </div>
