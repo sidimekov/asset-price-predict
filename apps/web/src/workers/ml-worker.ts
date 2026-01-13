@@ -1,3 +1,5 @@
+/* eslint-env worker */
+/* global performance */
 /// <reference lib="webworker" />
 import * as ort from 'onnxruntime-web';
 import { forecastMinimalConfig } from '@/config/ml';

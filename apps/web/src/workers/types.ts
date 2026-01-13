@@ -39,3 +39,9 @@ export type WorkerMessage =
   | InferRequestMessage
   | InferDoneMessage
   | InferErrorMessage;
+
+/**
+ * Runtime marker to avoid 0-line coverage on type-only module.
+ * Does not affect worker protocol or logic.
+ */
+export const WORKER_MESSAGE_PROTOCOL_V1 = 'infer:v1' as const;

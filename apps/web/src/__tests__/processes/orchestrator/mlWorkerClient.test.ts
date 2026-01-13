@@ -30,7 +30,6 @@ describe('mlWorkerClient.inferForecast', () => {
     workerInstance = new MockWorker();
     WorkerCtorMock = vi.fn(() => workerInstance as any);
 
-    // подменяем глобальный Worker
     vi.stubGlobal('Worker', WorkerCtorMock);
 
     // чтобы mlWorkerClient подхватил новый Worker
@@ -40,7 +39,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('sends infer:request to worker and resolves on infer:done', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-    );
+      );
 
     const tail: TailPoint[] = [
       [1, 100],
@@ -50,7 +49,6 @@ describe('mlWorkerClient.inferForecast', () => {
 
     const promise = inferForecast(tail, horizon, 'my-model');
 
-    // микротаскf выполняется, чтобы postMessage был вызван
     await Promise.resolve();
 
     expect(WorkerCtorMock).toHaveBeenCalledTimes(1);
@@ -58,13 +56,11 @@ describe('mlWorkerClient.inferForecast', () => {
 
     const sent = workerInstance.lastMessage;
 
-    // новый протокол
     expect(sent.type).toBe('infer:request');
     expect(sent.payload.tail).toEqual(tail);
     expect(sent.payload.horizon).toBe(horizon);
     expect(sent.payload.model).toBe('my-model');
 
-    // успешный ответ воркера
     workerInstance.emitMessage({
       id: sent.id,
       type: 'infer:done',
@@ -91,7 +87,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('rejects when worker sends error message', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-    );
+      );
 
     const tail: TailPoint[] = [
       [1, 100],
@@ -118,10 +114,135 @@ describe('mlWorkerClient.inferForecast', () => {
   it('throws on invalid tail or horizon', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-    );
+      );
 
     await expect(inferForecast([], 0)).rejects.toThrow(
       'Invalid tail or horizon for inference',
     );
+  });
+
+  it('reuses singleton Worker instance (does not create new Worker on 2nd call)', async () => {
+    const { inferForecast } = await import(
+      '@/processes/orchestrator/mlWorkerClient'
+      );
+
+    const p1 = inferForecast(
+      [
+        [1, 10],
+        [2, 11],
+      ],
+      2,
+      'm1',
+    );
+
+    await Promise.resolve();
+    const firstSent = workerInstance.lastMessage;
+
+    // 2nd call must NOT create a new Worker
+    const p2 = inferForecast(
+      [
+        [1, 20],
+        [2, 21],
+      ],
+      2,
+      'm2',
+    );
+
+    await Promise.resolve();
+    const secondSent = workerInstance.lastMessage;
+
+    expect(WorkerCtorMock).toHaveBeenCalledTimes(1);
+    expect(firstSent.id).not.toBe(secondSent.id);
+
+    workerInstance.emitMessage({
+      id: firstSent.id,
+      type: 'infer:done',
+      payload: {
+        p50: [1, 2],
+        diag: { runtime_ms: 1, backend: 'wasm', model_ver: 'x' },
+      },
+    });
+
+    workerInstance.emitMessage({
+      id: secondSent.id,
+      type: 'infer:done',
+      payload: {
+        p50: [3, 4],
+        diag: { runtime_ms: 2, backend: 'wasm', model_ver: 'y' },
+      },
+    });
+
+    const r1 = await p1;
+    const r2 = await p2;
+
+    expect(r1.p50).toEqual([1, 2]);
+    expect(r2.p50).toEqual([3, 4]);
+  });
+
+  it('ignores messages with unknown id (pending not found) and still resolves on correct id', async () => {
+    const { inferForecast } = await import(
+      '@/processes/orchestrator/mlWorkerClient'
+      );
+
+    const promise = inferForecast(
+      [
+        [1, 100],
+        [2, 101],
+      ],
+      2,
+      'm',
+    );
+
+    await Promise.resolve();
+    const sent = workerInstance.lastMessage;
+
+    // wrong id -> must be ignored (no crash, no resolve)
+    workerInstance.emitMessage({
+      id: 'some_other_id',
+      type: 'infer:done',
+      payload: {
+        p50: [999],
+        diag: { runtime_ms: 1, backend: 'wasm', model_ver: 'bad' },
+      },
+    });
+
+    // correct id -> resolve
+    workerInstance.emitMessage({
+      id: sent.id,
+      type: 'infer:done',
+      payload: {
+        p50: [1, 2],
+        diag: { runtime_ms: 1, backend: 'wasm', model_ver: 'ok' },
+      },
+    });
+
+    const result = await promise;
+    expect(result.p50).toEqual([1, 2]);
+  });
+
+  it('rejects on unknown worker message type', async () => {
+    const { inferForecast } = await import(
+      '@/processes/orchestrator/mlWorkerClient'
+      );
+
+    const promise = inferForecast(
+      [
+        [1, 10],
+        [2, 11],
+      ],
+      2,
+      'm',
+    );
+
+    await Promise.resolve();
+    const sent = workerInstance.lastMessage;
+
+    workerInstance.emitMessage({
+      id: sent.id,
+      type: 'weird:type',
+      payload: {},
+    });
+
+    await expect(promise).rejects.toThrow('Unknown worker message type');
   });
 });
