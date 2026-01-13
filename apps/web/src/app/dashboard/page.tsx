@@ -19,46 +19,26 @@ import {
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
 import {
-  forecastPredictRequested,
-  setForecastParams,
-} from '@/entities/forecast/model/forecastSlice';
-import { selectForecastParams } from '@/entities/forecast/model/selectors';
-import {
   selectTimeseriesByKey,
   selectTimeseriesLoadingByKey,
   selectTimeseriesErrorByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
-import { selectPriceChangeByAsset } from '@/entities/timeseries/model/selectors';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
 import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
+import type { MarketTimeframe } from '@/config/market';
 import SegmentedControl from '@/shared/ui/SegmentedControl';
-import {
-  DEFAULT_LIMIT,
-  DEFAULT_TIMEFRAME,
-  type MarketTimeframe,
-} from '@/config/market';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ChartViewMode = 'line' | 'candles';
 
 const SMALL_TIMEFRAMES = new Set(['1m', '5m', '15m']);
-const DEFAULT_WINDOW = 200;
 const VIEW_MODE_STORAGE_KEY = 'chart:viewMode';
 
 const isChartViewMode = (value: string | null): value is ChartViewMode =>
   value === 'line' || value === 'candles';
-
-const resolveCurrency = (
-  provider: 'binance' | 'moex' | 'mock',
-  symbol: string,
-): 'RUB' | 'USDT' | 'USD' | undefined => {
-  if (provider === 'moex') return 'RUB';
-  if (provider === 'binance' && symbol.toUpperCase().endsWith('USDT')) {
-    return 'USDT';
-  }
-  return undefined;
-};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -68,38 +48,8 @@ export default function Dashboard() {
   const selectedAsset = useAppSelector(selectSelectedAsset);
   const params = useAppSelector(selectForecastParams);
 
-  const rawWindow = params?.window;
-  const windowNum = typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
-  const timeseriesWindow =
-    Number.isFinite(windowNum) && windowNum && windowNum > 0
-      ? windowNum
-      : process.env.NODE_ENV !== 'production'
-        ? 200
-        : DEFAULT_LIMIT;
-
-  const recentAssetsWithStats = useAppSelector((state) =>
-    recentAssets.map((asset) => {
-      const providerNorm = mapProviderToMarket(asset.provider) ?? 'MOCK';
-      const stats = selectPriceChangeByAsset(
-        state,
-        providerNorm,
-        asset.symbol,
-        DEFAULT_TIMEFRAME,
-        timeseriesWindow,
-      );
-      return {
-        symbol: asset.symbol,
-        provider: asset.provider,
-        lastPrice: stats.lastPrice,
-        changePct: stats.changePct,
-        currency: resolveCurrency(asset.provider, asset.symbol),
-      };
-    }),
-  );
-
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
-
   const [viewMode, setViewMode] = React.useState<ChartViewMode>(() => {
     if (typeof window === 'undefined') return 'line';
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -110,8 +60,13 @@ export default function Dashboard() {
     return isChartViewMode(window.localStorage.getItem(VIEW_MODE_STORAGE_KEY));
   });
 
+  const selectedSymbol = selectedAsset?.symbol ?? null;
+  const providerNorm = selectedAsset
+    ? mapProviderToMarket(selectedAsset.provider)
+    : null;
+
   const defaultParams = React.useMemo(
-    () => ({ tf: DEFAULT_TIMEFRAME, window: 200, horizon: 24, model: null }),
+    () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
     [],
   );
 
@@ -122,25 +77,14 @@ export default function Dashboard() {
   }, [dispatch, params, defaultParams]);
 
   const effectiveParams = params ?? defaultParams;
-  const effectiveTf = effectiveParams.tf as MarketTimeframe;
-  const effectiveWindowRaw = effectiveParams.window;
-  const effectiveWindow =
-    typeof effectiveWindowRaw === 'number'
-      ? effectiveWindowRaw
-      : Number(effectiveWindowRaw ?? DEFAULT_WINDOW) || DEFAULT_WINDOW;
-
-  const selectedSymbol = selectedAsset?.symbol ?? null;
-  const providerNorm = selectedAsset
-    ? mapProviderToMarket(selectedAsset.provider)
-    : null;
 
   const tsKey =
     providerNorm && selectedSymbol
       ? makeTimeseriesKey({
           provider: providerNorm,
           symbol: selectedSymbol,
-          tf: effectiveTf,
-          window: effectiveWindow,
+          tf: effectiveParams.tf as MarketTimeframe,
+          window: effectiveParams.window,
         })
       : null;
 
@@ -162,17 +106,11 @@ export default function Dashboard() {
 
   React.useEffect(() => {
     if (hasUserSelectedView) return;
-    const mode = SMALL_TIMEFRAMES.has(String(effectiveTf)) ? 'candles' : 'line';
+    const mode = SMALL_TIMEFRAMES.has(String(effectiveParams.tf))
+      ? 'candles'
+      : 'line';
     setViewMode(mode);
-  }, [effectiveTf, hasUserSelectedView]);
-
-  const handleViewModeChange = (mode: ChartViewMode) => {
-    setHasUserSelectedView(true);
-    setViewMode(mode);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-    }
-  };
+  }, [effectiveParams.tf, hasUserSelectedView]);
 
   const handleAssetSelect = ({
     symbol,
@@ -192,22 +130,7 @@ export default function Dashboard() {
     if (!selectedSymbol || !selectedAsset) return;
     dispatch(setSelected(selectedAsset));
     dispatch(setForecastParams(effectiveParams));
-    dispatch(
-      forecastPredictRequested({
-        symbol: selectedAsset.symbol,
-        provider: selectedAsset.provider,
-        tf: effectiveParams.tf,
-        window: effectiveParams.window,
-        horizon: effectiveParams.horizon,
-        model: effectiveParams.model ?? null,
-      }),
-    );
-    const query = new URLSearchParams({
-      provider: selectedAsset.provider,
-      tf: String(effectiveParams.tf),
-      window: String(effectiveParams.window),
-    });
-    router.push(`/forecast/${encodeURIComponent(selectedAsset.symbol)}?${query}`);
+    router.push(`/forecast/${encodeURIComponent(selectedAsset.symbol)}`);
   };
 
   const handleRemoveAsset = (symbol: string) => {
@@ -229,6 +152,14 @@ export default function Dashboard() {
     }
   };
 
+  const handleViewModeChange = (mode: ChartViewMode) => {
+    setHasUserSelectedView(true);
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    }
+  };
+
   useOrchestrator();
 
   const chartState: State = !selectedAsset
@@ -241,11 +172,7 @@ export default function Dashboard() {
           ? 'ready'
           : 'empty';
 
-  const historySeries = bars?.map(
-    (bar) => [bar[0], bar[4]] as [number, number],
-  );
-  const historyValues = bars?.map((bar) => bar[4]) ?? [];
-  const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
+  const historySeries = bars?.map((bar) => [bar[0], bar[4]] as [number, number]);
 
   return (
     <div className="min-h-screen bg-primary">
@@ -254,7 +181,11 @@ export default function Dashboard() {
         <div className="col-span-12">
           <RecentAssetsBar
             state={derivedAssetState}
-            assets={recentAssetsWithStats}
+            assets={recentAssets.map((a) => ({
+              symbol: a.symbol,
+              price: '—',
+              provider: a.provider,
+            }))}
             selected={selectedSymbol}
             onSelect={handleRecentSelect}
             onRemove={handleRemoveAsset}
@@ -265,7 +196,7 @@ export default function Dashboard() {
         {/* Chart */}
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-dark rounded-3xl p-6 relative">
-            <div className="absolute right-6 top-6">
+            <div className="absolute right-6 top-6 z-10">
               <SegmentedControl<ChartViewMode>
                 value={viewMode}
                 options={[
@@ -273,23 +204,18 @@ export default function Dashboard() {
                   { value: 'candles', label: 'Candles' },
                 ]}
                 onChange={handleViewModeChange}
+                size="sm"
               />
             </div>
             <div className="flex items-start">
-              <YAxis
-                className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
-                values={historyValues}
-              />
+              <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
 
-              <div className="flex min-w-0 flex-1 flex-col">
+              <div className="flex flex-col">
                 <div className="flex">
-                  <div className="relative h-96 w-full">
+                  <div className="relative h-96 w-[800px] flex-none">
                     {chartState === 'ready' && historySeries ? (
                       viewMode === 'candles' ? (
-                        <CandlesChart
-                          bars={bars ?? []}
-                          className="h-96 w-full"
-                        />
+                        <CandlesChart className="h-96 w-full" bars={bars ?? []} />
                       ) : (
                         <LineChart
                           className="h-96 w-full"
@@ -306,12 +232,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <XAxis
-                  className="text-[#8480C9]"
-                  timestamps={
-                    historyTimestamps.length > 0 ? historyTimestamps : undefined
-                  }
-                />
+                <XAxis className="text-[#8480C9]" />
               </div>
             </div>
           </div>
