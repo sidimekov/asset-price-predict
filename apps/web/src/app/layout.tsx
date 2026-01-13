@@ -80,7 +80,6 @@ export default function RootLayout({
                     <div className="py-8">{children}</div>
                   </Container>
                 </main>
-
               </div>
             </div>
           ) : (
