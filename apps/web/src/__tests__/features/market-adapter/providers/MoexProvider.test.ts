@@ -57,7 +57,10 @@ describe('fetchMoexTimeseries', () => {
     expect(mockMoexInitiate).toHaveBeenCalledTimes(1);
     expect(mockMoexInitiate).toHaveBeenCalledWith({
       symbol: 'SBER',
-      timeframe: '1d',
+      engine: 'stock',
+      market: 'shares',
+      board: 'TQBR',
+      interval: 24,
       limit: 20,
     });
 

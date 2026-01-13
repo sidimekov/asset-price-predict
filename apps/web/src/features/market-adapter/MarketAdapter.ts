@@ -21,7 +21,7 @@ import {
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
 
-import type { BinanceKline } from '@/shared/api/marketApi';
+import type { BinanceKlineRaw } from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
@@ -64,7 +64,7 @@ export interface MarketAdapterError {
 }
 
 // Нормализация баров
-function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
+function normalizeBinanceKlines(klines: BinanceKlineRaw[]): Bar[] {
   return klines.map((k) => [
     k[0],
     Number(k[1]),

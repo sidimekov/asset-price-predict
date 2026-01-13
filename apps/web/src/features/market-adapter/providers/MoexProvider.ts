@@ -1,7 +1,6 @@
 // apps/web/src/features/market-adapter/providers/MoexProvider.ts
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
-import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
 import type { ProviderCallOpts, ProviderRequestBase } from './types';
 
 function createAbortError(): Error {
@@ -31,8 +30,11 @@ export async function fetchMoexTimeseries(
 
   const queryResult = dispatch(
     marketApi.endpoints.getMoexTimeseries.initiate({
-      symbol: symbol as MarketSymbol,
-      timeframe: timeframe as Timeframe,
+      symbol,
+      engine: 'stock',
+      market: 'shares',
+      board: 'TQBR',
+      interval: mapTimeframeToMoexInterval(timeframe),
       limit,
     }),
   );
@@ -89,5 +91,24 @@ export async function searchMoexSymbols(
       signal.removeEventListener('abort', onAbort);
     }
     queryResult.unsubscribe();
+  }
+}
+
+function mapTimeframeToMoexInterval(
+  timeframe: ProviderRequestBase['timeframe'],
+): number {
+  switch (timeframe) {
+    case '1h':
+      return 60;
+    case '8h':
+      return 60;
+    case '1d':
+      return 24;
+    case '7d':
+      return 7;
+    case '1mo':
+      return 31;
+    default:
+      return 24;
   }
 }

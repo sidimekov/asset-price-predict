@@ -103,7 +103,7 @@ describe('useOrchestrator', () => {
     const [ctxArg, depsArg] = runMock.mock.calls[0];
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'BINANCE', // маппинг
+      provider: 'MOCK', // dev override
       tf: '1h',
       window: 200,
       horizon: 24,

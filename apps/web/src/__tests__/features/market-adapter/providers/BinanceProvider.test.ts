@@ -24,7 +24,7 @@ vi.mock('@/shared/api/marketApi', () => ({
     },
   },
   // тип нам тут не важен, просто чтобы импорт не падал
-  BinanceKline: {} as any,
+  BinanceKlineRaw: {} as any,
 }));
 
 describe('fetchBinanceTimeseries', () => {
