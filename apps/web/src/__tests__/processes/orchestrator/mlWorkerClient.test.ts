@@ -39,7 +39,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('sends infer:request to worker and resolves on infer:done', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-      );
+    );
 
     const tail: TailPoint[] = [
       [1, 100],
@@ -87,7 +87,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('rejects when worker sends error message', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-      );
+    );
 
     const tail: TailPoint[] = [
       [1, 100],
@@ -114,7 +114,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('throws on invalid tail or horizon', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-      );
+    );
 
     await expect(inferForecast([], 0)).rejects.toThrow(
       'Invalid tail or horizon for inference',
@@ -124,7 +124,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('reuses singleton Worker instance (does not create new Worker on 2nd call)', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-      );
+    );
 
     const p1 = inferForecast(
       [
@@ -182,7 +182,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('ignores messages with unknown id (pending not found) and still resolves on correct id', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-      );
+    );
 
     const promise = inferForecast(
       [
@@ -223,7 +223,7 @@ describe('mlWorkerClient.inferForecast', () => {
   it('rejects on unknown worker message type', async () => {
     const { inferForecast } = await import(
       '@/processes/orchestrator/mlWorkerClient'
-      );
+    );
 
     const promise = inferForecast(
       [

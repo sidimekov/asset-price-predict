@@ -21,7 +21,6 @@ const ORCHESTRATOR_DEBOUNCE_MS = 250;
 //   // DEV override: всегда моковые таймсерии
 //   if (process.env.NODE_ENV !== 'production') return 'MOCK';
 function mapProviderToMarket(provider: string): MarketDataProvider | null {
-
   switch (provider) {
     case 'binance':
       return 'BINANCE';
