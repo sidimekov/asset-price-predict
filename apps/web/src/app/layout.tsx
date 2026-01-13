@@ -50,6 +50,7 @@ export default function RootLayout({
     <html lang="ru">
       <body className="bg-primary text-ink font-sans antialiased min-h-screen">
         <StoreProvider>
+          <YandexMetrika />
           {showAppLayout ? (
             <div className="flex h-screen overflow-hidden">
               <div className={sidebarOpen ? 'sidebar' : 'sidebar collapsed'}>
@@ -80,7 +81,6 @@ export default function RootLayout({
                   </Container>
                 </main>
 
-                <YandexMetrika />
               </div>
             </div>
           ) : (
