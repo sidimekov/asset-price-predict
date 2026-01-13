@@ -15,4 +15,10 @@ describe('YAxis', () => {
     const { container } = render(<YAxis className="test-class" />);
     expect(container.firstChild).toHaveClass('test-class');
   });
+
+  it('renders dynamic levels from values', () => {
+    render(<YAxis values={[10, 20]} tickCount={3} />);
+    expect(screen.getByText('20')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+  });
 });
