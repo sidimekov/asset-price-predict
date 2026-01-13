@@ -42,9 +42,7 @@ export default function YAxis({
           });
 
           if (min === max) {
-            return Array.from({ length: tickCount }, () =>
-              formatter.format(min),
-            );
+            return Array.from({ length: tickCount }, () => formatter.format(min));
           }
 
           return Array.from({ length: tickCount }, (_, idx) => {
