@@ -47,22 +47,64 @@ function isAbortError(err: any): boolean {
   return err?.name === 'AbortError' || err?.code === 'ABORTED';
 }
 
+function makeAbortError(): Error & { code?: string } {
+  const e: any = new Error('Aborted');
+  e.name = 'AbortError';
+  e.code = 'ABORTED';
+  return e;
+}
+
 /**
  * ForecastManager - центр оркестратора
- * Таймсерии: через timeseriesSlice + MarketAdapter
- * Прогноз: через ML воркер, результат в forecastSlice
+ *  - history (timeseries) можно грузить отдельно
+ *  - forecast считается только по trigger (Predict)
  */
 export class ForecastManager {
-  static async run(
+  static async run(ctx: OrchestratorInput, deps: OrchestratorDeps): Promise<void> {
+    return ForecastManager.runForecast(ctx, deps);
+  }
+
+  /**
+   * авто-подгрузка таймсерии (без инференса)
+   * Используется на Dashboard: выбрали актив - история появилась в timeseriesSlice
+   */
+  static async ensureTimeseriesOnly(
+    ctx: Pick<OrchestratorInput, 'symbol' | 'provider' | 'tf' | 'window'>,
+    deps: OrchestratorDeps,
+  ): Promise<void> {
+    const { symbol, provider, tf, window } = ctx;
+    const { dispatch, getState, signal } = deps;
+
+    if (signal?.aborted) return;
+
+    const tsKey = buildTimeseriesKey(provider as any, symbol, tf, window);
+
+    try {
+      await ForecastManager.ensureTimeseries(
+        { tsKey, symbol, provider, tf, window },
+        { dispatch, getState, signal },
+      );
+    } catch (err: any) {
+      // ensureTimeseries уже диспатчит timeseriesFailed
+      // здесь ничего дополнительно не делаем
+      if (signal?.aborted || isAbortError(err)) return;
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[Orchestrator] ensureTimeseriesOnly error', err);
+      }
+    }
+  }
+
+  /**
+   * Model A: прогноз считается только по кнопке Predict
+   */
+  static async runForecast(
     ctx: OrchestratorInput,
     deps: OrchestratorDeps,
   ): Promise<void> {
     const { symbol, provider, tf, window, horizon, model } = ctx;
     const { dispatch, getState, signal } = deps;
 
-    // ключ таймсерии должен учитывать window/limit
     const tsKey = buildTimeseriesKey(provider as any, symbol, tf, window);
-
     const fcKey = makeForecastKey({
       symbol,
       tf,
@@ -73,7 +115,7 @@ export class ForecastManager {
     orchestratorState.status = 'running';
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log('[Orchestrator] run', {
+      console.log('[Orchestrator] runForecast', {
         symbol,
         provider,
         tf,
@@ -89,7 +131,12 @@ export class ForecastManager {
     dispatch(forecastRequested(fcKey));
 
     try {
-      // 1) ensure timeseries
+      if (signal?.aborted) {
+        dispatch(forecastCancelled(fcKey));
+        return;
+      }
+
+      // 1) ensure timeseries (из store + TTL; если надо — MarketAdapter)
       const bars = await ForecastManager.ensureTimeseries(
         { tsKey, symbol, provider, tf, window },
         { dispatch, getState, signal },
@@ -106,14 +153,9 @@ export class ForecastManager {
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
       // 3) infer (with abort)
-      const inferResult = await inferForecast(
-        tail,
-        horizon,
-        model ?? undefined,
-        {
-          signal,
-        },
-      );
+      const inferResult = await inferForecast(tail, horizon, model ?? undefined, {
+        signal,
+      } as any);
 
       if (signal?.aborted) {
         dispatch(forecastCancelled(fcKey));
@@ -195,7 +237,6 @@ export class ForecastManager {
           error: message,
         }),
       );
-      // ВАЖНО: больше не throw наружу
     } finally {
       if (orchestratorState.status !== 'error') {
         orchestratorState.status = 'idle';
@@ -215,6 +256,8 @@ export class ForecastManager {
   ): Promise<Bar[]> {
     const { tsKey, symbol, provider, tf, window } = args;
     const { dispatch, getState, signal } = deps;
+
+    if (signal?.aborted) throw makeAbortError();
 
     // 0) check store cache + TTL
     const state = getState();
@@ -257,6 +300,8 @@ export class ForecastManager {
       } as any,
       { signal },
     );
+
+    if (signal?.aborted) throw makeAbortError();
 
     if ('code' in adapterRes) {
       const message = adapterRes.message || 'Failed to load timeseries';
