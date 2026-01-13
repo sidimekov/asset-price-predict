@@ -58,9 +58,9 @@ export default function Dashboard() {
       : 'ready';
 
   const handleAssetSelect = ({
-                               symbol,
-                               provider,
-                             }: {
+    symbol,
+    provider,
+  }: {
     symbol: string;
     provider: 'binance' | 'moex';
   }) => {

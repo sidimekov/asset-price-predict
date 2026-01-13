@@ -15,7 +15,9 @@ import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
-function mapProviderToMarket(provider: string): MarketDataProvider | 'MOCK' | null {
+function mapProviderToMarket(
+  provider: string,
+): MarketDataProvider | 'MOCK' | null {
   // DEV override (временно): всегда моковые таймсерии
   if (process.env.NODE_ENV !== 'production') return 'MOCK';
 
@@ -52,16 +54,14 @@ export function useOrchestrator() {
 
   const predictRequest = useAppSelector(
     (s: RootState) => (s as any).forecast?.predict?.request ?? null,
-  ) as
-    | {
+  ) as {
     symbol: string;
     provider?: string;
     tf: string;
     window: number;
     horizon: number;
     model?: string | null;
-  }
-    | null;
+  } | null;
 
   // --- refs for timeseries auto ---
   const tsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

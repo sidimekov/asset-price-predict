@@ -60,7 +60,10 @@ function makeAbortError(): Error & { code?: string } {
  *  - forecast считается только по trigger (Predict)
  */
 export class ForecastManager {
-  static async run(ctx: OrchestratorInput, deps: OrchestratorDeps): Promise<void> {
+  static async run(
+    ctx: OrchestratorInput,
+    deps: OrchestratorDeps,
+  ): Promise<void> {
     return ForecastManager.runForecast(ctx, deps);
   }
 
@@ -153,9 +156,14 @@ export class ForecastManager {
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
       // 3) infer (with abort)
-      const inferResult = await inferForecast(tail, horizon, model ?? undefined, {
-        signal,
-      } as any);
+      const inferResult = await inferForecast(
+        tail,
+        horizon,
+        model ?? undefined,
+        {
+          signal,
+        } as any,
+      );
 
       if (signal?.aborted) {
         dispatch(forecastCancelled(fcKey));
