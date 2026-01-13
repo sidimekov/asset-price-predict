@@ -134,15 +134,10 @@ async function resolveProviderData(
   params: ProviderRequestBase,
   opts: AdapterCallOpts = {},
 ): Promise<ProviderResolveResult> {
-  const paramsWithSignal = {
-    ...params,
-    signal: opts.signal,
-  } as ProviderRequestBase & AdapterCallOpts;
-
   try {
     switch (provider) {
       case 'BINANCE': {
-        const klines = await fetchBinanceTimeseries(dispatch, paramsWithSignal);
+        const klines = await fetchBinanceTimeseries(dispatch, params, opts);
         return {
           ok: true,
           raw: klines,
@@ -152,7 +147,7 @@ async function resolveProviderData(
       }
 
       case 'MOEX': {
-        const moexRaw = await fetchMoexTimeseries(dispatch, paramsWithSignal);
+        const moexRaw = await fetchMoexTimeseries(dispatch, params, opts);
         return {
           ok: true,
           raw: moexRaw,
@@ -162,11 +157,7 @@ async function resolveProviderData(
       }
 
       case 'MOCK': {
-        const mockRaw = await fetchMockTimeseries(
-          dispatch,
-          paramsWithSignal,
-          opts,
-        );
+        const mockRaw = await fetchMockTimeseries(dispatch, params, opts);
         return {
           ok: true,
           raw: mockRaw,

@@ -1,13 +1,21 @@
 // apps/web/src/features/market-adapter/providers/MockProvider.ts
 import type { AppDispatch } from '@/shared/store';
-import type { ProviderRequestBase } from './types';
+import type { ProviderCallOpts, ProviderRequestBase } from './types';
 import type { CatalogItem } from '@shared/types/market';
 
-type FetchOpts = {
-  signal?: AbortSignal;
-};
-
 // Deterministic PRNG (seeded) - stable for UX/tests
+
+function createAbortError(): Error {
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+}
 
 function hashSeed(input: string): number {
   // simple, fast string hash -> uint32
@@ -54,8 +62,9 @@ function timeframeToStepMs(timeframe: string): number {
 export async function fetchMockTimeseries(
   _dispatch: AppDispatch,
   params: ProviderRequestBase,
-  _opts: FetchOpts = {},
+  opts: ProviderCallOpts = {},
 ): Promise<unknown> {
+  throwIfAborted(opts.signal);
   return generateMockBarsRaw(params);
 }
 
@@ -66,10 +75,14 @@ export async function fetchMockTimeseries(
 export async function fetchMockTimeseriesViaApi(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
-  opts: FetchOpts = {},
+  opts: ProviderCallOpts = {},
 ): Promise<unknown> {
-  const { marketApi } = await import('@/shared/api/marketApi');
   const { symbol, timeframe, limit } = params;
+  const { signal } = opts;
+
+  throwIfAborted(signal);
+
+  const { marketApi } = await import('@/shared/api/marketApi');
 
   const queryResult = dispatch(
     marketApi.endpoints.getMockTimeseries.initiate({
@@ -79,10 +92,21 @@ export async function fetchMockTimeseriesViaApi(
     }),
   );
 
+  const onAbort = () => {
+    queryResult.abort();
+  };
+
+  if (signal) {
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+
   try {
     const data = await queryResult.unwrap();
     return data;
   } finally {
+    if (signal) {
+      signal.removeEventListener('abort', onAbort);
+    }
     queryResult.unsubscribe();
   }
 }
@@ -177,7 +201,11 @@ const MOCK_SYMBOLS: MockSymbolRaw[] = [
  */
 export async function searchMockSymbols(
   query: string,
+  opts: ProviderCallOpts = {},
 ): Promise<MockSymbolRaw[]> {
+  const { signal } = opts;
+  throwIfAborted(signal);
+
   const q = query.trim().toLowerCase();
   if (!q) return [];
 
