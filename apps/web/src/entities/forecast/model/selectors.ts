@@ -5,6 +5,7 @@ import type {
   ForecastSeries,
   ExplainRow,
   ForecastMeta,
+  ForecastParams,
 } from '../types';
 
 // Базовый селектор среза
@@ -33,14 +34,7 @@ export const selectForecastError = (
  */
 export const selectForecastParams = (
   state: RootState,
-):
-  | {
-      tf: string;
-      window: string | number;
-      horizon: number;
-      model?: string | null;
-    }
-  | undefined => (state as any).forecast?.params as any;
+): ForecastParams | undefined => state.forecast.params;
 
 /**
  * селектор для графика: сразу отдаёт только ряды

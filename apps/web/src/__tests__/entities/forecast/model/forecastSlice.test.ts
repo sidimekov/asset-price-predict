@@ -5,6 +5,7 @@ import {
   forecastRequested,
   forecastReceived,
   forecastFailed,
+  setForecastParams,
   clearForecast,
   clearAllForecasts,
 } from '@/entities/forecast/model/forecastSlice';
@@ -108,5 +109,12 @@ describe('forecastSlice', () => {
 
     // должно остаться как было
     expect(state).toEqual(initial);
+  });
+
+  it('setForecastParams сохраняет параметры прогноза', () => {
+    const params = { tf: '1h', window: 200, horizon: 24, model: null };
+    const state = forecastReducer(getInitial(), setForecastParams(params));
+
+    expect(state.params).toEqual(params);
   });
 });

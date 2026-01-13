@@ -7,7 +7,15 @@ describe('ParamsPanel', () => {
   it('calls onPredict when button is clicked', () => {
     const onPredict = vi.fn();
 
-    render(<ParamsPanel state="success" onPredict={onPredict} />);
+    render(
+      <ParamsPanel
+        state="success"
+        onPredict={onPredict}
+        selectedTimeframe="1h"
+        selectedWindow={200}
+        selectedHorizon={24}
+      />,
+    );
 
     const button = screen.getByRole('button', { name: /predict/i });
     fireEvent.click(button);
@@ -15,63 +23,80 @@ describe('ParamsPanel', () => {
     expect(onPredict).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onModelChange and onDateChange when not readOnly', () => {
+  it('calls onModelChange and horizon/window changes when not readOnly', () => {
     const onModelChange = vi.fn();
-    const onDateChange = vi.fn();
+    const onWindowChange = vi.fn();
+    const onHorizonChange = vi.fn();
+    const onTimeframeChange = vi.fn();
 
     const { container } = render(
       <ParamsPanel
         state="success"
         onPredict={vi.fn()}
         selectedModel=""
-        selectedDate="2025-12-14"
+        selectedTimeframe="1h"
+        selectedWindow={100}
+        selectedHorizon={12}
         onModelChange={onModelChange}
-        onDateChange={onDateChange}
+        onWindowChange={onWindowChange}
+        onHorizonChange={onHorizonChange}
+        onTimeframeChange={onTimeframeChange}
       />,
     );
 
-    const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: 'model-2' } });
-    expect(onModelChange).toHaveBeenCalledWith('model-2');
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: '8h' } });
+    expect(onTimeframeChange).toHaveBeenCalledWith('8h');
 
-    const dateInput = container.querySelector('input[type="date"]');
+    fireEvent.change(selects[1], { target: { value: 'lgbm_v1' } });
+    expect(onModelChange).toHaveBeenCalledWith('lgbm_v1');
 
-    expect(dateInput).not.toBeNull();
+    const numberInputs = container.querySelectorAll('input[type="number"]');
 
-    if (dateInput) {
-      fireEvent.change(dateInput, { target: { value: '2025-12-31' } });
-    }
+    expect(numberInputs.length).toBeGreaterThan(1);
 
-    expect(onDateChange).toHaveBeenCalledWith('2025-12-31');
+    fireEvent.change(numberInputs[0], { target: { value: '220' } });
+    fireEvent.change(numberInputs[1], { target: { value: '30' } });
+
+    expect(onWindowChange).toHaveBeenCalledWith(220);
+    expect(onHorizonChange).toHaveBeenCalledWith(30);
   });
 
-  it('does not allow changing model or date when readOnly', () => {
+  it('does not allow changing inputs when readOnly', () => {
     const onModelChange = vi.fn();
-    const onDateChange = vi.fn();
+    const onWindowChange = vi.fn();
+    const onHorizonChange = vi.fn();
+    const onTimeframeChange = vi.fn();
 
     const { container } = render(
       <ParamsPanel
         state="success"
         onPredict={vi.fn()}
-        selectedModel="model-1"
-        selectedDate="2025-12-14"
+        selectedModel="client"
+        selectedTimeframe="1h"
+        selectedWindow={100}
+        selectedHorizon={12}
         onModelChange={onModelChange}
-        onDateChange={onDateChange}
+        onWindowChange={onWindowChange}
+        onHorizonChange={onHorizonChange}
+        onTimeframeChange={onTimeframeChange}
         readOnly
       />,
     );
 
-    const select = screen.getByRole('combobox');
-    const dateInput = container.querySelector('input[type="date"]');
+    const selects = screen.getAllByRole('combobox');
+    const numberInputs = container.querySelectorAll('input[type="number"]');
 
-    expect(dateInput).not.toBeNull();
+    expect(numberInputs.length).toBeGreaterThan(1);
 
-    fireEvent.change(select, { target: { value: 'model-3' } });
-    if (dateInput) {
-      fireEvent.change(dateInput, { target: { value: '2025-12-31' } });
-    }
+    fireEvent.change(selects[0], { target: { value: '8h' } });
+    fireEvent.change(selects[1], { target: { value: 'baseline' } });
+    fireEvent.change(numberInputs[0], { target: { value: '220' } });
+    fireEvent.change(numberInputs[1], { target: { value: '30' } });
 
     expect(onModelChange).not.toHaveBeenCalled();
-    expect(onDateChange).not.toHaveBeenCalled();
+    expect(onWindowChange).not.toHaveBeenCalled();
+    expect(onHorizonChange).not.toHaveBeenCalled();
+    expect(onTimeframeChange).not.toHaveBeenCalled();
   });
 });

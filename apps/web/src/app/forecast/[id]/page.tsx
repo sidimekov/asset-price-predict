@@ -1,64 +1,105 @@
 'use client';
 
 import React from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
 import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
+import LineChart from '@/widgets/chart/LineChart';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import FactorsTable from '@/features/factors/FactorsTable';
 import type { FactorRow } from '@/features/factors/FactorsTable';
-import { historyRepository } from '@/entities/history/repository';
-import type { HistoryEntry } from '@/entities/history/model';
+import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
+import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
+import {
+  selectTimeseriesByKey,
+  selectTimeseriesLoadingByKey,
+  selectTimeseriesErrorByKey,
+} from '@/entities/timeseries/model/timeseriesSlice';
+import {
+  selectForecastByKey,
+  selectForecastLoading,
+  selectForecastError,
+  selectForecastParams,
+} from '@/entities/forecast/model/selectors';
+import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import { makeForecastKey, makeTimeseriesKey } from '@/processes/orchestrator/keys';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
+import type { MarketTimeframe } from '@/config/market';
+import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
-type ParamsState = 'idle' | 'loading' | 'error' | 'success';
 
 export default function ForecastPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const dispatch = useAppDispatch();
 
   const id = params.id;
 
-  const [entry, setEntry] = React.useState<HistoryEntry | null>(null);
-  const [entryLoading, setEntryLoading] = React.useState(true);
+  const selectedAsset = useAppSelector(selectSelectedAsset);
+  const storedParams = useAppSelector(selectForecastParams);
+  const providerNorm = selectedAsset
+    ? mapProviderToMarket(selectedAsset.provider)
+    : null;
+
+  const defaultParams = React.useMemo(
+    () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
+    [],
+  );
 
   React.useEffect(() => {
-    let active = true;
-    setEntry(null);
-    setEntryLoading(true);
-    historyRepository
-      .getById(String(id))
-      .then((found) => {
-        if (active) setEntry(found);
+    if (!storedParams) {
+      dispatch(setForecastParams(defaultParams));
+    }
+  }, [dispatch, storedParams, defaultParams]);
+
+  const effectiveParams = storedParams ?? defaultParams;
+  const selectedSymbol = selectedAsset?.symbol ?? null;
+  const tickerQuery = searchParams.get('ticker');
+  const displaySymbol = tickerQuery || selectedSymbol || String(id);
+  const selectedPrice = '—';
+
+  const tsKey =
+    providerNorm && selectedSymbol
+      ? makeTimeseriesKey({
+          provider: providerNorm,
+          symbol: selectedSymbol,
+          tf: effectiveParams.tf as MarketTimeframe,
+          window: effectiveParams.window,
+        })
+      : null;
+
+  const fcKey = selectedSymbol
+    ? makeForecastKey({
+        symbol: selectedSymbol,
+        tf: effectiveParams.tf as MarketTimeframe,
+        horizon: effectiveParams.horizon,
+        model: effectiveParams.model ?? undefined,
       })
-      .finally(() => {
-        if (active) setEntryLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [id]);
+    : null;
 
-  const displaySymbol = entry?.symbol || String(id);
-  const selectedPrice = '—'; // Цена остается фиксированной как в оригинале
+  const bars = useAppSelector((state) =>
+    tsKey ? selectTimeseriesByKey(state, tsKey as any) : null,
+  );
+  const barsLoading = useAppSelector((state) =>
+    tsKey ? selectTimeseriesLoadingByKey(state, tsKey as any) : false,
+  );
+  const barsError = useAppSelector((state) =>
+    tsKey ? selectTimeseriesErrorByKey(state, tsKey as any) : null,
+  );
 
-  const [chartState, setChartState] = React.useState<State>('idle');
-  const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
-
-  React.useEffect(() => {
-    setChartState('loading');
-    setParamsState('loading');
-    // chart and params placeholders are loaded by timeout
-
-    const t = setTimeout(() => {
-      setChartState('ready');
-      setParamsState('success');
-    }, 1200);
-
-    return () => clearTimeout(t);
-  }, []);
+  const forecastEntry = useAppSelector((state) =>
+    fcKey ? selectForecastByKey(state, fcKey) : undefined,
+  );
+  const forecastLoading = useAppSelector((state) =>
+    fcKey ? selectForecastLoading(state, fcKey) : false,
+  );
+  const forecastError = useAppSelector((state) =>
+    fcKey ? selectForecastError(state, fcKey) : null,
+  );
 
   const handleBackToAssets = () => {
     router.push('/dashboard');
@@ -82,34 +123,56 @@ export default function ForecastPage() {
   ];
 
   const factors: FactorRow[] =
-    entry?.explain?.map((f) => ({
+    forecastEntry?.explain?.map((f) => ({
       name: f.name,
-      impact: `${f.sign}${f.impact_abs.toFixed(3)}`,
+      impact: f.impact !== undefined ? String(f.impact) : undefined,
       shap: f.shap !== undefined ? String(f.shap) : undefined,
-      conf:
-        f.confidence !== undefined
-          ? `${(f.confidence * 100).toFixed(0)}%`
-          : undefined,
+      conf: f.conf !== undefined ? `${(f.conf * 100).toFixed(0)}%` : undefined,
     })) ?? [];
 
-  const factorsState: State = entryLoading
+  const factorsState: State = forecastLoading
     ? 'loading'
-    : factors.length
-      ? 'ready'
-      : 'empty';
+    : forecastError || !forecastEntry?.explain?.length
+      ? 'empty'
+      : 'ready';
 
-  const seriesRows = entry
-    ? entry.p50.map((point, index) => {
+  const seriesRows = forecastEntry
+    ? forecastEntry.p50.map((point, index) => {
         const ts = point[0];
         const p50 = point[1];
-        const p10 = entry.p10?.[index]?.[1];
-        const p90 = entry.p90?.[index]?.[1];
+        const p10 = forecastEntry.p10?.[index]?.[1];
+        const p90 = forecastEntry.p90?.[index]?.[1];
         return { ts, p50, p10, p90 };
       })
     : [];
 
+  const chartState: State = !selectedAsset
+    ? 'empty'
+    : barsLoading
+      ? 'loading'
+      : barsError
+        ? 'empty'
+        : bars && bars.length
+          ? 'ready'
+          : 'empty';
+
+  const historySeries = bars?.map((bar) => [bar[0], bar[4]] as [number, number]);
+
+  useOrchestrator();
+
   return (
     <div className="min-h-screen bg-primary">
+      {!selectedAsset && !tickerQuery ? (
+        <div className="flex flex-col items-center justify-center min-h-screen text-ink-muted">
+          <p className="mb-6">Select an asset to view forecast details.</p>
+          <button
+            className="gradient-button w-60 h-12 rounded text-ink font-medium transition-smooth scale-on-press"
+            onClick={handleBackToAssets}
+          >
+            Back to dashboard
+          </button>
+        </div>
+      ) : (
       <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
         {/* Selected asset panel */}
         <div className="col-span-12">
@@ -143,11 +206,27 @@ export default function ForecastPage() {
                   <div className="flex flex-col">
                     <div className="flex">
                       <div className="relative h-96 w-[800px] flex-none">
-                        <CandlesChartPlaceholder state={chartState} />
+                        {chartState === 'ready' && historySeries ? (
+                          <LineChart
+                            className="h-96 w-full"
+                            series={historySeries}
+                          />
+                        ) : barsError ? (
+                          <div className="h-96 w-full flex items-center justify-center text-ink-muted">
+                            Failed to load history
+                          </div>
+                        ) : (
+                          <CandlesChartPlaceholder state={chartState} />
+                        )}
                       </div>
 
                       <div className="relative h-96 w-[330px] left-0 border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
-                        <ForecastShapePlaceholder className="h-96 w-full" />
+                        <ForecastShapePlaceholder
+                          className="h-96 w-full"
+                          p50={forecastEntry?.p50}
+                          p10={forecastEntry?.p10}
+                          p90={forecastEntry?.p90}
+                        />
                       </div>
                     </div>
 
@@ -170,11 +249,13 @@ export default function ForecastPage() {
         {/* Params */}
         <div className="col-span-12 lg:col-span-4">
           <ParamsPanel
-            state={paramsState}
+            state="success"
             onPredict={handleBackToAssets}
             buttonLabel="Back to asset selection"
-            selectedModel={entry?.meta.model_ver ?? ''}
-            selectedDate={entry?.created_at ?? ''}
+            selectedTimeframe={effectiveParams.tf}
+            selectedWindow={effectiveParams.window}
+            selectedHorizon={effectiveParams.horizon}
+            selectedModel={effectiveParams.model ?? null}
             readOnly
           />
         </div>
@@ -193,9 +274,9 @@ export default function ForecastPage() {
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-dark rounded-3xl p-6">
             <div className="text-sm text-ink-tertiary">Forecast series</div>
-            {entryLoading ? (
+            {forecastLoading ? (
               <div className="mt-4 text-ink-tertiary">Loading forecast...</div>
-            ) : entry ? (
+            ) : forecastEntry ? (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-sm text-white">
                   <thead>
@@ -224,6 +305,7 @@ export default function ForecastPage() {
           </div>
         </div>
       </div>
+      )}
 
       <div className="h-10" />
     </div>

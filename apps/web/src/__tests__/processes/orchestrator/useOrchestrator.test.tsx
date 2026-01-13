@@ -126,7 +126,7 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     );
 
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(300);
     });
 
     const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;

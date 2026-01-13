@@ -1,5 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ForecastKey, ForecastEntry, ForecastState } from '../types';
+import type {
+  ForecastKey,
+  ForecastEntry,
+  ForecastState,
+  ForecastParams,
+} from '../types';
 
 export type PredictRequest = {
   symbol: string;
@@ -28,7 +33,9 @@ export type ForecastSliceState = ForecastState & {
   predict: PredictState;
 };
 
+  params: undefined,
 const initialState: ForecastSliceState = {
+  params: undefined,
   byKey: {},
   loadingByKey: {},
   errorByKey: {},
@@ -62,6 +69,9 @@ const forecastSlice = createSlice({
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
       // byKey не трогаем - старый прогноз остаётся, пока идёт новый
+    },
+    setForecastParams(state, action: PayloadAction<ForecastParams>) {
+      state.params = action.payload;
     },
 
     /** Успешно получили прогноз */
@@ -116,6 +126,7 @@ export const {
   forecastReceived,
   forecastFailed,
   forecastCancelled,
+  setForecastParams,
   clearForecast,
   clearAllForecasts,
 } = forecastSlice.actions;

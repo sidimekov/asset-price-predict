@@ -1,9 +1,13 @@
 import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ForecastPage from '@/app/forecast/[id]/page';
+import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
 const pushMock = vi.fn();
+const dispatchMock = vi.fn();
+const useAppSelectorMock = vi.fn();
 
 vi.mock('next/navigation', () => {
   const query = {
@@ -26,6 +30,15 @@ vi.mock('next/navigation', () => {
   };
 });
 
+vi.mock('@/shared/store/hooks', () => ({
+  useAppDispatch: () => dispatchMock,
+  useAppSelector: (selector: any) => useAppSelectorMock(selector),
+}));
+
+vi.mock('@/processes/orchestrator/useOrchestrator', () => ({
+  useOrchestrator: () => undefined,
+}));
+
 // Мокаем ParamsPanel, чтобы удобно кликать по кнопке
 vi.mock('@/features/params/ParamsPanel', () => ({
   __esModule: true,
@@ -38,7 +51,19 @@ vi.mock('@/features/params/ParamsPanel', () => ({
 }));
 
 describe('ForecastPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders forecast page with selected asset and panels', () => {
+    useAppSelectorMock.mockImplementation((selector: any) => {
+      if (selector === selectSelectedAsset)
+        return { symbol: 'BTC', provider: 'binance' };
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
+      return undefined;
+    });
+
     const { container } = render(<ForecastPage />);
 
     expect(container.firstChild).toBeTruthy();
@@ -48,6 +73,14 @@ describe('ForecastPage', () => {
   });
 
   it('navigates back to dashboard when back button is clicked', () => {
+    useAppSelectorMock.mockImplementation((selector: any) => {
+      if (selector === selectSelectedAsset)
+        return { symbol: 'BTC', provider: 'binance' };
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
+      return undefined;
+    });
+
     const { getByText } = render(<ForecastPage />);
 
     const backButton = getByText('Back to asset selection');

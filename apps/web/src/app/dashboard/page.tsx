@@ -4,12 +4,12 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
+import LineChart from '@/widgets/chart/LineChart';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
-import { predictRequested } from '@/entities/forecast/model/forecastSlice';
 import {
   addRecent,
   setSelected,
@@ -17,10 +17,19 @@ import {
   selectRecent,
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
+import {
+  selectTimeseriesByKey,
+  selectTimeseriesLoadingByKey,
+  selectTimeseriesErrorByKey,
+} from '@/entities/timeseries/model/timeseriesSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
+import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
+import type { MarketTimeframe } from '@/config/market';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
-type ParamsState = 'idle' | 'loading' | 'error' | 'success';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -28,28 +37,48 @@ export default function Dashboard() {
 
   const recentAssets = useAppSelector(selectRecent);
   const selectedAsset = useAppSelector(selectSelectedAsset);
+  const params = useAppSelector(selectForecastParams);
 
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
-  const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
-
-  const [selectedModel, setSelectedModel] = React.useState('');
-  const [selectedDate, setSelectedDate] = React.useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-      2,
-      '0',
-    )}-${String(today.getDate()).padStart(2, '0')}`;
-  });
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setParamsState('success');
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
 
   const selectedSymbol = selectedAsset?.symbol ?? null;
+  const providerNorm = selectedAsset
+    ? mapProviderToMarket(selectedAsset.provider)
+    : null;
+
+  const defaultParams = React.useMemo(
+    () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!params) {
+      dispatch(setForecastParams(defaultParams));
+    }
+  }, [dispatch, params, defaultParams]);
+
+  const effectiveParams = params ?? defaultParams;
+
+  const tsKey =
+    providerNorm && selectedSymbol
+      ? makeTimeseriesKey({
+          provider: providerNorm,
+          symbol: selectedSymbol,
+          tf: effectiveParams.tf as MarketTimeframe,
+          window: effectiveParams.window,
+        })
+      : null;
+
+  const bars = useAppSelector((state) =>
+    tsKey ? selectTimeseriesByKey(state, tsKey as any) : null,
+  );
+  const barsLoading = useAppSelector((state) =>
+    tsKey ? selectTimeseriesLoadingByKey(state, tsKey as any) : false,
+  );
+  const barsError = useAppSelector((state) =>
+    tsKey ? selectTimeseriesErrorByKey(state, tsKey as any) : null,
+  );
 
   const derivedAssetState: State = !selectedSymbol
     ? 'empty'
@@ -72,27 +101,10 @@ export default function Dashboard() {
   };
 
   const handlePredict = () => {
-    if (!selectedAsset?.symbol || !selectedAsset?.provider) return;
-
-    // forecast только по trigger
-    dispatch(
-      predictRequested({
-        symbol: selectedAsset.symbol,
-        provider: selectedAsset.provider, // ui provider: 'moex' | 'binance'
-        tf: '1h',
-        window: 200,
-        horizon: 24,
-        model: selectedModel || null,
-      }),
-    );
-
-    // Переход на forecast страницу — оставляем как было
-    const parts = [`ticker=${encodeURIComponent(selectedAsset.symbol)}`];
-    if (selectedModel) parts.push(`model=${encodeURIComponent(selectedModel)}`);
-    if (selectedDate) parts.push(`to=${encodeURIComponent(selectedDate)}`);
-
-    const query = parts.length > 0 ? `?${parts.join('&')}` : '';
-    router.push(`/forecast/0${query}`);
+    if (!selectedSymbol || !selectedAsset) return;
+    dispatch(setSelected(selectedAsset));
+    dispatch(setForecastParams(effectiveParams));
+    router.push(`/forecast/${encodeURIComponent(selectedAsset.symbol)}`);
   };
 
   const handleRemoveAsset = (symbol: string) => {
@@ -110,11 +122,23 @@ export default function Dashboard() {
   const handleRecentSelect = (symbol: string) => {
     const asset = recentAssets.find((a) => a.symbol === symbol);
     if (asset) {
-      dispatch(setSelected({ symbol: asset.symbol, provider: asset.provider }));
+      dispatch(setSelected(asset));
     }
   };
 
   useOrchestrator();
+
+  const chartState: State = !selectedAsset
+    ? 'empty'
+    : barsLoading
+      ? 'loading'
+      : barsError
+        ? 'empty'
+        : bars && bars.length
+          ? 'ready'
+          : 'empty';
+
+  const historySeries = bars?.map((bar) => [bar[0], bar[4]] as [number, number]);
 
   return (
     <div className="min-h-screen bg-primary">
@@ -144,7 +168,18 @@ export default function Dashboard() {
               <div className="flex flex-col">
                 <div className="flex">
                   <div className="relative h-96 w-[800px] flex-none">
-                    <CandlesChartPlaceholder state={derivedAssetState} />
+                    {chartState === 'ready' && historySeries ? (
+                      <LineChart
+                        className="h-96 w-full"
+                        series={historySeries}
+                      />
+                    ) : barsError ? (
+                      <div className="h-96 w-full flex items-center justify-center text-ink-muted">
+                        Failed to load history
+                      </div>
+                    ) : (
+                      <CandlesChartPlaceholder state={chartState} />
+                    )}
                   </div>
                 </div>
 
@@ -160,12 +195,44 @@ export default function Dashboard() {
         {/* Params */}
         <div className="col-span-12 lg:col-span-4">
           <ParamsPanel
-            state={paramsState}
+            state="success"
             onPredict={handlePredict}
-            selectedModel={selectedModel}
-            selectedDate={selectedDate}
-            onModelChange={setSelectedModel}
-            onDateChange={setSelectedDate}
+            selectedTimeframe={effectiveParams.tf}
+            selectedWindow={effectiveParams.window}
+            selectedHorizon={effectiveParams.horizon}
+            selectedModel={effectiveParams.model ?? null}
+            onTimeframeChange={(tf) =>
+              dispatch(
+                setForecastParams({
+                  ...effectiveParams,
+                  tf,
+                }),
+              )
+            }
+            onWindowChange={(window) =>
+              dispatch(
+                setForecastParams({
+                  ...effectiveParams,
+                  window,
+                }),
+              )
+            }
+            onHorizonChange={(horizon) =>
+              dispatch(
+                setForecastParams({
+                  ...effectiveParams,
+                  horizon,
+                }),
+              )
+            }
+            onModelChange={(model) =>
+              dispatch(
+                setForecastParams({
+                  ...effectiveParams,
+                  model,
+                }),
+              )
+            }
           />
         </div>
       </div>
