@@ -105,6 +105,23 @@ export default function ForecastPage() {
     router.push('/dashboard');
   };
 
+  const forecastTimeLabels = [
+    '6:00AM',
+    '12:00AM',
+    '6:00PM',
+    '12:00PM',
+    '6:00AM',
+    '12:00AM',
+    '6:00PM',
+    '12:00PM',
+    '6:00AM',
+    '12:00AM',
+    '6:00PM',
+    '12:00PM',
+    '6:00AM',
+    '12:00AM',
+  ];
+
   const factors: FactorRow[] =
     forecastEntry?.explain?.map((f) => ({
       name: f.name,
@@ -139,9 +156,7 @@ export default function ForecastPage() {
           ? 'ready'
           : 'empty';
 
-  const historySeries = bars?.map((bar, index) => [index, bar[4]] as [number, number]);
-  const historyValues = bars?.map((bar) => bar[4]) ?? [];
-  const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
+  const historySeries = bars?.map((bar) => [bar[0], bar[4]] as [number, number]);
 
   useOrchestrator();
 
@@ -183,44 +198,44 @@ export default function ForecastPage() {
         {/* Chart + forecast shape */}
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-dark rounded-3xl p-6">
-            <div className="flex items-start">
-              <YAxis
-                className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
-                values={historyValues}
-              />
+            <div className="overflow-x-auto w-[1100px]">
+              <div className="flex items-start">
+                <div className="flex items-start relative left-0">
+                  <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
 
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex">
-                  <div className="relative h-96 flex-1">
-                    {chartState === 'ready' && historySeries ? (
-                      <LineChart className="h-96 w-full" series={historySeries} />
-                    ) : barsError ? (
-                      <div className="h-96 w-full flex items-center justify-center text-ink-muted">
-                        Failed to load history
+                  <div className="flex flex-col">
+                    <div className="flex">
+                      <div className="relative h-96 w-[800px] flex-none">
+                        {chartState === 'ready' && historySeries ? (
+                          <LineChart
+                            className="h-96 w-full"
+                            series={historySeries}
+                          />
+                        ) : barsError ? (
+                          <div className="h-96 w-full flex items-center justify-center text-ink-muted">
+                            Failed to load history
+                          </div>
+                        ) : (
+                          <CandlesChartPlaceholder state={chartState} />
+                        )}
                       </div>
-                    ) : (
-                      <CandlesChartPlaceholder state={chartState} />
-                    )}
-                  </div>
 
-                  <div className="relative h-96 w-[330px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
-                    <ForecastShapePlaceholder
-                      className="h-96 w-full"
-                      p50={forecastEntry?.p50}
-                      p10={forecastEntry?.p10}
-                      p90={forecastEntry?.p90}
-                    />
-                  </div>
-                </div>
+                      <div className="relative h-96 w-[330px] left-0 border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
+                        <ForecastShapePlaceholder
+                          className="h-96 w-full"
+                          p50={forecastEntry?.p50}
+                          p10={forecastEntry?.p10}
+                          p90={forecastEntry?.p90}
+                        />
+                      </div>
+                    </div>
 
-                <div className="flex">
-                  <div className="flex-1">
                     <XAxis
-                      className="text-[#8480C9] w-full"
-                      timestamps={historyTimestamps}
+                      width={1130}
+                      className="ml-12 h-96 text-[#8480C9]"
+                      labels={forecastTimeLabels}
                     />
                   </div>
-                  <div className="w-[330px]" />
                 </div>
               </div>
             </div>
