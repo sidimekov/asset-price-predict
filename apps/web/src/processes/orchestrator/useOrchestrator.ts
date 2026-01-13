@@ -15,7 +15,13 @@ import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
+// mock provider for debug (uncomment method signature and comment original signature)
+
+// function mapProviderToMarket(provider: string): MarketDataProvider | 'MOCK' | null {
+//   // DEV override: всегда моковые таймсерии
+//   if (process.env.NODE_ENV !== 'production') return 'MOCK';
 function mapProviderToMarket(provider: string): MarketDataProvider | null {
+
   switch (provider) {
     case 'binance':
       return 'BINANCE';
@@ -38,6 +44,12 @@ export function useOrchestrator() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    // mock params (uncomment for debug):
+    //
+    // const params = (process.env.NODE_ENV !== 'production'
+    //   ? { tf: '1h', window: 200, horizon: 24, model: null }
+    //   : undefined);
+
     if (!selected || !params) return;
 
     const { symbol, provider } = selected;
