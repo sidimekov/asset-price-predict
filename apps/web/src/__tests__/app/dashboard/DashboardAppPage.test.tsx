@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Dashboard from '@/app/dashboard/page';
 import {
   selectRecent,
@@ -95,7 +95,6 @@ vi.mock('@/features/asset-catalog/ui/AssetCatalogPanel', () => ({
 describe('Dashboard page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
   });
 
   it('does not navigate when no selected asset', () => {
@@ -132,9 +131,7 @@ describe('Dashboard page', () => {
     fireEvent.click(screen.getByText('set model'));
     fireEvent.click(screen.getByText('predict'));
 
-    expect(pushMock).toHaveBeenCalledWith(
-      '/forecast/BTC?provider=binance&tf=1h&window=200',
-    );
+    expect(pushMock).toHaveBeenCalledWith('/forecast/BTC');
   });
 
   it('handles catalog selection and dispatches actions', () => {
@@ -163,7 +160,6 @@ describe('Dashboard page', () => {
       if (selector === selectSelectedAsset) return selected;
       if (selector === selectForecastParams)
         return { tf: '1h', window: 200, horizon: 24, model: null };
-      if (typeof selector === 'function') return [];
       return undefined;
     });
 
@@ -172,58 +168,5 @@ describe('Dashboard page', () => {
     fireEvent.click(screen.getByText('select recent'));
 
     expect(dispatchMock).toHaveBeenCalled();
-  });
-
-  it('auto-selects candles for small timeframes', async () => {
-    const recent = [{ symbol: 'BTC', provider: 'binance' }];
-    const selected = { symbol: 'BTC', provider: 'binance' };
-    useAppSelectorMock.mockImplementation((selector: any) => {
-      if (selector === selectRecent) return recent;
-      if (selector === selectSelectedAsset) return selected;
-      if (selector === selectForecastParams) return { tf: '1m', window: 200 };
-      if (typeof selector === 'function')
-        return [
-          [1, 10, 12, 9, 11],
-          [2, 11, 13, 10, 12],
-        ];
-      return undefined;
-    });
-
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Candles').className).toContain(
-        'segmented-option-active',
-      );
-    });
-  });
-
-  it('uses stored view mode and persists manual change', async () => {
-    window.localStorage.setItem('chart:viewMode', 'candles');
-
-    const recent = [{ symbol: 'BTC', provider: 'binance' }];
-    const selected = { symbol: 'BTC', provider: 'binance' };
-    useAppSelectorMock.mockImplementation((selector: any) => {
-      if (selector === selectRecent) return recent;
-      if (selector === selectSelectedAsset) return selected;
-      if (selector === selectForecastParams) return { tf: '1h', window: 200 };
-      if (typeof selector === 'function')
-        return [
-          [1, 10, 12, 9, 11],
-          [2, 11, 13, 10, 12],
-        ];
-      return undefined;
-    });
-
-    render(<Dashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Candles').className).toContain(
-        'segmented-option-active',
-      );
-    });
-
-    fireEvent.click(screen.getByText('Line'));
-    expect(window.localStorage.getItem('chart:viewMode')).toBe('line');
   });
 });

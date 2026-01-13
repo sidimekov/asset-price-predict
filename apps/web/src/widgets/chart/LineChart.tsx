@@ -53,11 +53,7 @@ export default function LineChart({
 
   return (
     <div className={className}>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        className="h-full w-full"
-      >
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full">
         <path
           d={path}
           fill="none"

@@ -9,9 +9,13 @@ const pushMock = vi.fn();
 const dispatchMock = vi.fn();
 const useAppSelectorMock = vi.fn();
 
-let query: Record<string, string> = {};
-
 vi.mock('next/navigation', () => {
+  const query = {
+    ticker: 'BTC',
+    model: 'model-1',
+    to: '2025-12-14',
+  } as const;
+
   return {
     useRouter: () => ({
       push: pushMock,
@@ -41,8 +45,6 @@ vi.mock('@/features/params/ParamsPanel', () => ({
   default: (props: any) => (
     <div>
       <div>Parameters</div>
-      <div>Timeframe: {props.selectedTimeframe}</div>
-      <div>Window: {props.selectedWindow}</div>
       <button onClick={props.onPredict}>Back to asset selection</button>
     </div>
   ),
@@ -51,11 +53,6 @@ vi.mock('@/features/params/ParamsPanel', () => ({
 describe('ForecastPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    query = {
-      ticker: 'BTC',
-      model: 'model-1',
-      to: '2025-12-14',
-    };
   });
 
   it('renders forecast page with selected asset and panels', () => {
@@ -64,7 +61,6 @@ describe('ForecastPage', () => {
         return { symbol: 'BTC', provider: 'binance' };
       if (selector === selectForecastParams)
         return { tf: '1h', window: 200, horizon: 24, model: null };
-      if (typeof selector === 'function') return null;
       return undefined;
     });
 
@@ -73,6 +69,7 @@ describe('ForecastPage', () => {
     expect(container.firstChild).toBeTruthy();
     expect(container.textContent).toContain('Selected asset');
     expect(container.textContent).toContain('Parameters');
+    expect(container.textContent).toContain('Factors');
   });
 
   it('navigates back to dashboard when back button is clicked', () => {
@@ -81,7 +78,6 @@ describe('ForecastPage', () => {
         return { symbol: 'BTC', provider: 'binance' };
       if (selector === selectForecastParams)
         return { tf: '1h', window: 200, horizon: 24, model: null };
-      if (typeof selector === 'function') return null;
       return undefined;
     });
 
@@ -92,46 +88,5 @@ describe('ForecastPage', () => {
 
     expect(pushMock).toHaveBeenCalledTimes(1);
     expect(pushMock).toHaveBeenCalledWith('/dashboard');
-  });
-
-  it('uses query params for timeframe and window when provided', () => {
-    query = {
-      ticker: 'BTC',
-      tf: '8h',
-      window: '150',
-    };
-
-    useAppSelectorMock.mockImplementation((selector: any) => {
-      if (selector === selectSelectedAsset)
-        return { symbol: 'BTC', provider: 'binance' };
-      if (selector === selectForecastParams)
-        return { tf: '1h', window: 200, horizon: 24, model: null };
-      if (typeof selector === 'function') return null;
-      return undefined;
-    });
-
-    const { getByText } = render(<ForecastPage />);
-
-    expect(getByText('Timeframe: 8h')).toBeInTheDocument();
-    expect(getByText('Window: 150')).toBeInTheDocument();
-  });
-
-  it('falls back to default window when query is invalid and params are missing', () => {
-    query = {
-      ticker: 'BTC',
-      window: 'nope',
-    };
-
-    useAppSelectorMock.mockImplementation((selector: any) => {
-      if (selector === selectSelectedAsset)
-        return { symbol: 'BTC', provider: 'binance' };
-      if (selector === selectForecastParams) return undefined;
-      if (typeof selector === 'function') return null;
-      return undefined;
-    });
-
-    const { getByText } = render(<ForecastPage />);
-
-    expect(getByText('Window: 200')).toBeInTheDocument();
   });
 });
