@@ -172,7 +172,9 @@ export default function Dashboard() {
           ? 'ready'
           : 'empty';
 
-  const historySeries = bars?.map((bar) => [bar[0], bar[4]] as [number, number]);
+  const historySeries = bars?.map((bar, index) => [index, bar[4]] as [number, number]);
+  const historyValues = bars?.map((bar) => bar[4]) ?? [];
+  const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
 
   return (
     <div className="min-h-screen bg-primary">
@@ -208,11 +210,14 @@ export default function Dashboard() {
               />
             </div>
             <div className="flex items-start">
-              <YAxis className="h-96 w-full px-6 text-[#8480C9]" />
+              <YAxis
+                className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
+                values={historyValues}
+              />
 
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex">
-                  <div className="relative h-96 w-[800px] flex-none">
+                  <div className="relative h-96 w-full">
                     {chartState === 'ready' && historySeries ? (
                       viewMode === 'candles' ? (
                         <CandlesChart className="h-96 w-full" bars={bars ?? []} />
@@ -232,7 +237,10 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <XAxis className="text-[#8480C9]" />
+                <XAxis
+                  className="text-[#8480C9]"
+                  timestamps={historyTimestamps}
+                />
               </div>
             </div>
           </div>

@@ -69,7 +69,7 @@ describe('ForecastPage', () => {
     expect(container.firstChild).toBeTruthy();
     expect(container.textContent).toContain('Selected asset');
     expect(container.textContent).toContain('Parameters');
-    expect(container.textContent).toContain('Factors');
+    expect(container.textContent).toContain('No factors yet');
   });
 
   it('navigates back to dashboard when back button is clicked', () => {

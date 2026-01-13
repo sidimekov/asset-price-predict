@@ -99,4 +99,121 @@ describe('ParamsPanel', () => {
     expect(onHorizonChange).not.toHaveBeenCalled();
     expect(onTimeframeChange).not.toHaveBeenCalled();
   });
+
+  it('renders loading skeletons', () => {
+    const { container } = render(<ParamsPanel state="loading" />);
+    expect(container.querySelectorAll('.param-panel-item').length).toBeGreaterThan(0);
+  });
+
+  it('renders error state', () => {
+    render(<ParamsPanel state="error" />);
+    expect(screen.getByText('Error loading parameters')).toBeInTheDocument();
+  });
+
+  it('disables predict when params are incomplete', () => {
+    render(
+      <ParamsPanel
+        state="success"
+        onPredict={vi.fn()}
+        selectedTimeframe=""
+        selectedWindow={0}
+        selectedHorizon={0}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: /predict/i });
+    expect(button).toBeDisabled();
+    expect(
+      screen.getByText('Select timeframe, window, and horizon to run a forecast.'),
+    ).toBeInTheDocument();
+  });
+
+  it('allows clearing model to default', () => {
+    const onModelChange = vi.fn();
+    render(
+      <ParamsPanel
+        state="success"
+        onPredict={vi.fn()}
+        selectedTimeframe="1h"
+        selectedWindow={200}
+        selectedHorizon={24}
+        selectedModel="client"
+        onModelChange={onModelChange}
+      />,
+    );
+
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[1], { target: { value: '' } });
+    expect(onModelChange).toHaveBeenCalledWith(null);
+  });
+
+  it('updates internal values when controlled props are not provided', () => {
+    render(<ParamsPanel state="success" onPredict={vi.fn()} />);
+
+    const selects = screen.getAllByRole('combobox');
+    const numberInputs = screen.getAllByRole('spinbutton');
+
+    expect(selects[0]).toHaveValue('1h');
+    expect(numberInputs[0]).toHaveValue(200);
+    expect(numberInputs[1]).toHaveValue(24);
+
+    fireEvent.change(selects[0], { target: { value: '8h' } });
+    fireEvent.change(numberInputs[0], { target: { value: '180' } });
+    fireEvent.change(numberInputs[1], { target: { value: '12' } });
+
+    expect(selects[0]).toHaveValue('8h');
+    expect(numberInputs[0]).toHaveValue(180);
+    expect(numberInputs[1]).toHaveValue(12);
+  });
+
+  it('coerces invalid numeric input to 0', () => {
+    const onWindowChange = vi.fn();
+    const onHorizonChange = vi.fn();
+
+    render(
+      <ParamsPanel
+        state="success"
+        onPredict={vi.fn()}
+        onWindowChange={onWindowChange}
+        onHorizonChange={onHorizonChange}
+      />,
+    );
+
+    const numberInputs = screen.getAllByRole('spinbutton');
+    fireEvent.change(numberInputs[0], { target: { value: '' } });
+    fireEvent.change(numberInputs[1], { target: { value: '' } });
+
+    expect(onWindowChange).toHaveBeenCalledWith(0);
+    expect(onHorizonChange).toHaveBeenCalledWith(0);
+  });
+
+  it('disables predict when onPredict is missing', () => {
+    render(
+      <ParamsPanel
+        state="success"
+        selectedTimeframe="1h"
+        selectedWindow={200}
+        selectedHorizon={24}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: /predict/i });
+    expect(button).toBeDisabled();
+  });
+
+  it('enables predict in readOnly mode even when params are incomplete', () => {
+    render(
+      <ParamsPanel
+        state="success"
+        onPredict={vi.fn()}
+        selectedTimeframe=""
+        selectedWindow={0}
+        selectedHorizon={0}
+        readOnly
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: /predict/i });
+    expect(button).toBeEnabled();
+  });
 });

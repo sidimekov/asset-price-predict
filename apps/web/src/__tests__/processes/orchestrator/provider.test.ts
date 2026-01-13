@@ -1,15 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
+const ORIGINAL_ENV = process.env.NODE_ENV;
+
 describe('mapProviderToMarket', () => {
-  it('maps known providers', () => {
-    expect(mapProviderToMarket('binance')).toBe('BINANCE');
-    expect(mapProviderToMarket('moex')).toBe('MOEX');
-    expect(mapProviderToMarket('mock')).toBe('MOCK');
-    expect(mapProviderToMarket('custom')).toBe('MOCK');
+  beforeEach(() => {
+    process.env.NODE_ENV = ORIGINAL_ENV;
   });
 
-  it('returns null for unknown provider', () => {
+  afterEach(() => {
+    process.env.NODE_ENV = ORIGINAL_ENV;
+  });
+
+  it('returns MOCK in non-production', () => {
+    process.env.NODE_ENV = 'development';
+    expect(mapProviderToMarket('binance')).toBe('MOCK');
+    expect(mapProviderToMarket('moex')).toBe('MOCK');
+  });
+
+  it('maps providers in production', () => {
+    process.env.NODE_ENV = 'production';
+    expect(mapProviderToMarket('binance')).toBe('BINANCE');
+    expect(mapProviderToMarket('moex')).toBe('MOEX');
     expect(mapProviderToMarket('unknown')).toBeNull();
   });
 });
