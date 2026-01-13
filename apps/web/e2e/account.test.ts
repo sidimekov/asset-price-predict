@@ -1,16 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { withBasePath } from './utils/basePath';
+import { buildUrl } from './utils/basePath';
 
 test.describe('Account Page', () => {
   test('should load and show profile information', async ({ page }) => {
-    await page.goto(withBasePath('/account'));
+    await page.goto(buildUrl('/account'));
     await expect(page.getByText('Username:')).toBeVisible();
   });
 
   test('should display action buttons for account management', async ({
     page,
   }) => {
-    await page.goto(withBasePath('/account'));
+    await page.goto(buildUrl('/account'));
     await expect(
       page.getByRole('button', { name: 'Edit photo' }),
     ).toBeVisible();
@@ -23,16 +23,21 @@ test.describe('Account Page', () => {
   test('should show not implemented alerts when clicking buttons', async ({
     page,
   }) => {
-    await page.goto(withBasePath('/account'));
+    await page.goto(buildUrl('/account'));
 
     await expect(
       page.getByRole('button', { name: 'Edit photo' }),
     ).toBeVisible();
-    const dialogPromise = page.waitForEvent('dialog');
+    const button = page.getByRole('button', { name: 'Edit photo' });
+    await button.scrollIntoViewIfNeeded();
 
-    await page.getByRole('button', { name: 'Edit photo' }).click();
-    const dialog = await dialogPromise;
-    expect(dialog.message()).toContain('Not implemented');
-    await dialog.dismiss();
+    let dialogMessage = '';
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message();
+      dialog.dismiss();
+    });
+
+    await button.click();
+    await expect.poll(() => dialogMessage).toContain('Not implemented');
   });
 });

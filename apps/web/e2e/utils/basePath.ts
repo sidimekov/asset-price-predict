@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 function readEnvFile(filePath: string): Record<string, string> {
   if (!fs.existsSync(filePath)) return {};
@@ -37,7 +38,8 @@ function resolveBasePath(): string {
   const fromEnv = process.env.NEXT_PUBLIC_BASE_PATH;
   if (fromEnv) return normalizeBasePath(fromEnv);
 
-  const envPath = path.resolve(__dirname, '..', '..', '.env.local');
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const envPath = path.resolve(currentDir, '..', '..', '.env.local');
   const env = readEnvFile(envPath);
   if (env.NEXT_PUBLIC_BASE_PATH) {
     return normalizeBasePath(env.NEXT_PUBLIC_BASE_PATH);
@@ -50,4 +52,12 @@ export const basePath = resolveBasePath();
 
 export function withBasePath(route: string): string {
   return `${basePath}${route}`;
+}
+
+export function buildUrl(route: string): string {
+  const baseUrl =
+    process.env.PLAYWRIGHT_BASE_URL ||
+    process.env.BASE_URL ||
+    'http://localhost:3000';
+  return `${baseUrl}${withBasePath(route)}`;
 }

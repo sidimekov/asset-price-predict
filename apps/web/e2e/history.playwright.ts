@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { withBasePath } from './utils/basePath';
+import { buildUrl } from './utils/basePath';
 
 const seedHistory = [
   {
@@ -23,7 +23,7 @@ test.describe('History Page', () => {
     await page.addInitScript((items) => {
       window.localStorage.setItem('localForecasts', JSON.stringify(items));
     }, seedHistory);
-    await page.goto(withBasePath('/history'));
+    await page.goto(buildUrl('/history'));
 
     // Дождались самой таблицы
     const table = page.locator('table');
@@ -50,7 +50,7 @@ test.describe('History Page', () => {
     await page.addInitScript((items) => {
       window.localStorage.setItem('localForecasts', JSON.stringify(items));
     }, seedHistory);
-    await page.goto(withBasePath('/history'));
+    await page.goto(buildUrl('/history'));
     const input = page.getByPlaceholder('Search');
     await input.fill('btc');
     await expect(input).toHaveValue('btc');
