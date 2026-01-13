@@ -16,6 +16,7 @@ yarn-error.log*
 .tmp/
 
 # Env & secrets
+apps/web/.env
 .env
 .env.*
 !.env.example
