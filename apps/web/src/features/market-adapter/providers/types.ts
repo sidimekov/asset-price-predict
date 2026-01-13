@@ -10,3 +10,7 @@ export interface ProviderRequestBase {
   timeframe: Timeframe;
   limit: number;
 }
+
+export type ProviderCallOpts = {
+  signal?: AbortSignal;
+};
