@@ -65,6 +65,7 @@ tsconfig.tsbuildinfo
 **/*.tsbuildinfo
 
 # Images / data caches
+/data
 /data/cache/
 **/.cache/
 
