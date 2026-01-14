@@ -68,19 +68,24 @@ export default function Dashboard() {
     provider,
   }: {
     symbol: string;
-    provider: 'binance' | 'moex';
+    provider: 'binance' | 'moex' | 'mock';
   }) => {
-    const normalizedProvider = provider.toUpperCase() as 'BINANCE' | 'MOEX';
+    const normalizedProvider =
+      provider === 'mock'
+        ? 'MOCK'
+        : (provider.toUpperCase() as 'BINANCE' | 'MOEX');
 
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));
 
-    const key = buildTimeseriesKey(
-      normalizedProvider,
-      symbol,
-      DEFAULT_TIMEFRAME,
-    );
-    dispatch(timeseriesRequested({ key }));
+    if (provider !== 'mock') {
+      const key = buildTimeseriesKey(
+        normalizedProvider,
+        symbol,
+        DEFAULT_TIMEFRAME,
+      );
+      dispatch(timeseriesRequested({ key }));
+    }
 
     setIsCatalogOpen(false);
     setModalQuery('');
