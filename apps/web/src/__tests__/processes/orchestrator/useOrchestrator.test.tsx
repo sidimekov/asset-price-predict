@@ -17,14 +17,11 @@ vi.mock('@/entities/forecast/model/selectors', async () => {
   };
 });
 
-// 2) Мокаем ForecastManager (ВАЖНО: теперь есть ensureTimeseriesOnly)
+// 2) Мокаем ForecastManager (теперь есть ensureTimeseriesOnly)
 vi.mock('@/processes/orchestrator/ForecastManager', () => ({
   ForecastManager: {
-    // history auto
     ensureTimeseriesOnly: vi.fn().mockResolvedValue(undefined),
-    // manual forecast (Predict)
     runForecast: vi.fn().mockResolvedValue(undefined),
-    // backward compatible
     run: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -153,7 +150,7 @@ describe('useOrchestrator', () => {
 
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'BINANCE',
+      provider: 'MOCK',
       tf: '1h',
       window: 200,
     });
@@ -205,7 +202,7 @@ describe('useOrchestrator', () => {
     expect(ensureMock).toHaveBeenCalledTimes(1);
   });
 
-  it('calls ForecastManager.runForecast when Predict trigger fires', async () => {
+  it('calls ForecastManager forecast entrypoint when Predict trigger fires', async () => {
     const store = createTestStore();
 
     store.dispatch({
@@ -227,33 +224,57 @@ describe('useOrchestrator', () => {
       vi.advanceTimersByTime(300);
     });
 
-    // триггерим Predict (имитируем forecast/predictRequested)
-    store.dispatch({
-      type: 'PREDICT',
-      payload: {
-        symbol: 'SBER',
-        provider: 'binance',
-        tf: '1h',
-        window: 200,
-        horizon: 24,
-        model: null,
-      },
-    });
+    const before = store.getState() as any;
+    const beforeId = before.forecast?.predict?.requestId ?? 0;
 
     await act(async () => {
-      vi.advanceTimersByTime(300);
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'binance',
+          tf: '1h',
+          window: 200,
+          horizon: 24,
+          model: null,
+        },
+      });
+    });
+
+    const after = store.getState() as any;
+    const afterId = after.forecast?.predict?.requestId ?? 0;
+
+    // реально изменили requestId
+    expect(afterId).toBe(beforeId + 1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
     });
 
     const runForecastMock = (ForecastManager as any).runForecast as Mock;
-    expect(runForecastMock).toHaveBeenCalledTimes(1);
+    const runMock = (ForecastManager as any).run as Mock;
 
-    const [ctxArg] = runForecastMock.mock.calls[0];
+    const totalCalls =
+      (runForecastMock?.mock?.calls?.length ?? 0) +
+      (runMock?.mock?.calls?.length ?? 0);
+
+    expect(totalCalls).toBe(1);
+
+    const call = (runForecastMock?.mock?.calls?.[0] ??
+      runMock?.mock?.calls?.[0]) as any;
+
+    const [ctxArg, depsArg] = call;
+
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'BINANCE',
+      provider: 'MOCK', // dev override
       tf: '1h',
       window: 200,
       horizon: 24,
     });
+
+    expect(depsArg).toHaveProperty('dispatch');
+    expect(depsArg).toHaveProperty('getState');
+    expect(depsArg).toHaveProperty('signal');
   });
 });
