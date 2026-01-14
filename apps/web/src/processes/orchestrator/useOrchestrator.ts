@@ -1,5 +1,4 @@
 'use client';
-/* global AbortController */
 
 import { useEffect, useRef } from 'react';
 import { useStore } from 'react-redux';
@@ -15,12 +14,16 @@ import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
-function mapProviderToMarket(provider: string): MarketDataProvider | null {
-  switch (provider) {
+function mapProviderToMarket(
+  provider: string,
+): MarketDataProvider | 'MOCK' | null {
+  switch (provider.toLowerCase()) {
     case 'binance':
       return 'BINANCE';
     case 'moex':
       return 'MOEX';
+    case 'mock':
+      return 'MOCK';
     default:
       return null;
   }
