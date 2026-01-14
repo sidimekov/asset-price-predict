@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/shared/store';
 import type { CatalogItem } from '@shared/types/market';
 
-export type Provider = 'binance' | 'moex';
+export type Provider = 'binance' | 'moex' | 'mock';
 
 export type RecentItem = {
   symbol: string;
@@ -126,14 +126,19 @@ export const {
 
 export const selectCurrentProvider = (state: RootState): Provider =>
   state.catalog.provider;
+
 export const selectCatalogResults = (state: RootState): CatalogItem[] =>
   state.catalog.results;
+
 export const selectIsSearching = (state: RootState): boolean =>
   state.catalog.loading;
+
 export const selectCatalogError = (state: RootState): string | null =>
   state.catalog.error;
+
 export const selectRecent = (state: RootState): RecentItem[] =>
   state.catalog.recent;
+
 export const selectSelectedAsset = (state: RootState) => state.catalog.selected;
 
 export default catalogSlice.reducer;
