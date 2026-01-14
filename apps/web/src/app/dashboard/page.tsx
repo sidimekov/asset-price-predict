@@ -99,7 +99,7 @@ export default function Dashboard() {
     router.push(`/forecast/0${query}`);
   };
 
-  const handleRemoveAsset = (symbol: string, provider?: string) => {
+  const handleRemoveAsset = (symbol: string) => {
     const asset = recentAssets.find((a) => a.symbol === symbol);
     if (asset) {
       dispatch(
