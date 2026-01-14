@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
 import ParamsPanel from '@/features/params/ParamsPanel';
-import FactorsTable from '@/features/factors/FactorsTable';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
@@ -22,9 +21,7 @@ import {
   buildTimeseriesKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 import { DEFAULT_TIMEFRAME } from '@/config/market';
-import mockAssets from '@/mocks/recentAssets.json';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
-import ForecastShapePlaceholder from '@/widgets/chart/ForecastShapePlaceholder';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
