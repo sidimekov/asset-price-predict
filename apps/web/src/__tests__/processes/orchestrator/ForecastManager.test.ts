@@ -334,4 +334,349 @@ describe('ForecastManager (new orchestrator)', () => {
     expect(orchestratorState).toBeDefined();
     expect(['idle', 'running', 'error']).toContain(orchestratorState.status);
   });
+  it('recomputes forecast even if forecast already exists in store (current behavior)', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'CACHED' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    const bars: Bar[] = [[1_000_000, 1, 2, 0.5, 1.5, 100]];
+
+    const fcKey = makeForecastKey({
+      symbol: ctx.symbol,
+      tf: ctx.tf,
+      horizon: ctx.horizon,
+      model: ctx.model ?? undefined,
+    });
+
+    // forecast уже есть, но ожидаем, что run пересчитает
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: { [tsKey]: { bars, fetchedAt: new Date().toISOString() } },
+      },
+      forecast: {
+        byKey: {
+          [fcKey]: {
+            p50: [[2_000_000, 123]],
+            meta: { runtime_ms: 1, backend: 'local', model_ver: 'x' },
+          },
+        },
+        loadingByKey: {},
+        errorByKey: {},
+      },
+    } as any);
+
+    inferForecastMock.mockResolvedValue({
+      p50: [10, 20],
+      p10: [9, 19],
+      p90: [11, 21],
+      diag: { runtime_ms: 10, backend: 'mock', model_ver: 'v1' },
+    });
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    expect(inferForecastMock).toHaveBeenCalledTimes(1);
+    expect(forecastReceived).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles inferForecast throw: dispatches forecastFailed, no history save, no throw outward', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'INFERR' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    const bars: Bar[] = [
+      [1_000_000, 1, 2, 0.5, 1.5, 100],
+      [2_000_000, 1.5, 2.5, 1, 2, 120],
+    ];
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: { [tsKey]: { bars, fetchedAt: new Date().toISOString() } },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    inferForecastMock.mockRejectedValue(new Error('infer boom'));
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    const fcKey = makeForecastKey({
+      symbol: ctx.symbol,
+      tf: ctx.tf,
+      horizon: ctx.horizon,
+      model: ctx.model ?? undefined,
+    });
+
+    expect(forecastFailed).toHaveBeenCalledWith({
+      key: fcKey,
+      error: 'infer boom',
+    });
+
+    expect(historySaveMock).not.toHaveBeenCalled();
+    expect(orchestratorState.status).toBe('error');
+  });
+  it('ensureTimeseriesOnly loads timeseries when stale and does not touch forecast', async () => {
+    const ctx = {
+      symbol: 'TSONLY' as any,
+      provider: 'MOEX' as any,
+      tf: '1h' as any,
+      window: 200,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(true);
+
+    mockGetState.mockReturnValue({
+      timeseries: { byKey: {} },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    const bars: Bar[] = [[1_000_000, 1, 2, 0.5, 1.5, 100]];
+
+    getMarketTimeseriesMock.mockResolvedValue({
+      bars,
+      symbol: ctx.symbol,
+      provider: ctx.provider,
+      timeframe: ctx.tf,
+      source: 'NETWORK',
+    });
+
+    await ForecastManager.ensureTimeseriesOnly(ctx as any, makeDeps());
+
+    expect(timeseriesRequested).toHaveBeenCalledWith({ key: tsKey });
+    expect(timeseriesReceived).toHaveBeenCalledWith({ key: tsKey, bars });
+
+    // forecast не трогаем
+    expect(forecastRequested).not.toHaveBeenCalled();
+    expect(inferForecastMock).not.toHaveBeenCalled();
+    expect(historySaveMock).not.toHaveBeenCalled();
+  });
+  it('treats MarketAdapter ABORTED as cancellation: no forecastFailed, no infer', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'ABRT2' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(true);
+
+    mockGetState.mockReturnValue({
+      timeseries: { byKey: {} },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    getMarketTimeseriesMock.mockResolvedValue({
+      code: 'ABORTED',
+      message: 'aborted',
+    });
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    const fcKey = makeForecastKey({
+      symbol: ctx.symbol,
+      tf: ctx.tf,
+      horizon: ctx.horizon,
+      model: ctx.model ?? undefined,
+    });
+
+    expect(forecastCancelled).toHaveBeenCalledWith(fcKey);
+    expect(forecastFailed).not.toHaveBeenCalled();
+    expect(inferForecastMock).not.toHaveBeenCalled();
+    expect(historySaveMock).not.toHaveBeenCalled();
+    expect(orchestratorState.status).toBe('idle');
+  });
+
+  it('builds tail size at least 128 for inference (branch: max(h*2,128))', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'TAIL128' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 300,
+      horizon: 2, // h*2=4, значит должно быть 128
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    const bars: Bar[] = Array.from({ length: 200 }, (_, i) => {
+      const ts = 1_000_000 + i * 60_000;
+      return [ts, 1, 2, 0.5, 1.5 + i, 100] as any;
+    });
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: { [tsKey]: { bars, fetchedAt: new Date().toISOString() } },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    inferForecastMock.mockResolvedValue({
+      p50: [1, 2],
+      p10: [],
+      p90: [],
+      diag: { runtime_ms: 1, backend: 'mock', model_ver: 'v' },
+    });
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    expect(inferForecastMock).toHaveBeenCalledTimes(1);
+    const [tailArg] = inferForecastMock.mock.calls[0];
+    expect(Array.isArray(tailArg)).toBe(true);
+    expect(tailArg.length).toBe(128);
+  });
+  it('handles empty bars -> inferForecast throws -> forecastFailed and status error', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'EMPTY' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: { [tsKey]: { bars: [], fetchedAt: new Date().toISOString() } },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    // inferForecast при пустом tail обычно кидает (в зависимости от реализации)
+    inferForecastMock.mockRejectedValue(
+      new Error('Invalid tail or horizon for inference'),
+    );
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    const fcKey = makeForecastKey({
+      symbol: ctx.symbol,
+      tf: ctx.tf,
+      horizon: ctx.horizon,
+      model: ctx.model ?? undefined,
+    });
+
+    expect(forecastFailed).toHaveBeenCalledWith({
+      key: fcKey,
+      error: 'Invalid tail or horizon for inference',
+    });
+
+    expect(historySaveMock).not.toHaveBeenCalled();
+    expect(orchestratorState.status).toBe('error');
+  });
+  // it('does not call inferForecast if forecast already exists in store', async () => {
+  //   const ctx: OrchestratorInput = {
+  //     symbol: 'CACHED' as any,
+  //     provider: 'MOEX' as any,
+  //     tf: '1h',
+  //     window: 200,
+  //     horizon: 2,
+  //     model: null,
+  //   };
+  //
+  //   const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+  //   (buildTimeseriesKey as any).mockReturnValue(tsKey);
+  //   (isTimeseriesStaleByKey as any).mockReturnValue(false);
+  //
+  //   const bars: Bar[] = [[1_000_000, 1, 2, 0.5, 1.5, 100]];
+  //
+  //   const fcKey = makeForecastKey({
+  //     symbol: ctx.symbol,
+  //     tf: ctx.tf,
+  //     horizon: ctx.horizon,
+  //     model: ctx.model ?? undefined,
+  //   });
+  //
+  //   mockGetState.mockReturnValue({
+  //     timeseries: {
+  //       byKey: { [tsKey]: { bars, fetchedAt: new Date().toISOString() } },
+  //     },
+  //     forecast: {
+  //       byKey: {
+  //         [fcKey]: {
+  //           p50: [[2_000_000, 123]],
+  //           meta: { runtime_ms: 1, backend: 'local', model_ver: 'x' },
+  //         },
+  //       },
+  //       loadingByKey: {},
+  //       errorByKey: {},
+  //     },
+  //   } as any);
+  //
+  //   await ForecastManager.run(ctx, makeDeps());
+  //
+  //   expect(inferForecastMock).not.toHaveBeenCalled();
+  //   expect(forecastReceived).toHaveBeenCalledTimes(1);
+  //   expect(historySaveMock).not.toHaveBeenCalled();
+  //   expect(orchestratorState.status).toBe('idle');
+  // });
+  it('treats inferForecast AbortError as cancellation', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'ABRT_INF' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    const bars: Bar[] = [[1_000_000, 1, 2, 0.5, 1.5, 100]];
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: { [tsKey]: { bars, fetchedAt: new Date().toISOString() } },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    const e = new Error('Aborted');
+    (e as any).name = 'AbortError';
+    inferForecastMock.mockRejectedValue(e);
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    const fcKey = makeForecastKey({
+      symbol: ctx.symbol,
+      tf: ctx.tf,
+      horizon: ctx.horizon,
+      model: ctx.model ?? undefined,
+    });
+
+    expect(forecastCancelled).toHaveBeenCalledWith(fcKey);
+    expect(forecastFailed).not.toHaveBeenCalled();
+    expect(historySaveMock).not.toHaveBeenCalled();
+    expect(orchestratorState.status).toBe('idle');
+  });
 });
