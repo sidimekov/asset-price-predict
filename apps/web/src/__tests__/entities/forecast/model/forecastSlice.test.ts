@@ -87,4 +87,26 @@ describe('forecastSlice', () => {
 
     expect(state).toEqual(getInitial());
   });
+  it('forecastRequested не затирает существующий прогноз по ключу', () => {
+    const initial = getInitial();
+
+    const withEntry = forecastReducer(
+      initial,
+      forecastReceived({ key: 'k', entry: sampleEntry }),
+    );
+
+    const state = forecastReducer(withEntry, forecastRequested('k'));
+
+    expect(state.byKey['k']).toEqual(sampleEntry); // не потерять старый прогноз
+    expect(state.loadingByKey['k']).toBe(true);
+    expect(state.errorByKey['k']).toBeNull();
+  });
+
+  it('clearForecast на отсутствующем ключе не ломает стейт', () => {
+    const initial = getInitial();
+    const state = forecastReducer(initial, clearForecast('missing'));
+
+    // должно остаться как было
+    expect(state).toEqual(initial);
+  });
 });

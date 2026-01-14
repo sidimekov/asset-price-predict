@@ -88,9 +88,7 @@ export class ForecastManager {
         { dispatch, getState, signal },
       );
     } catch (err: any) {
-      // ensureTimeseries уже диспатчит timeseriesFailed
-      // здесь ничего дополнительно не делаем
-      if (signal?.aborted || isAbortError(err)) return;
+      if (isAbortError(err) || signal?.aborted) return;
       if (process.env.NODE_ENV !== 'production') {
         console.error('[Orchestrator] ensureTimeseriesOnly error', err);
       }
@@ -313,6 +311,11 @@ export class ForecastManager {
 
     if ('code' in adapterRes) {
       const message = adapterRes.message || 'Failed to load timeseries';
+
+      if ((adapterRes as any).code === 'ABORTED') {
+        throw makeAbortError();
+      }
+
       dispatch(timeseriesFailed({ key: tsKey as any, error: message }));
       throw new Error(message);
     }
