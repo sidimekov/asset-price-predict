@@ -9,7 +9,6 @@ export const normalizeCatalogItem = (
   if (provider === 'BINANCE') {
     const symbol = raw.symbol || `${raw.baseAsset}${raw.quoteAsset}`;
     if (!symbol) return null;
-
     return {
       symbol: symbol.toUpperCase(),
       name: raw.baseAsset
@@ -25,7 +24,6 @@ export const normalizeCatalogItem = (
   if (provider === 'MOEX') {
     const symbol = (raw.SECID || raw.symbol || '').toString().trim();
     if (!symbol) return null;
-
     return {
       symbol,
       name: raw.SHORTNAME || raw.NAME || symbol,
@@ -41,12 +39,13 @@ export const normalizeCatalogItem = (
     raw.symbol &&
     raw.name
   ) {
+    // Для MOCK используем данные как есть, если они предоставлены
     return {
       symbol: String(raw.symbol).toUpperCase(),
       name: String(raw.name),
-      exchange: provider === 'MOCK' ? 'MOCKEX' : 'CUSTOM',
-      assetClass: 'other',
-      currency: 'USD',
+      exchange: raw.exchange || (provider === 'MOCK' ? 'MOCKEX' : 'CUSTOM'),
+      assetClass: raw.assetClass || 'other',
+      currency: raw.currency || 'USD',
       provider,
     };
   }
