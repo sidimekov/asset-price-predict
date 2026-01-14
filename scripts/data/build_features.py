@@ -11,21 +11,21 @@ from typing import Iterable, List, Dict, Any, Optional, Tuple
 
 @dataclass
 class FeatureConfig:
-    ema_span: int = 10
-    vol_window: int = 20
     horizon: int = 5
     target: str = "log_return"  # or "delta_price"
 
 
 FEATURE_COLUMNS = [
-    "close_lag_1",
-    "close_lag_3",
-    "close_lag_5",
-    "log_return",
-    "ema",
-    "rolling_vol",
-    "day_of_week",
-    "month",
+    "last_close",
+    "mean_5",
+    "mean_20",
+    "std_20",
+    "momentum_3",
+    "momentum_8",
+    "ema_5",
+    "ema_10",
+    "ret_mean_5",
+    "ret_std_20",
 ]
 
 
@@ -33,14 +33,14 @@ def _read_bars(path: Path) -> List[List[Any]]:
     return json.loads(path.read_text())
 
 
-def _ema_series(values: List[float], span: int) -> List[float]:
+def _ema_window(values: List[float], span: int) -> float:
     if not values:
-        return []
+        return 0.0
     alpha = 2 / (span + 1)
-    ema_vals = [values[0]]
+    ema = values[0]
     for v in values[1:]:
-        ema_vals.append(alpha * v + (1 - alpha) * ema_vals[-1])
-    return ema_vals
+        ema = alpha * v + (1 - alpha) * ema
+    return ema
 
 
 def _log_return(prev: float, curr: float) -> float:
@@ -61,11 +61,6 @@ def _rolling_std(values: List[float], window: int) -> List[Optional[float]]:
         var = sum((v - mean) ** 2 for v in w) / window
         out.append(sqrt(var))
     return out
-
-
-def _time_parts(ts_ms: int) -> Tuple[int, int]:
-    dt = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
-    return dt.weekday(), dt.month
 
 
 def _iter_json_files(root: Path) -> Iterable[Path]:
@@ -91,30 +86,36 @@ def build_features_for_bars(
     closes = [float(b[4]) for b in bars]
     timestamps = [int(b[0]) for b in bars]
 
-    log_returns = [0.0]
+    returns = [0.0]
     for i in range(1, len(closes)):
-        log_returns.append(_log_return(closes[i - 1], closes[i]))
+        prev = closes[i - 1]
+        curr = closes[i]
+        returns.append(0.0 if prev == 0 else (curr - prev) / prev)
 
-    ema_vals = _ema_series(closes, cfg.ema_span)
-    vol_vals = _rolling_std(log_returns, cfg.vol_window)
-
-    min_idx = max(5, 1, cfg.ema_span, cfg.vol_window)
+    min_idx = 20
     rows: List[Dict[str, Any]] = []
     for i in range(min_idx, len(closes) - cfg.horizon):
-        if vol_vals[i] is None:
-            continue
-        dow, month = _time_parts(timestamps[i])
+        mean_5 = sum(closes[i - 4 : i + 1]) / 5
+        mean_20 = sum(closes[i - 19 : i + 1]) / 20
+        std_20_window = closes[i - 19 : i + 1]
+        var_20 = sum((v - mean_20) ** 2 for v in std_20_window) / 20
+        ret_5 = returns[i - 5 : i]
+        ret_20 = returns[i - 20 : i]
+        mean_ret_20 = sum(ret_20) / 20
+        var_ret_20 = sum((v - mean_ret_20) ** 2 for v in ret_20) / 20
         row = {
             "ts": timestamps[i],
             "close": closes[i],
-            "close_lag_1": closes[i - 1],
-            "close_lag_3": closes[i - 3],
-            "close_lag_5": closes[i - 5],
-            "log_return": log_returns[i],
-            "ema": ema_vals[i],
-            "rolling_vol": vol_vals[i],
-            "day_of_week": dow,
-            "month": month,
+            "last_close": closes[i],
+            "mean_5": mean_5,
+            "mean_20": mean_20,
+            "std_20": sqrt(var_20),
+            "momentum_3": closes[i] - closes[i - 2],
+            "momentum_8": closes[i] - closes[i - 7],
+            "ema_5": _ema_window(closes[i - 4 : i + 1], 5),
+            "ema_10": _ema_window(closes[i - 9 : i + 1], 10),
+            "ret_mean_5": sum(ret_5) / 5,
+            "ret_std_20": sqrt(var_ret_20),
             "target": _target_value(closes, i, cfg),
         }
         rows.append(row)
@@ -123,8 +124,6 @@ def build_features_for_bars(
         "rows": len(rows),
         "horizon": cfg.horizon,
         "target": cfg.target,
-        "ema_span": cfg.ema_span,
-        "vol_window": cfg.vol_window,
         "features": FEATURE_COLUMNS,
     }
     return rows, meta
@@ -172,15 +171,11 @@ def main() -> None:
     )
     parser.add_argument("--bars", required=True)
     parser.add_argument("--out-dir", required=True)
-    parser.add_argument("--ema-span", type=int, default=10)
-    parser.add_argument("--vol-window", type=int, default=20)
     parser.add_argument("--horizon", type=int, default=5)
     parser.add_argument("--target", choices=["log_return", "delta_price"], default="log_return")
     args = parser.parse_args()
 
     cfg = FeatureConfig(
-        ema_span=args.ema_span,
-        vol_window=args.vol_window,
         horizon=args.horizon,
         target=args.target,
     )
