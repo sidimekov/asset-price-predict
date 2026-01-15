@@ -28,8 +28,8 @@ vi.mock('@/features/market-adapter/cache/ClientTimeseriesCache', () => ({
     set: vi.fn(),
   },
   makeTimeseriesCacheKey: vi.fn(
-      (provider: string, symbol: string, timeframe: string, limit: number) =>
-          `${provider}:${symbol}:${timeframe}:${limit}`,
+    (provider: string, symbol: string, timeframe: string, limit: number) =>
+      `${provider}:${symbol}:${timeframe}:${limit}`,
   ),
 }));
 
@@ -69,12 +69,12 @@ type Bar = [number, number, number, number, number, number?];
 
 // Вспомогательная функция для создания тестовых баров
 const createTestBar = (
-    timestamp: number,
-    open: number,
-    high: number,
-    low: number,
-    close: number,
-    volume?: number,
+  timestamp: number,
+  open: number,
+  high: number,
+  low: number,
+  close: number,
+  volume?: number,
 ): Bar => [timestamp, open, high, low, close, volume];
 
 describe('MarketAdapter - Получение временных рядов (getMarketTimeseries)', () => {
@@ -95,10 +95,10 @@ describe('MarketAdapter - Получение временных рядов (getM
       });
 
       expect(makeTimeseriesCacheKey).toHaveBeenCalledWith(
-          'BINANCE',
-          'BTCUSDT',
-          '1h',
-          100,
+        'BINANCE',
+        'BTCUSDT',
+        '1h',
+        100,
       );
       expect(clientTimeseriesCache.get).toHaveBeenCalled();
       expect(mockFetchBinanceTimeseries).not.toHaveBeenCalled();
@@ -213,7 +213,9 @@ describe('MarketAdapter - Получение временных рядов (getM
     it('обрабатывает данные от CUSTOM провайдера', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
 
-      mockGenerateMockBarsRaw.mockReturnValue([[1000, 1, 2, 0.5, 1.5, 100]] as any);
+      mockGenerateMockBarsRaw.mockReturnValue([
+        [1000, 1, 2, 0.5, 1.5, 100],
+      ] as any);
 
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'CUSTOM',
@@ -236,9 +238,7 @@ describe('MarketAdapter - Получение временных рядов (getM
   describe('Обработка ошибок', () => {
     it('возвращает ошибку провайдера при сбое запроса', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
-      mockFetchBinanceTimeseries.mockRejectedValue(
-          new Error('Network error'),
-      );
+      mockFetchBinanceTimeseries.mockRejectedValue(new Error('Network error'));
 
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'BTCUSDT',

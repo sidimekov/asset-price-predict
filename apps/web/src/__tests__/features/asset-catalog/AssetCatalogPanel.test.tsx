@@ -87,13 +87,17 @@ describe('AssetCatalogPanel', () => {
 
   // Вспомогательная функция для мокания состояний Redux
   const mockReduxState = (
-      overrides: {
-        results?: CatalogItem[];
-        loading?: boolean;
-        error?: string | null;
-        provider?: 'binance' | 'moex';
-        recent?: Array<{ symbol: string; provider: 'binance' | 'moex'; usedAt: string }>;
-      } = {},
+    overrides: {
+      results?: CatalogItem[];
+      loading?: boolean;
+      error?: string | null;
+      provider?: 'binance' | 'moex';
+      recent?: Array<{
+        symbol: string;
+        provider: 'binance' | 'moex';
+        usedAt: string;
+      }>;
+    } = {},
   ) => {
     const {
       results = [],
@@ -134,7 +138,7 @@ describe('AssetCatalogPanel', () => {
 
       expect(screen.getByText('Find Assets')).toBeInTheDocument();
       expect(
-          screen.getByPlaceholderText('Search for asset...'),
+        screen.getByPlaceholderText('Search for asset...'),
       ).toBeInTheDocument();
       expect(screen.getByText('BINANCE')).toBeInTheDocument();
       expect(screen.getByText('MOEX')).toBeInTheDocument();
@@ -174,7 +178,7 @@ describe('AssetCatalogPanel', () => {
       mockReduxState();
 
       render(
-          <AssetCatalogPanel {...defaultProps} onQueryChange={onQueryChange} />,
+        <AssetCatalogPanel {...defaultProps} onQueryChange={onQueryChange} />,
       );
 
       const searchInput = screen.getByPlaceholderText('Search for asset...');
@@ -279,7 +283,7 @@ describe('AssetCatalogPanel', () => {
 
       // Проверяем что чекбоксы сброшены
       const checkboxes = screen.getAllByRole('checkbox');
-      checkboxes.forEach(checkbox => {
+      checkboxes.forEach((checkbox) => {
         expect(checkbox).not.toBeChecked();
       });
     });
@@ -297,7 +301,7 @@ describe('AssetCatalogPanel', () => {
 
       // Проверяем что все чекбоксы выбраны
       const checkboxes = screen.getAllByRole('checkbox');
-      checkboxes.forEach(checkbox => {
+      checkboxes.forEach((checkbox) => {
         expect(checkbox).toBeChecked();
       });
     });
@@ -352,12 +356,12 @@ describe('AssetCatalogPanel', () => {
       mockReduxState({ results: [mockCatalogItems[0]] });
 
       render(
-          <AssetCatalogPanel
-              {...defaultProps}
-              onSelect={onSelect}
-              onClose={onClose}
-              query="BTC"
-          />,
+        <AssetCatalogPanel
+          {...defaultProps}
+          onSelect={onSelect}
+          onClose={onClose}
+          query="BTC"
+        />,
       );
 
       const firstResult = screen.getByText('BTCUSDT');
@@ -388,12 +392,12 @@ describe('AssetCatalogPanel', () => {
       mockReduxState({ results: mockCatalogItems });
 
       render(
-          <AssetCatalogPanel
-              {...defaultProps}
-              onSelect={onSelect}
-              onClose={onClose}
-              query="BTC"
-          />,
+        <AssetCatalogPanel
+          {...defaultProps}
+          onSelect={onSelect}
+          onClose={onClose}
+          query="BTC"
+        />,
       );
 
       // Не выбираем элемент, пытаемся добавить
@@ -500,7 +504,9 @@ describe('AssetCatalogPanel', () => {
       const filterButton = screen.getByLabelText('Фильтры');
       fireEvent.click(filterButton);
 
-      const reverseOrderRadio = screen.getByLabelText('The reverse order (Z → A)');
+      const reverseOrderRadio = screen.getByLabelText(
+        'The reverse order (Z → A)',
+      );
       fireEvent.click(reverseOrderRadio);
 
       expect(reverseOrderRadio).toBeChecked();
@@ -513,7 +519,9 @@ describe('AssetCatalogPanel', () => {
 
       render(<AssetCatalogPanel {...defaultProps} />);
 
-      expect(screen.getByText(`${mockCatalogItems.length} found`)).toBeInTheDocument();
+      expect(
+        screen.getByText(`${mockCatalogItems.length} found`),
+      ).toBeInTheDocument();
     });
 
     it('отображает количество активных фильтров', () => {
