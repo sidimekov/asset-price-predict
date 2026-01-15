@@ -29,7 +29,9 @@ describe('baseQuery', () => {
     fetchBaseQueryMock.mockReturnValue(rawQuery);
 
     const { baseQuery } = await import('@/shared/networking/baseQuery');
-    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    const debugSpy = vi
+      .spyOn(console, 'debug')
+      .mockImplementation(() => undefined);
 
     const result = await baseQuery('/status', {} as never, {} as never);
 
@@ -37,8 +39,17 @@ describe('baseQuery', () => {
       data: { ok: true },
       meta: { response: { status: 200 } },
     });
-    expect(rawQuery).toHaveBeenCalledWith('/status', expect.anything(), expect.anything());
-    expect(debugSpy).toHaveBeenCalledWith('[Networking]', 'GET', '/status', 200);
+    expect(rawQuery).toHaveBeenCalledWith(
+      '/status',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(debugSpy).toHaveBeenCalledWith(
+      '[Networking]',
+      'GET',
+      '/status',
+      200,
+    );
 
     debugSpy.mockRestore();
   });
@@ -51,7 +62,9 @@ describe('baseQuery', () => {
     fetchBaseQueryMock.mockReturnValue(rawQuery);
 
     const { baseQuery } = await import('@/shared/networking/baseQuery');
-    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    const debugSpy = vi
+      .spyOn(console, 'debug')
+      .mockImplementation(() => undefined);
 
     const result = await baseQuery(
       { url: '/fail', method: 'post' },
