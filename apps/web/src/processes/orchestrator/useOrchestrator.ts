@@ -21,7 +21,7 @@ function mapProviderToMarket(
   // DEV override (временно): всегда моковые таймсерии
   if (process.env.NODE_ENV !== 'production') return 'MOCK';
 
-  switch (provider) {
+  switch (provider.toLowerCase()) {
     case 'binance':
       return 'BINANCE';
     case 'moex':
@@ -40,14 +40,12 @@ export function useOrchestrator() {
   const selected = useAppSelector(selectSelectedAsset);
   const paramsFromStore = useAppSelector(selectForecastParams);
 
-  // DEV-only дефолты (чтобы не блокировать разработку страниц)
   const params =
     paramsFromStore ??
     (process.env.NODE_ENV !== 'production'
       ? { tf: '1h', window: 200, horizon: 24, model: null }
       : undefined);
 
-  // predict trigger: слушаем requestId
   const predictRequestId = useAppSelector(
     (s: RootState) => (s as any).forecast?.predict?.requestId ?? 0,
   );
@@ -63,20 +61,14 @@ export function useOrchestrator() {
     model?: string | null;
   } | null;
 
-  // --- refs for timeseries auto ---
   const tsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tsLastSignatureRef = useRef<string | null>(null);
   const tsAbortRef = useRef<AbortController | null>(null);
 
-  // --- refs for forecast manual ---
   const fcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fcLastRequestIdRef = useRef<number>(0);
   const fcAbortRef = useRef<AbortController | null>(null);
 
-  /**
-   * AUTO timeseries:
-   * selected + params(tf/window) -> ensureTimeseriesOnly()
-   */
   useEffect(() => {
     if (!selected || !params) return;
 
@@ -92,7 +84,6 @@ export function useOrchestrator() {
     if (!Number.isFinite(windowNum) || windowNum <= 0) return;
 
     const signature = `${providerNorm}:${symbol}:${tf}:${windowNum}`;
-
     if (signature === tsLastSignatureRef.current) return;
     tsLastSignatureRef.current = signature;
 
@@ -136,16 +127,11 @@ export function useOrchestrator() {
     };
   }, [dispatch, store, selected, params]);
 
-  /**
-   * B) MANUAL forecast:
-   * реагируем только на predictRequested (requestId меняется)
-   */
   useEffect(() => {
     if (!predictRequestId) return;
     if (predictRequestId === fcLastRequestIdRef.current) return;
     fcLastRequestIdRef.current = predictRequestId;
 
-    // берём запрос, если он есть; иначе fallback на selected+params
     const req = predictRequest;
 
     const symbol = req?.symbol ?? selected?.symbol;

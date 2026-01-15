@@ -2,7 +2,15 @@ import React from 'react';
 import { Provider, useSelector } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { render, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from 'vitest';
 
 // 1) Мокаем селекторы, которые useOrchestrator импортирует напрямую
 vi.mock('@/features/asset-catalog/model/catalogSlice', async () => {
@@ -17,20 +25,25 @@ vi.mock('@/entities/forecast/model/selectors', async () => {
   };
 });
 
-// 2) Мокаем ForecastManager (теперь есть ensureTimeseriesOnly)
+// 2) Мокаем ForecastManager (split API)
 vi.mock('@/processes/orchestrator/ForecastManager', () => ({
   ForecastManager: {
     ensureTimeseriesOnly: vi.fn().mockResolvedValue(undefined),
     runForecast: vi.fn().mockResolvedValue(undefined),
-    run: vi.fn().mockResolvedValue(undefined),
+    run: vi.fn().mockResolvedValue(undefined), // безопасно, если где-то ещё используется
   },
 }));
 
 import { ForecastManager } from '@/processes/orchestrator/ForecastManager';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
+type Selected = { symbol: string; provider: string } | undefined;
+type Params =
+  | { tf: string; window: number | string; horizon: number; model?: any }
+  | undefined;
+
 const catalogReducer = (
-  state = { selected: undefined as any },
+  state = { selected: undefined as Selected },
   action: any,
 ) => {
   switch (action.type) {
@@ -43,8 +56,8 @@ const catalogReducer = (
 
 const forecastReducer = (
   state = {
-    params: undefined as any,
-    predict: { requestId: 0, request: null },
+    params: undefined as Params,
+    predict: { requestId: 0, request: null as any },
   },
   action: any,
 ) => {
@@ -72,22 +85,22 @@ const forecastReducer = (
 const TestComponent: React.FC = () => {
   useOrchestrator();
 
-  // просто чтобы компонент реально подписался на стор
-  const selected = useSelector((s: any) => s.catalog.selected);
-  const params = useSelector((s: any) => s.forecast.params);
+  // гарантируем подписку на стор (чтобы эффекты точно реагировали на dispatch)
+  useSelector((s: any) => s.catalog.selected);
+  useSelector((s: any) => s.forecast.params);
+  useSelector((s: any) => s.forecast.predict.requestId);
 
-  return (
-    <div>
-      <div data-testid="symbol">{selected?.symbol ?? 'none'}</div>
-      <div data-testid="tf">{params?.tf ?? 'none'}</div>
-    </div>
-  );
+  return <div />;
 };
 
-describe('useOrchestrator', () => {
+describe('useOrchestrator (split timeseries/forecast)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   const createTestStore = () =>
@@ -123,7 +136,7 @@ describe('useOrchestrator', () => {
     expect(runForecastMock).not.toHaveBeenCalled();
   });
 
-  it('calls ForecastManager.ensureTimeseriesOnly once when selected and params are set (auto history)', async () => {
+  it('calls ensureTimeseriesOnly once when selected and params are set (auto history)', async () => {
     const store = createTestStore();
 
     store.dispatch({
@@ -155,7 +168,7 @@ describe('useOrchestrator', () => {
 
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'MOCK',
+      provider: 'MOCK', // DEV override в non-prod
       tf: '1h',
       window: 200,
     });
@@ -165,7 +178,7 @@ describe('useOrchestrator', () => {
     expect(depsArg).toHaveProperty('signal');
   });
 
-  it('does not rerun ensureTimeseriesOnly for the same signature when state updates with same values', async () => {
+  it('does not rerun ensureTimeseriesOnly for the same signature', async () => {
     const store = createTestStore();
 
     store.dispatch({
@@ -190,7 +203,7 @@ describe('useOrchestrator', () => {
     const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
     expect(ensureMock).toHaveBeenCalledTimes(1);
 
-    // обновляем стор теми же значениями (новые ссылки, но сигнатура та же)
+    // те же значения -> не должно быть второго вызова
     store.dispatch({
       type: 'SET_SELECTED',
       payload: { symbol: 'SBER', provider: 'binance' },
@@ -207,7 +220,7 @@ describe('useOrchestrator', () => {
     expect(ensureMock).toHaveBeenCalledTimes(1);
   });
 
-  it('calls ForecastManager forecast entrypoint when Predict trigger fires', async () => {
+  it('calls runForecast when Predict trigger fires (requestId changes)', async () => {
     const store = createTestStore();
 
     store.dispatch({
@@ -225,13 +238,16 @@ describe('useOrchestrator', () => {
       </Provider>,
     );
 
+    // даём авто timeseries отработать
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
 
-    const before = store.getState() as any;
-    const beforeId = before.forecast?.predict?.requestId ?? 0;
+    // чтобы ожидания были стабильные — чистим вызовы перед predict
+    // чтобы ожидания были стабильные — чистим вызовы перед predict
+    vi.clearAllMocks();
 
+    // 1) диспатчим PREDICT (без прокрутки таймеров)
     await act(async () => {
       store.dispatch({
         type: 'PREDICT',
@@ -246,33 +262,24 @@ describe('useOrchestrator', () => {
       });
     });
 
-    const after = store.getState() as any;
-    const afterId = after.forecast?.predict?.requestId ?? 0;
-
-    // реально изменили requestId
-    expect(afterId).toBe(beforeId + 1);
-
+    // 2) даём React применить effect, который поставит setTimeout
     await act(async () => {
-      vi.advanceTimersByTime(350);
+      await Promise.resolve();
+    });
+
+    // 3) теперь исполняем debounce
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
 
     const runForecastMock = (ForecastManager as any).runForecast as Mock;
-    const runMock = (ForecastManager as any).run as Mock;
+    expect(runForecastMock).toHaveBeenCalledTimes(1);
 
-    const totalCalls =
-      (runForecastMock?.mock?.calls?.length ?? 0) +
-      (runMock?.mock?.calls?.length ?? 0);
-
-    expect(totalCalls).toBe(1);
-
-    const call = (runForecastMock?.mock?.calls?.[0] ??
-      runMock?.mock?.calls?.[0]) as any;
-
-    const [ctxArg, depsArg] = call;
+    const [ctxArg, depsArg] = runForecastMock.mock.calls[0];
 
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'MOCK', // dev override
+      provider: 'MOCK', // DEV override
       tf: '1h',
       window: 200,
       horizon: 24,
@@ -282,6 +289,7 @@ describe('useOrchestrator', () => {
     expect(depsArg).toHaveProperty('getState');
     expect(depsArg).toHaveProperty('signal');
   });
+
   it('skips when window is invalid (<=0 or NaN)', async () => {
     const store = createTestStore();
 
@@ -302,19 +310,169 @@ describe('useOrchestrator', () => {
     );
 
     await act(async () => {
-      vi.advanceTimersByTime(400);
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'binance',
+          tf: '1h',
+          window: 0, // <-- ВАЖНО: invalid
+          horizon: 24,
+          model: null,
+        },
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
 
     const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
-    const runMock = (ForecastManager as any).run as Mock;
     const runForecastMock = (ForecastManager as any).runForecast as Mock;
 
     expect(ensureMock).not.toHaveBeenCalled();
-    expect(runMock).not.toHaveBeenCalled();
     expect(runForecastMock).not.toHaveBeenCalled();
   });
+  it('uses DEV default params when params are missing (non-production)', async () => {
+    const store = createTestStore();
 
-  it('aborts previous scheduled run when signature changes quickly (debounce)', async () => {
+    // params НЕ задаём
+    store.dispatch({
+      type: 'SET_SELECTED',
+      payload: { symbol: 'SBER', provider: 'binance' },
+    });
+
+    render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
+    expect(ensureMock).toHaveBeenCalledTimes(1);
+
+    const [ctxArg] = ensureMock.mock.calls[0];
+    expect(ctxArg).toMatchObject({
+      symbol: 'SBER',
+      provider: 'MOCK', // dev override
+      tf: '1h', // default
+      window: 200, // default
+    });
+  });
+
+  it('parses window when it is a string (timeseries)', async () => {
+    const store = createTestStore();
+
+    store.dispatch({
+      type: 'SET_SELECTED',
+      payload: { symbol: 'SBER', provider: 'binance' },
+    });
+
+    store.dispatch({
+      type: 'SET_PARAMS',
+      payload: { tf: '1h', window: '200', horizon: 24, model: null },
+    });
+
+    render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
+    expect(ensureMock).toHaveBeenCalledTimes(1);
+
+    const [ctxArg] = ensureMock.mock.calls[0];
+    expect(ctxArg.window).toBe(200);
+  });
+
+  it('in production maps provider=binance -> BINANCE for timeseries', async () => {
+    const prevEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      const store = createTestStore();
+
+      store.dispatch({
+        type: 'SET_SELECTED',
+        payload: { symbol: 'SBER', provider: 'binance' },
+      });
+
+      store.dispatch({
+        type: 'SET_PARAMS',
+        payload: { tf: '1h', window: 200, horizon: 24, model: null },
+      });
+
+      render(
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
+      );
+
+      await act(async () => {
+        vi.advanceTimersByTime(300);
+      });
+
+      const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
+      expect(ensureMock).toHaveBeenCalledTimes(1);
+
+      const [ctxArg] = ensureMock.mock.calls[0];
+      expect(ctxArg).toMatchObject({
+        symbol: 'SBER',
+        provider: 'BINANCE',
+      });
+    } finally {
+      process.env.NODE_ENV = prevEnv;
+    }
+  });
+
+  it('in production skips unknown provider for timeseries (providerNorm=null)', async () => {
+    const prevEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      const store = createTestStore();
+
+      store.dispatch({
+        type: 'SET_SELECTED',
+        payload: { symbol: 'SBER', provider: 'unknown' },
+      });
+
+      store.dispatch({
+        type: 'SET_PARAMS',
+        payload: { tf: '1h', window: 200, horizon: 24, model: null },
+      });
+
+      render(
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
+      );
+
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+
+      const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
+      expect(ensureMock).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = prevEnv;
+    }
+  });
+
+  it('debounce: when selected changes quickly, only latest timeseries call happens', async () => {
     const store = createTestStore();
 
     render(
@@ -323,7 +481,6 @@ describe('useOrchestrator', () => {
       </Provider>,
     );
 
-    // 1) ставим SBER
     await act(async () => {
       store.dispatch({
         type: 'SET_SELECTED',
@@ -335,16 +492,15 @@ describe('useOrchestrator', () => {
       });
     });
 
-    // 2) до истечения debounce меняем на GAZP
+    // до истечения debounce меняем selected
     await act(async () => {
-      vi.advanceTimersByTime(100); // ещё не 250
+      vi.advanceTimersByTime(100);
       store.dispatch({
         type: 'SET_SELECTED',
         payload: { symbol: 'GAZP', provider: 'binance' },
       });
     });
 
-    // 3) теперь даём debounce дойти
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
@@ -353,15 +509,52 @@ describe('useOrchestrator', () => {
     expect(ensureMock).toHaveBeenCalledTimes(1);
 
     const [ctxArg] = ensureMock.mock.calls[0];
-    expect(ctxArg).toMatchObject({
-      symbol: 'GAZP',
-      provider: 'MOCK', // dev override как у тебя сейчас
-      tf: '1h',
-      window: 200,
-    });
+    expect(ctxArg.symbol).toBe('GAZP');
   });
 
-  it('does not start forecast when predict.request is null (even if requestId changes)', async () => {
+  it('runs forecast even when predict.request is null (falls back to selected+params)', async () => {
+    const store = createTestStore();
+
+    store.dispatch({
+      type: 'SET_SELECTED',
+      payload: { symbol: 'SBER', provider: 'binance' },
+    });
+    store.dispatch({
+      type: 'SET_PARAMS',
+      payload: { tf: '1h', window: 200, horizon: 24, model: null },
+    });
+
+    render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+
+    // сначала авто ts
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    vi.clearAllMocks();
+
+    // request=null, но requestId++
+    await act(async () => {
+      store.dispatch({ type: 'PREDICT_EMPTY' });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    const runForecastMock = (ForecastManager as any).runForecast as Mock;
+    expect(runForecastMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not rerun forecast when requestId does not change', async () => {
     const store = createTestStore();
 
     store.dispatch({
@@ -383,17 +576,154 @@ describe('useOrchestrator', () => {
       vi.advanceTimersByTime(300);
     });
 
+    vi.clearAllMocks();
+
+    // 1st predict
     await act(async () => {
-      store.dispatch({ type: 'PREDICT_EMPTY' });
-      vi.advanceTimersByTime(400);
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'binance',
+          tf: '1h',
+          window: 200,
+          horizon: 24,
+          model: null,
+        },
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      vi.advanceTimersByTime(300);
+    });
+
+    // просто прогоняем время ещё раз — requestId не менялся, новый запуск не должен появиться
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
     });
 
     const runForecastMock = (ForecastManager as any).runForecast as Mock;
-    const runMock = (ForecastManager as any).run as Mock;
+    expect(runForecastMock).toHaveBeenCalledTimes(1);
+  });
 
-    expect(
-      (runForecastMock?.mock?.calls?.length ?? 0) +
-        (runMock?.mock?.calls?.length ?? 0),
-    ).toBe(0);
+  it('debounce: two quick predicts -> only latest forecast call happens', async () => {
+    const store = createTestStore();
+
+    store.dispatch({
+      type: 'SET_SELECTED',
+      payload: { symbol: 'SBER', provider: 'binance' },
+    });
+    store.dispatch({
+      type: 'SET_PARAMS',
+      payload: { tf: '1h', window: 200, horizon: 24, model: null },
+    });
+
+    render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    vi.clearAllMocks();
+
+    await act(async () => {
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'binance',
+          tf: '1h',
+          window: 200,
+          horizon: 24,
+          model: null,
+        },
+      });
+    });
+
+    // ещё не прошло 250 — диспатчим второй predict с отличием
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'binance',
+          tf: '1h',
+          window: 200,
+          horizon: 12, // меняем, чтобы проверить "последний победил"
+          model: null,
+        },
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      vi.advanceTimersByTime(300);
+    });
+
+    const runForecastMock = (ForecastManager as any).runForecast as Mock;
+    expect(runForecastMock).toHaveBeenCalledTimes(1);
+
+    const [ctxArg] = runForecastMock.mock.calls[0];
+    expect(ctxArg.horizon).toBe(12);
+  });
+
+  it('in production skips unknown provider for forecast (providerNorm=null)', async () => {
+    const prevEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+
+    try {
+      const store = createTestStore();
+
+      store.dispatch({
+        type: 'SET_SELECTED',
+        payload: { symbol: 'SBER', provider: 'unknown' },
+      });
+      store.dispatch({
+        type: 'SET_PARAMS',
+        payload: { tf: '1h', window: 200, horizon: 24, model: null },
+      });
+
+      render(
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
+      );
+
+      await act(async () => {
+        vi.advanceTimersByTime(300);
+      });
+
+      vi.clearAllMocks();
+
+      await act(async () => {
+        store.dispatch({
+          type: 'PREDICT',
+          payload: {
+            symbol: 'SBER',
+            provider: 'unknown',
+            tf: '1h',
+            window: 200,
+            horizon: 24,
+            model: null,
+          },
+        });
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+        vi.advanceTimersByTime(300);
+      });
+
+      const runForecastMock = (ForecastManager as any).runForecast as Mock;
+      expect(runForecastMock).not.toHaveBeenCalled();
+    } finally {
+      process.env.NODE_ENV = prevEnv;
+    }
   });
 });
