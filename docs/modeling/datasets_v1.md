@@ -17,6 +17,7 @@
 ## Набор активов (v1)
 
 **MOEX (акции)**:
+
 - SBER
 - GAZP
 - LKOH
@@ -24,6 +25,7 @@
 - NVTK
 
 **Binance (крипто)**:
+
 - BTCUSDT
 - ETHUSDT
 - BNBUSDT
