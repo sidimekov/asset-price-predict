@@ -1,15 +1,11 @@
 import { describe, it, expectTypeOf } from 'vitest';
-import type {
-  AccountProfile,
-  AccountRes,
-} from '../src/dto/account.js';
+import type { AccountProfile, AccountRes } from '../src/dto/account.js';
 import type { AuthUser, LoginReq, LoginRes } from '../src/dto/auth.js';
 import type {
   ForecastCreateReq,
   ForecastDetailRes,
   ForecastListRes,
 } from '../src/dto/forecast.js';
-
 
 describe('DTO types', () => {
   it('AccountRes совпадает с AccountProfile', () => {
