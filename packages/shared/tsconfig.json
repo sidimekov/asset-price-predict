@@ -7,7 +7,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "emitDeclarationOnly": false,
-    "composite": false
+    "composite": false,
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src"]
 }
