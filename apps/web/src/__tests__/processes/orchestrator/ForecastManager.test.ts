@@ -58,6 +58,16 @@ vi.mock('@/entities/forecast/model/forecastSlice', () => {
   };
 });
 
+vi.mock('@/entities/history/repository', () => ({
+  historyRepository: {
+    list: vi.fn(),
+    getById: vi.fn(),
+    save: vi.fn(),
+    remove: vi.fn(),
+    clear: vi.fn(),
+  },
+}));
+
 import {
   ForecastManager,
   type OrchestratorInput,
@@ -85,11 +95,13 @@ import {
   forecastFailed,
   forecastCancelled,
 } from '@/entities/forecast/model/forecastSlice';
+import { historyRepository } from '@/entities/history/repository';
 
 // @ts-ignore
 const getMarketTimeseriesMock = getMarketTimeseries as unknown as vi.Mock;
 // @ts-ignore
 const inferForecastMock = inferForecast as unknown as vi.Mock;
+const historySaveMock = historyRepository.save as unknown as vi.Mock;
 
 const mockDispatch = vi.fn();
 const mockGetState = vi.fn(() => ({}) as any);
@@ -159,6 +171,7 @@ describe('ForecastManager (new orchestrator)', () => {
     expect(forecastRequested).toHaveBeenCalledWith(fcKey);
     expect(inferForecastMock).toHaveBeenCalledTimes(1);
     expect(forecastReceived).toHaveBeenCalledTimes(1);
+    expect(historySaveMock).toHaveBeenCalledTimes(1);
 
     // status back to idle
     expect(orchestratorState.status).toBe('idle');
@@ -227,6 +240,7 @@ describe('ForecastManager (new orchestrator)', () => {
     // forecast flow
     expect(inferForecastMock).toHaveBeenCalledTimes(1);
     expect(forecastReceived).toHaveBeenCalledTimes(1);
+    expect(historySaveMock).toHaveBeenCalledTimes(1);
 
     expect(orchestratorState.status).toBe('idle');
   });
@@ -276,6 +290,7 @@ describe('ForecastManager (new orchestrator)', () => {
       key: fcKey,
       error: 'fail',
     });
+    expect(historySaveMock).not.toHaveBeenCalled();
   });
 
   it('supports abort: if signal aborted, dispatches forecastCancelled and does not call inferForecast', async () => {
@@ -311,6 +326,7 @@ describe('ForecastManager (new orchestrator)', () => {
 
     expect(forecastCancelled).toHaveBeenCalledWith(fcKey);
     expect(inferForecastMock).not.toHaveBeenCalled();
+    expect(historySaveMock).not.toHaveBeenCalled();
   });
 
   it('state.ts is minimal: exports TTL and orchestratorState', () => {

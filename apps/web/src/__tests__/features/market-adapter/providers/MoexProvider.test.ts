@@ -1,10 +1,14 @@
 // apps/web/src/__tests__/features/market-adapter/providers/MoexProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchMoexTimeseries } from '@/features/market-adapter/providers/MoexProvider';
+import {
+  fetchMoexTimeseries,
+  searchMoexSymbols,
+} from '@/features/market-adapter/providers/MoexProvider';
 
 // hoisted-мок для initiate
-const { mockMoexInitiate } = vi.hoisted(() => ({
+const { mockMoexInitiate, mockMoexSearchInitiate } = vi.hoisted(() => ({
   mockMoexInitiate: vi.fn(),
+  mockMoexSearchInitiate: vi.fn(),
 }));
 
 vi.mock('@/shared/api/marketApi', () => ({
@@ -14,6 +18,9 @@ vi.mock('@/shared/api/marketApi', () => ({
       getMoexTimeseries: {
         initiate: (...args: any[]) => mockMoexInitiate(...args),
       },
+      searchMoexSymbols: {
+        initiate: (...args: any[]) => mockMoexSearchInitiate(...args),
+      },
     },
   },
 }));
@@ -21,6 +28,7 @@ vi.mock('@/shared/api/marketApi', () => ({
 describe('fetchMoexTimeseries', () => {
   beforeEach(() => {
     mockMoexInitiate.mockReset();
+    mockMoexSearchInitiate.mockReset();
   });
 
   it('вызывает getMoexTimeseries и возвращает данные', async () => {
@@ -58,5 +66,48 @@ describe('fetchMoexTimeseries', () => {
     expect(mockQueryResult.unwrap).toHaveBeenCalledTimes(1);
     expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
     expect(result).toBe(mockData);
+  });
+
+  it('абортирует inflight запрос через AbortSignal', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+    const controller = new AbortController();
+
+    const params = {
+      symbol: 'SBER',
+      timeframe: '1d' as const,
+      limit: 20,
+    };
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockResolvedValue([]),
+      unsubscribe: vi.fn(),
+      abort: vi.fn(),
+    };
+
+    mockMoexInitiate.mockReturnValue(mockQueryResult);
+
+    const promise = fetchMoexTimeseries(mockDispatch as any, params as any, {
+      signal: controller.signal,
+    });
+
+    controller.abort();
+    await promise;
+
+    expect(mockQueryResult.abort).toHaveBeenCalledTimes(1);
+    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('searchMoexSymbols сразу отказывает при abort', async () => {
+    const mockDispatch = vi.fn();
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      searchMoexSymbols(mockDispatch as any, 'sber', {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+
+    expect(mockMoexSearchInitiate).not.toHaveBeenCalled();
   });
 });

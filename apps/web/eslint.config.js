@@ -52,6 +52,8 @@ export default [
         HTMLElement: 'readonly',
         require: 'readonly',
         HTMLDivElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLSelectElement: 'readonly',
       },
     },
     rules: {
