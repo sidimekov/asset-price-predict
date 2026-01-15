@@ -8,13 +8,10 @@ import {
   clearForecast,
   clearAllForecasts,
 } from '@/entities/forecast/model/forecastSlice';
-import type { ForecastState, ForecastEntry } from '@/entities/forecast/types';
+import type { ForecastEntry } from '@/entities/forecast/types';
 
-const initialState: ForecastState = {
-  byKey: {},
-  loadingByKey: {},
-  errorByKey: {},
-};
+const getInitial = () =>
+  forecastReducer(undefined as any, { type: '@@INIT' } as any);
 
 const sampleEntry: ForecastEntry = {
   p50: [
@@ -30,16 +27,18 @@ const sampleEntry: ForecastEntry = {
 
 describe('forecastSlice', () => {
   it('forecastRequested выставляет loading и сбрасывает error', () => {
-    const state = forecastReducer(initialState, forecastRequested('k'));
+    const initial = getInitial();
+    const state = forecastReducer(initial, forecastRequested('k'));
 
     expect(state.loadingByKey['k']).toBe(true);
     expect(state.errorByKey['k']).toBeNull();
-    expect(state.byKey['k']).toBeUndefined();
+    // byKey не трогаем
   });
 
   it('forecastReceived кладёт entry и сбрасывает loading/error', () => {
+    const initial = getInitial();
     const state = forecastReducer(
-      initialState,
+      initial,
       forecastReceived({ key: 'k', entry: sampleEntry }),
     );
 
@@ -49,10 +48,8 @@ describe('forecastSlice', () => {
   });
 
   it('forecastFailed выставляет error и снимает loading', () => {
-    const stateAfterRequest = forecastReducer(
-      initialState,
-      forecastRequested('k'),
-    );
+    const initial = getInitial();
+    const stateAfterRequest = forecastReducer(initial, forecastRequested('k'));
 
     const state = forecastReducer(
       stateAfterRequest,
@@ -64,11 +61,12 @@ describe('forecastSlice', () => {
   });
 
   it('clearForecast удаляет конкретный ключ', () => {
-    const filled: ForecastState = {
-      byKey: { k: sampleEntry },
-      loadingByKey: { k: false },
-      errorByKey: { k: null },
-    };
+    const initial = getInitial();
+
+    const filled = forecastReducer(
+      initial,
+      forecastReceived({ key: 'k', entry: sampleEntry }),
+    );
 
     const state = forecastReducer(filled, clearForecast('k'));
 
@@ -77,15 +75,38 @@ describe('forecastSlice', () => {
     expect(state.errorByKey['k']).toBeUndefined();
   });
 
-  it('clearAllForecasts сбрасывает стейт к initialState', () => {
-    const filled: ForecastState = {
-      byKey: { k: sampleEntry },
-      loadingByKey: { k: false },
-      errorByKey: { k: null },
-    };
+  it('clearAllForecasts сбрасывает стейт к initial', () => {
+    const initial = getInitial();
+
+    const filled = forecastReducer(
+      initial,
+      forecastReceived({ key: 'k', entry: sampleEntry }),
+    );
 
     const state = forecastReducer(filled, clearAllForecasts());
 
-    expect(state).toEqual(initialState);
+    expect(state).toEqual(getInitial());
+  });
+  it('forecastRequested не затирает существующий прогноз по ключу', () => {
+    const initial = getInitial();
+
+    const withEntry = forecastReducer(
+      initial,
+      forecastReceived({ key: 'k', entry: sampleEntry }),
+    );
+
+    const state = forecastReducer(withEntry, forecastRequested('k'));
+
+    expect(state.byKey['k']).toEqual(sampleEntry); // не потерять старый прогноз
+    expect(state.loadingByKey['k']).toBe(true);
+    expect(state.errorByKey['k']).toBeNull();
+  });
+
+  it('clearForecast на отсутствующем ключе не ломает стейт', () => {
+    const initial = getInitial();
+    const state = forecastReducer(initial, clearForecast('missing'));
+
+    // должно остаться как было
+    expect(state).toEqual(initial);
   });
 });
