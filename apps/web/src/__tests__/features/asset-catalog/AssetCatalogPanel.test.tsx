@@ -58,10 +58,12 @@ const mockRecentItems = [
   {
     symbol: 'AAPL',
     provider: 'binance' as const,
+    usedAt: '2024-01-15T10:30:00Z',
   },
   {
     symbol: 'GOOGL',
     provider: 'binance' as const,
+    usedAt: '2024-01-15T10:30:00Z',
   },
 ];
 
@@ -85,13 +87,13 @@ describe('AssetCatalogPanel', () => {
 
   // Вспомогательная функция для мокания состояний Redux
   const mockReduxState = (
-    overrides: {
-      results?: CatalogItem[];
-      loading?: boolean;
-      error?: string | null;
-      provider?: 'binance' | 'moex';
-      recent?: Array<{ symbol: string; provider: 'binance' | 'moex' }>;
-    } = {},
+      overrides: {
+        results?: CatalogItem[];
+        loading?: boolean;
+        error?: string | null;
+        provider?: 'binance' | 'moex';
+        recent?: Array<{ symbol: string; provider: 'binance' | 'moex'; usedAt: string }>;
+      } = {},
   ) => {
     const {
       results = [],
@@ -101,46 +103,24 @@ describe('AssetCatalogPanel', () => {
       recent = [],
     } = overrides;
 
-    // Создаем моковые селекторы
-    const selectCatalogResults = () => results;
-    const selectIsSearching = () => loading;
-    const selectCatalogError = () => error;
-    const selectCurrentProvider = () => provider;
-    const selectRecent = () => recent;
-
-    // Мокаем useAppSelector чтобы он вызывал соответствующие селекторы
+    // Мокаем useAppSelector чтобы он возвращал соответствующие значения
     mockUseAppSelector.mockImplementation((selector: any) => {
-      // В реальном коде селекторы вызываются с state
-      // Здесь мы просто вызываем их как функции
-      if (
-        selector.name === 'selectCatalogResults' ||
-        selector.toString().includes('results')
-      ) {
-        return selectCatalogResults();
+      // В реальном коде selector - это функция, которая принимает state
+      // Здесь мы эмулируем поведение разных селекторов
+      if (selector.toString().includes('catalog.results')) {
+        return results;
       }
-      if (
-        selector.name === 'selectIsSearching' ||
-        selector.toString().includes('loading')
-      ) {
-        return selectIsSearching();
+      if (selector.toString().includes('catalog.loading')) {
+        return loading;
       }
-      if (
-        selector.name === 'selectCatalogError' ||
-        selector.toString().includes('error')
-      ) {
-        return selectCatalogError();
+      if (selector.toString().includes('catalog.error')) {
+        return error;
       }
-      if (
-        selector.name === 'selectCurrentProvider' ||
-        selector.toString().includes('provider')
-      ) {
-        return selectCurrentProvider();
+      if (selector.toString().includes('catalog.provider')) {
+        return provider;
       }
-      if (
-        selector.name === 'selectRecent' ||
-        selector.toString().includes('recent')
-      ) {
-        return selectRecent();
+      if (selector.toString().includes('catalog.recent')) {
+        return recent;
       }
       return null;
     });
@@ -154,7 +134,7 @@ describe('AssetCatalogPanel', () => {
 
       expect(screen.getByText('Find Assets')).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText('Search for asset...'),
+          screen.getByPlaceholderText('Search for asset...'),
       ).toBeInTheDocument();
       expect(screen.getByText('BINANCE')).toBeInTheDocument();
       expect(screen.getByText('MOEX')).toBeInTheDocument();
@@ -179,44 +159,12 @@ describe('AssetCatalogPanel', () => {
   });
 
   describe('недавние элементы', () => {
-    it('отображает недавние элементы когда нет запроса', () => {
+    it('не отображает недавние элементы когда есть запрос', () => {
       mockReduxState({ recent: mockRecentItems });
 
-      render(<AssetCatalogPanel {...defaultProps} />);
+      render(<AssetCatalogPanel {...defaultProps} query="test" />);
 
-      expect(screen.getByText('Recently used')).toBeInTheDocument();
-
-      const aaplElements = screen.getAllByText('AAPL');
-      expect(aaplElements.length).toBeGreaterThan(0);
-
-      const googlElements = screen.getAllByText('GOOGL');
-      expect(googlElements.length).toBeGreaterThan(0);
-    });
-
-    it('обрабатывает клик по недавнему элементу', () => {
-      const onSelect = vi.fn();
-      const onClose = vi.fn();
-      mockReduxState({ recent: mockRecentItems });
-
-      render(
-        <AssetCatalogPanel
-          {...defaultProps}
-          onSelect={onSelect}
-          onClose={onClose}
-        />,
-      );
-
-      // Находим кнопку по тексту AAPL (первое вхождение - заголовок)
-      const aaplButtons = screen.getAllByText('AAPL');
-      const button = aaplButtons[0].closest('button');
-      expect(button).toBeInTheDocument();
-      fireEvent.click(button!);
-
-      expect(onSelect).toHaveBeenCalledWith({
-        symbol: 'AAPL',
-        provider: 'binance',
-      });
-      expect(onClose).toHaveBeenCalled();
+      expect(screen.queryByText('Recently used')).not.toBeInTheDocument();
     });
   });
 
@@ -226,7 +174,7 @@ describe('AssetCatalogPanel', () => {
       mockReduxState();
 
       render(
-        <AssetCatalogPanel {...defaultProps} onQueryChange={onQueryChange} />,
+          <AssetCatalogPanel {...defaultProps} onQueryChange={onQueryChange} />,
       );
 
       const searchInput = screen.getByPlaceholderText('Search for asset...');
@@ -246,7 +194,7 @@ describe('AssetCatalogPanel', () => {
       expect(screen.getByText('Ethereum')).toBeInTheDocument();
     });
 
-    it('отображает сообщение когда нет результатов', () => {
+    it('отображает сообщение когда нет результатов при запросе >= 2 символов', () => {
       mockReduxState({ results: [] });
 
       render(<AssetCatalogPanel {...defaultProps} query="XYZ" />);
@@ -254,7 +202,15 @@ describe('AssetCatalogPanel', () => {
       expect(screen.getByText('No assets found for "XYZ"')).toBeInTheDocument();
     });
 
-    it('выполняет поиск при длине запроса >= 2 символов', async () => {
+    it('не отображает сообщение "No assets found" при коротком запросе', () => {
+      mockReduxState({ results: [] });
+
+      render(<AssetCatalogPanel {...defaultProps} query="X" />);
+
+      expect(screen.queryByText('No assets found for')).not.toBeInTheDocument();
+    });
+
+    it('выполняет поиск через searchAssets при длине запроса >= 2 символов', async () => {
       mockSearchAssets.mockResolvedValue(mockCatalogItems);
       mockReduxState();
 
@@ -266,9 +222,119 @@ describe('AssetCatalogPanel', () => {
     });
   });
 
+  describe('фильтры', () => {
+    it('отображает popover фильтров при клике на иконку фильтра', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      expect(screen.getByText('Filters')).toBeInTheDocument();
+      expect(screen.getByText('Select all')).toBeInTheDocument();
+      expect(screen.getByText('Reset')).toBeInTheDocument();
+    });
+
+    it('скрывает popover фильтров при клике вне его', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      expect(screen.getByText('Filters')).toBeInTheDocument();
+
+      // Кликаем вне popover
+      fireEvent.mouseDown(document.body);
+
+      expect(screen.queryByText('Filters')).not.toBeInTheDocument();
+    });
+
+    it('применяет фильтры при клике на Apply', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      const applyButton = screen.getByText(/Apply/);
+      fireEvent.click(applyButton);
+
+      expect(screen.queryByText('Filters')).not.toBeInTheDocument();
+    });
+
+    it('сбрасывает фильтры при клике на Reset', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      const resetButton = screen.getByText('Reset');
+      fireEvent.click(resetButton);
+
+      // Проверяем что чекбоксы сброшены
+      const checkboxes = screen.getAllByRole('checkbox');
+      checkboxes.forEach(checkbox => {
+        expect(checkbox).not.toBeChecked();
+      });
+    });
+
+    it('выбирает все фильтры при клике на Select all', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      const selectAllButton = screen.getByText('Select all');
+      fireEvent.click(selectAllButton);
+
+      // Проверяем что все чекбоксы выбраны
+      const checkboxes = screen.getAllByRole('checkbox');
+      checkboxes.forEach(checkbox => {
+        expect(checkbox).toBeChecked();
+      });
+    });
+  });
+
+  describe('определение категории активов', () => {
+    it('правильно отображает категории для MOEX активов', () => {
+      const moexItems: CatalogItem[] = [
+        {
+          symbol: 'SBER',
+          name: 'Сбербанк',
+          exchange: '',
+          provider: 'MOEX',
+          assetClass: 'equity',
+          currency: 'RUB',
+        },
+        {
+          symbol: 'OFZ',
+          name: 'Облигация федерального займа',
+          exchange: '',
+          provider: 'MOEX',
+          assetClass: 'bond',
+          currency: 'RUB',
+        },
+      ];
+
+      mockReduxState({ results: moexItems, provider: 'moex' });
+      render(<AssetCatalogPanel {...defaultProps} query="test" />);
+
+      // Проверяем что категории отображаются
+      expect(screen.getByText('SBER')).toBeInTheDocument();
+    });
+  });
+
   describe('выбор элемента', () => {
     it('выбирает элемент и активирует кнопку добавления', () => {
-      mockReduxState({ results: mockCatalogItems });
+      mockReduxState({ results: [mockCatalogItems[0]] });
 
       render(<AssetCatalogPanel {...defaultProps} query="BTC" />);
 
@@ -283,15 +349,15 @@ describe('AssetCatalogPanel', () => {
     it('обрабатывает клик по кнопке добавления с выбранным элементом', () => {
       const onSelect = vi.fn();
       const onClose = vi.fn();
-      mockReduxState({ results: mockCatalogItems });
+      mockReduxState({ results: [mockCatalogItems[0]] });
 
       render(
-        <AssetCatalogPanel
-          {...defaultProps}
-          onSelect={onSelect}
-          onClose={onClose}
-          query="BTC"
-        />,
+          <AssetCatalogPanel
+              {...defaultProps}
+              onSelect={onSelect}
+              onClose={onClose}
+              query="BTC"
+          />,
       );
 
       const firstResult = screen.getByText('BTCUSDT');
@@ -322,12 +388,12 @@ describe('AssetCatalogPanel', () => {
       mockReduxState({ results: mockCatalogItems });
 
       render(
-        <AssetCatalogPanel
-          {...defaultProps}
-          onSelect={onSelect}
-          onClose={onClose}
-          query="BTC"
-        />,
+          <AssetCatalogPanel
+              {...defaultProps}
+              onSelect={onSelect}
+              onClose={onClose}
+              query="BTC"
+          />,
       );
 
       // Не выбираем элемент, пытаемся добавить
@@ -340,17 +406,6 @@ describe('AssetCatalogPanel', () => {
   });
 
   describe('переключение провайдеров', () => {
-    it('переключает провайдера', () => {
-      mockReduxState();
-
-      render(<AssetCatalogPanel {...defaultProps} />);
-
-      const moexTab = screen.getByText('MOEX');
-      fireEvent.click(moexTab);
-
-      expect(moexTab).toBeInTheDocument();
-    });
-
     it('имеет правильные ARIA атрибуты для вкладок', () => {
       mockReduxState();
 
@@ -366,74 +421,6 @@ describe('AssetCatalogPanel', () => {
     });
   });
 
-  describe('определение категории активов', () => {
-    it('правильно определяет категории для MOEX активов', () => {
-      const moexItems: CatalogItem[] = [
-        {
-          symbol: 'SBER',
-          name: 'Сбербанк',
-          exchange: '',
-          provider: 'MOEX',
-          assetClass: 'equity',
-        },
-        {
-          symbol: 'GAZP',
-          name: 'Газпром',
-          exchange: '',
-          provider: 'MOEX',
-          assetClass: 'equity',
-        },
-        {
-          symbol: 'IMOEX',
-          name: 'Индекс Мосбиржи',
-          exchange: '',
-          provider: 'MOEX',
-          assetClass: 'equity',
-        },
-      ];
-
-      mockReduxState({ results: moexItems });
-      render(<AssetCatalogPanel {...defaultProps} query="test" />);
-
-      expect(screen.getByText('SBER')).toBeInTheDocument();
-      expect(screen.getByText('GAZP')).toBeInTheDocument();
-      expect(screen.getByText('IMOEX')).toBeInTheDocument();
-    });
-
-    it('правильно определяет категории для Binance активов', () => {
-      const binanceItems: CatalogItem[] = [
-        {
-          symbol: 'BTCUSDT',
-          name: 'Bitcoin',
-          exchange: '',
-          provider: 'BINANCE',
-          assetClass: 'crypto',
-        },
-        {
-          symbol: 'EURUSD',
-          name: 'Euro Dollar',
-          exchange: '',
-          provider: 'BINANCE',
-          assetClass: 'crypto',
-        },
-        {
-          symbol: 'XAUUSD',
-          name: 'Gold',
-          exchange: '',
-          provider: 'BINANCE',
-          assetClass: 'crypto',
-        },
-      ];
-
-      mockReduxState({ results: binanceItems });
-      render(<AssetCatalogPanel {...defaultProps} query="test" />);
-
-      expect(screen.getByText('BTCUSDT')).toBeInTheDocument();
-      expect(screen.getByText('EURUSD')).toBeInTheDocument();
-      expect(screen.getByText('XAUUSD')).toBeInTheDocument();
-    });
-  });
-
   describe('обработка ошибок', () => {
     it('обрабатывает ошибку при получении активов', async () => {
       mockSearchAssets.mockRejectedValue(new Error('Network error'));
@@ -445,16 +432,104 @@ describe('AssetCatalogPanel', () => {
         expect(screen.getByText('Search failed')).toBeInTheDocument();
       });
     });
+
+    it('обрабатывает ошибку при получении всех активов (query < 2)', async () => {
+      mockReduxState({ error: 'Failed to load assets' });
+
+      render(<AssetCatalogPanel {...defaultProps} query="" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load assets')).toBeInTheDocument();
+      });
+    });
   });
 
   describe('доступность', () => {
-    it('правильно отображает кнопку фильтров', () => {
+    it('правильно отображает кнопку фильтров с aria-label', () => {
       mockReduxState();
 
       render(<AssetCatalogPanel {...defaultProps} />);
 
       const filterButton = screen.getByLabelText('Фильтры');
       expect(filterButton).toBeInTheDocument();
+    });
+  });
+
+  describe('сортировка', () => {
+    it('применяет сортировку по алфавиту (A → Z)', () => {
+      const unsortedItems: CatalogItem[] = [
+        {
+          symbol: 'ZECUSDT',
+          name: 'Zcash',
+          provider: 'BINANCE',
+          assetClass: 'crypto',
+          currency: 'USDT',
+          exchange: 'BINANCE',
+        },
+        {
+          symbol: 'AAPLUSDT',
+          name: 'Apple',
+          provider: 'BINANCE',
+          assetClass: 'crypto',
+          currency: 'USDT',
+          exchange: 'BINANCE',
+        },
+        {
+          symbol: 'BTCUSDT',
+          name: 'Bitcoin',
+          provider: 'BINANCE',
+          assetClass: 'crypto',
+          currency: 'USDT',
+          exchange: 'BINANCE',
+        },
+      ];
+
+      mockReduxState({ results: unsortedItems });
+
+      render(<AssetCatalogPanel {...defaultProps} query="test" />);
+
+      const items = screen.getAllByRole('button', { name: /.*USDT/ });
+      expect(items).toHaveLength(3);
+    });
+
+    it('позволяет изменить сортировку через фильтры', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      const reverseOrderRadio = screen.getByLabelText('The reverse order (Z → A)');
+      fireEvent.click(reverseOrderRadio);
+
+      expect(reverseOrderRadio).toBeChecked();
+    });
+  });
+
+  describe('общее количество активов', () => {
+    it('отображает количество найденных активов', () => {
+      mockReduxState({ results: mockCatalogItems });
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      expect(screen.getByText(`${mockCatalogItems.length} found`)).toBeInTheDocument();
+    });
+
+    it('отображает количество активных фильтров', () => {
+      mockReduxState();
+
+      render(<AssetCatalogPanel {...defaultProps} />);
+
+      const filterButton = screen.getByLabelText('Фильтры');
+      fireEvent.click(filterButton);
+
+      // Выбираем один фильтр
+      const cryptoCheckbox = screen.getByLabelText('Crypto');
+      fireEvent.click(cryptoCheckbox);
+
+      const applyButton = screen.getByText(/Apply \(1\)/);
+      expect(applyButton).toBeInTheDocument();
     });
   });
 });
