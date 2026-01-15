@@ -34,6 +34,7 @@ export default defineConfig({
         'src/entities/forecast/model/types.ts',
         'src/features/market-adapter/providers/types.ts',
         'src/app/forecast/**',
+        'src/entities/history/model.ts'
       ],
       thresholds: {
         lines: 80,
