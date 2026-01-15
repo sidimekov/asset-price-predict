@@ -1,11 +1,14 @@
-import type { ForecastCreateReq } from '@assetpredict/shared';
+import type {
+  ForecastCreateReq,
+  ForecastCreateRes,
+} from '@assetpredict/shared';
 
 function isoNow() {
   return new Date().toISOString();
 }
 
 export class ForecastController {
-  createForecast(req: ForecastCreateReq) {
+  createForecast(req: ForecastCreateReq): ForecastCreateRes {
     // Заглушка - series пустые
     return {
       id: 'mock-forecast-id',

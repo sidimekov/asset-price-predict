@@ -1,16 +1,17 @@
+import type { LoginRes } from '@assetpredict/shared';
+
+const mockAuthResponse = (): LoginRes => ({
+  token: 'mock',
+  user: { id: 'u1', email: 'user@example.com', username: 'Demo' },
+});
+
 export class AuthController {
-  login() {
+  login(): LoginRes {
     // мок JWT + мок пользователь
-    return {
-      token: 'mock',
-      user: { id: 'u1', email: 'user@example.com' },
-    };
+    return mockAuthResponse();
   }
 
-  logout() {
-    return {
-      token: 'mock',
-      user: { id: 'u1', email: 'user@example.com' },
-    };
+  logout(): LoginRes {
+    return mockAuthResponse();
   }
 }
