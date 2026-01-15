@@ -14,55 +14,23 @@ jobs:
       - name: Получение кода
         uses: actions/checkout@v4
 
-      - name: Установка Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Поднять сервисы (dev)
+        run: docker compose up -d --build
 
-      - name: Установка pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9.0.0
-          run_install: false
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Установка зависимостей монорепо
-        run: pnpm install --frozen-lockfile
-
-      - name: Сборка пакета @assetpredict/shared
-        run: pnpm -F @assetpredict/shared build
-
-      - name: Тесты пакета @assetpredict/shared
-        run: pnpm -F @assetpredict/shared test
-
-      - name: E2E тесты API (apps/api)
-        run: pnpm -F @assetpredict/api e2e
-
-      - name: Установка браузеров Playwright (в пакете apps/web)
-        run: pnpm -F @assetpredict/web exec playwright install --with-deps
-
-      - name: Сборка фронта (apps/web)
-        run: pnpm -F @assetpredict/web build
-        env:
-          NEXT_TELEMETRY_DISABLED: 1
-
-      - name: Запуск приложения (apps/web)
-        run: pnpm -F @assetpredict/web start &
-        env:
-          PORT: 3000
-          CI: true
-          NEXT_TELEMETRY_DISABLED: 1
-
-      - name: Ожидание доступности приложения
+      - name: Дождаться web
         run: pnpm dlx wait-on http://localhost:3000
 
-      - name: Запуск Playwright тестов (apps/web)
-        run: pnpm -F @assetpredict/web e2e
+      - name: Playwright e2e в контейнере (к сервисам через host)
+        run: |
+          docker run --rm \
+            --add-host=host.docker.internal:host-gateway \
+            -v "${{ github.workspace }}:/repo" \
+            -w /repo \
+            -e CI=true \
+            -e NEXT_TELEMETRY_DISABLED=1 \
+            -e NEXT_PUBLIC_BACKEND_URL=http://host.docker.internal:3001 \
+            mcr.microsoft.com/playwright:v1.56.0-jammy \
+            bash -lc "corepack enable && pnpm install --frozen-lockfile && pnpm -F @assetpredict/web e2e"
 
       - name: Загрузка отчета о тестах
         if: failure()
