@@ -54,6 +54,7 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLSelectElement: 'readonly',
+        Storage: 'readonly',
       },
     },
     rules: {
