@@ -52,6 +52,21 @@ export const forecastApi = backendApi.injectEndpoints({
 });
 ```
 
+## API модули
+
+Доступные модули для работы с backend API:
+
+- `auth.api.ts`
+   - `useLoginMutation()` : POST `/auth/login` (сохраняет `auth.token`)
+- `account.api.ts`
+   - `useGetMeQuery()` : GET `/account`
+- `forecast.api.ts`
+   - `useCreateForecastMutation()` : POST `/forecast`
+   - `useGetForecastsQuery()` : GET `/forecasts`
+   - `useGetForecastByIdQuery()` : GET `/forecasts/:id`
+- `history.api.ts`
+   - `useGetHistoryQuery()` : GET `/forecasts` (алиас для истории)
+
 ## Ошибки
 
 `baseQuery` приводит все ошибки к типу `HttpError`:
