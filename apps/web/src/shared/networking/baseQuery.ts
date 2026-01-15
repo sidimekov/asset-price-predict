@@ -2,6 +2,7 @@ import type {
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
+  FetchBaseQueryMeta,
   QueryReturnValue,
 } from '@reduxjs/toolkit/query';
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
@@ -11,7 +12,9 @@ import type { HttpError } from './types';
 const rawBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
-  FetchBaseQueryError
+  FetchBaseQueryError,
+  {},
+  FetchBaseQueryMeta
 > = fetchBaseQuery({
   baseUrl: '/api',
   timeout: 10_000,
@@ -47,9 +50,11 @@ const getRequestInfo = (args: string | FetchArgs) => {
 export const baseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
-  HttpError
+  HttpError,
+  {},
+  FetchBaseQueryMeta
 > = async (args, api, extraOptions) => {
-  const result: QueryReturnValue<unknown, FetchBaseQueryError, {}> =
+  const result: QueryReturnValue<unknown, FetchBaseQueryError, FetchBaseQueryMeta> =
     await rawBaseQuery(args, api, extraOptions);
 
   if (process.env.NODE_ENV === 'development') {
