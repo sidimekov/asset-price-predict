@@ -2,7 +2,15 @@ import React from 'react';
 import { Provider, useSelector } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { render, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  type Mock,
+} from 'vitest';
 
 // 1) Мокаем селекторы, которые useOrchestrator импортирует напрямую
 vi.mock('@/features/asset-catalog/model/catalogSlice', async () => {
