@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import type { HistoryEntry } from '@/entities/history/model';
 
-// Вспомогательные функции для валидации
+// Переносим функции валидации прямо в тестовый файл
 export function isValidHistoryEntry(entry: any): entry is HistoryEntry {
   return (
     typeof entry === 'object' &&
+    entry !== null &&
     typeof entry.id === 'string' &&
     typeof entry.created_at === 'string' &&
     !isNaN(Date.parse(entry.created_at)) &&
@@ -21,6 +22,7 @@ export function isValidHistoryEntry(entry: any): entry is HistoryEntry {
         typeof item[1] === 'number',
     ) &&
     typeof entry.meta === 'object' &&
+    entry.meta !== null &&
     typeof entry.meta.runtime_ms === 'number' &&
     (entry.meta.backend === 'client' || entry.meta.backend === 'server')
   );
@@ -29,7 +31,7 @@ export function isValidHistoryEntry(entry: any): entry is HistoryEntry {
 export function validateHistoryEntry(entry: any): string[] {
   const errors: string[] = [];
 
-  if (typeof entry !== 'object') {
+  if (typeof entry !== 'object' || entry === null) {
     return ['Entry must be an object'];
   }
 
@@ -74,7 +76,7 @@ export function validateHistoryEntry(entry: any): string[] {
     errors.push('p50 must contain arrays of two numbers');
   }
 
-  if (typeof entry.meta !== 'object') {
+  if (typeof entry.meta !== 'object' || entry.meta === null) {
     errors.push('meta must be an object');
   } else {
     if (typeof entry.meta.runtime_ms !== 'number') {
@@ -108,9 +110,13 @@ describe('history validation', () => {
       expect(isValidHistoryEntry(validEntry)).toBe(true);
     });
 
+    it('возвращает false для null', () => {
+      expect(isValidHistoryEntry(null)).toBe(false);
+    });
+
     it('возвращает false для невалидного id', () => {
       const invalidEntry = {
-        id: 123, // должно быть string
+        id: 123,
         created_at: '2024-01-15T10:30:00Z',
         symbol: 'BTCUSDT',
         tf: '1h',
@@ -152,7 +158,7 @@ describe('history validation', () => {
         tf: '1h',
         horizon: 24,
         provider: 'BINANCE',
-        p50: [[1000, 'string']], // должно быть число
+        p50: [[1000, 'string']],
         meta: {
           runtime_ms: 100,
           backend: 'client',
@@ -173,8 +179,23 @@ describe('history validation', () => {
         p50: [[1000, 50000]],
         meta: {
           runtime_ms: 100,
-          backend: 'invalid', // должно быть 'client' или 'server'
+          backend: 'invalid',
         },
+      };
+
+      expect(isValidHistoryEntry(invalidEntry)).toBe(false);
+    });
+
+    it('возвращает false для отсутствующего meta', () => {
+      const invalidEntry = {
+        id: 'test-id',
+        created_at: '2024-01-15T10:30:00Z',
+        symbol: 'BTCUSDT',
+        tf: '1h',
+        horizon: 24,
+        provider: 'BINANCE',
+        p50: [[1000, 50000]],
+        // нет meta
       };
 
       expect(isValidHistoryEntry(invalidEntry)).toBe(false);
@@ -200,6 +221,10 @@ describe('history validation', () => {
       expect(validateHistoryEntry(validEntry)).toEqual([]);
     });
 
+    it('возвращает ошибку для null', () => {
+      expect(validateHistoryEntry(null)).toEqual(['Entry must be an object']);
+    });
+
     it('возвращает ошибки для невалидного HistoryEntry', () => {
       const invalidEntry = {
         id: 123,
@@ -213,10 +238,15 @@ describe('history validation', () => {
       };
 
       const errors = validateHistoryEntry(invalidEntry);
-      expect(errors.length).toBeGreaterThan(0);
+
       expect(errors).toContain('id must be a string');
       expect(errors).toContain('created_at must be a valid ISO date string');
       expect(errors).toContain('symbol must be a string');
+      expect(errors).toContain('tf must be a string');
+      expect(errors).toContain('horizon must be a number');
+      expect(errors).toContain('provider must be a string');
+      expect(errors).toContain('p50 must be an array');
+      expect(errors).toContain('meta must be an object');
     });
 
     it('возвращает ошибку для невалидного p50 массива', () => {
@@ -239,6 +269,46 @@ describe('history validation', () => {
 
       const errors = validateHistoryEntry(invalidEntry);
       expect(errors).toContain('p50 must contain arrays of two numbers');
+    });
+
+    it('возвращает ошибку для невалидного backend в meta', () => {
+      const invalidEntry = {
+        id: 'test-id',
+        created_at: '2024-01-15T10:30:00Z',
+        symbol: 'BTCUSDT',
+        tf: '1h',
+        horizon: 24,
+        provider: 'BINANCE',
+        p50: [[1000, 50000]],
+        meta: {
+          runtime_ms: 100,
+          backend: 'invalid',
+        },
+      };
+
+      const errors = validateHistoryEntry(invalidEntry);
+      expect(errors).toContain(
+        'meta.backend must be either "client" or "server"',
+      );
+    });
+
+    it('возвращает ошибку для невалидного runtime_ms', () => {
+      const invalidEntry = {
+        id: 'test-id',
+        created_at: '2024-01-15T10:30:00Z',
+        symbol: 'BTCUSDT',
+        tf: '1h',
+        horizon: 24,
+        provider: 'BINANCE',
+        p50: [[1000, 50000]],
+        meta: {
+          runtime_ms: 'not-a-number',
+          backend: 'client',
+        },
+      };
+
+      const errors = validateHistoryEntry(invalidEntry);
+      expect(errors).toContain('meta.runtime_ms must be a number');
     });
   });
 });
