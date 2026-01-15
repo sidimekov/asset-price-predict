@@ -72,8 +72,10 @@ Feature window по умолчанию: `64` (как в ML Worker).
 
 ## Таргет и горизонт
 
-- **Цель (target)**: `log_return(t+H)` или `delta_price(t+H)`
-- **H** (горизонт): фиксированный, по умолчанию `5`
+- **Цель (target)**: `log_return(t+1..H)` или `delta_price(t+1..H)`
+- **H** (горизонт): фиксированный, по умолчанию `24` (v1)
+
+В `build_features.py` таргеты пишутся как колонки `target_1 ... target_H`.
 
 ## Сплиты
 
@@ -116,9 +118,9 @@ python scripts/data/preprocess_timeseries.py \
 # 3) Features
 python scripts/data/build_features.py \
   --bars data/normalized/moex --out-dir data/features/v1/moex \
-  --horizon 5 --target log_return --feature-window 64
+  --horizon 24 --target delta_price --feature-window 64
 
 python scripts/data/build_features.py \
   --bars data/normalized/binance --out-dir data/features/v1/binance \
-  --horizon 5 --target log_return --feature-window 64
+  --horizon 24 --target delta_price --feature-window 64
 ```

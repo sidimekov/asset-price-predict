@@ -30,3 +30,8 @@ Order is fixed and must match `apps/web/src/workers/ml-worker.ts`:
 
 - Keep `n=10` for v1 to avoid ML Worker changes.
 - If we switch to `p50`/`p10`/`p90` outputs later, ML Worker will need updates.
+
+## Training scripts
+
+- `scripts/modeling/train_forecast_lgbm_v1.py`
+- `scripts/modeling/train_forecast_catboost_v1.py`
