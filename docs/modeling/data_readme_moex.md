@@ -42,6 +42,7 @@ JSON на тикер + TF:
 - преобразует `begin` (локальное время MOEX) в UTC epoch ms
 - проверяет валидность OHLC
 - сортирует и удаляет дубликаты
+- выравнивает по TF и заполняет пропуски (close=prev_close, volume=0)
 
 Нормализованные бары: `data/normalized/moex/{TICKER}_1d.json`
 

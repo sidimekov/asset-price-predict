@@ -71,6 +71,73 @@ def _read_raw(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def _interval_ms_from_binance(value: str) -> Optional[int]:
+    if value.endswith("m"):
+        return int(value[:-1]) * 60_000
+    if value.endswith("h"):
+        return int(value[:-1]) * 3_600_000
+    if value.endswith("d"):
+        return int(value[:-1]) * 86_400_000
+    return None
+
+
+def _interval_ms_from_moex(value: Any) -> Optional[int]:
+    try:
+        interval = int(value)
+    except (TypeError, ValueError):
+        return None
+    if interval == 24:
+        return 86_400_000
+    if interval <= 0:
+        return None
+    return interval * 60_000
+
+
+def _interval_ms(raw: Dict[str, Any]) -> Optional[int]:
+    source = raw.get("source")
+    if source == "MOEX":
+        return _interval_ms_from_moex(raw.get("interval"))
+    if source == "BINANCE":
+        value = raw.get("interval")
+        if isinstance(value, str):
+            return _interval_ms_from_binance(value)
+    return None
+
+
+def _align_bars(
+    bars: List[List[Any]], interval_ms: Optional[int]
+) -> Tuple[List[List[Any]], int]:
+    if not bars or not interval_ms:
+        return bars, 0
+
+    by_ts = {int(b[0]): b for b in bars}
+    timestamps = sorted(by_ts.keys())
+    start_ts = timestamps[0]
+    end_ts = timestamps[-1]
+    has_volume = any(len(b) >= 6 for b in bars)
+
+    aligned: List[List[Any]] = []
+    gap_count = 0
+    prev_close: Optional[float] = None
+    ts = start_ts
+    while ts <= end_ts:
+        bar = by_ts.get(ts)
+        if bar:
+            prev_close = float(bar[4])
+            aligned.append(bar)
+        else:
+            gap_count += 1
+            if prev_close is None:
+                ts += interval_ms
+                continue
+            fill = [ts, prev_close, prev_close, prev_close, prev_close]
+            if has_volume:
+                fill.append(0.0)
+            aligned.append(fill)
+        ts += interval_ms
+    return aligned, gap_count
+
+
 def _to_bars(raw: Dict[str, Any]) -> List[List[Any]]:
     source = raw.get("source")
     data = raw.get("data", [])
@@ -116,11 +183,14 @@ def preprocess(in_path: Path, out_dir: Path) -> None:
     for src in files:
         raw = _read_raw(src)
         bars = _to_bars(raw)
+        interval_ms = _interval_ms(raw)
+        bars, gap_count = _align_bars(bars, interval_ms)
         rel = src.name
         dest = out_dir / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(json.dumps(bars, ensure_ascii=True))
-        print(f"[preprocess] {src} -> {dest} ({len(bars)} bars)")
+        gap_msg = f", filled_gaps={gap_count}" if gap_count else ""
+        print(f"[preprocess] {src} -> {dest} ({len(bars)} bars{gap_msg})")
 
 
 def main() -> None:

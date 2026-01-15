@@ -51,6 +51,7 @@
 - без дубликатов
 - валидная OHLC логика (`high >= max(open,close)`, `low <= min(open,close)`)
 - volume >= 0 (если есть)
+- выравнивание по TF: пропуски заполняются (close=prev_close, volume=0)
 
 ### Фичи (совпадают с ML Worker)
 
@@ -66,6 +67,8 @@
 8. `ema_10`
 9. `ret_mean_5`
 10. `ret_std_20`
+
+Feature window по умолчанию: `64` (как в ML Worker).
 
 ## Таргет и горизонт
 
@@ -113,9 +116,9 @@ python scripts/data/preprocess_timeseries.py \
 # 3) Features
 python scripts/data/build_features.py \
   --bars data/normalized/moex --out-dir data/features/v1/moex \
-  --horizon 5 --target log_return
+  --horizon 5 --target log_return --feature-window 64
 
 python scripts/data/build_features.py \
   --bars data/normalized/binance --out-dir data/features/v1/binance \
-  --horizon 5 --target log_return
+  --horizon 5 --target log_return --feature-window 64
 ```

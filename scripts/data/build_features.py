@@ -13,6 +13,7 @@ from typing import Iterable, List, Dict, Any, Optional, Tuple
 class FeatureConfig:
     horizon: int = 5
     target: str = "log_return"  # or "delta_price"
+    feature_window: int = 64
 
 
 FEATURE_COLUMNS = [
@@ -92,7 +93,7 @@ def build_features_for_bars(
         curr = closes[i]
         returns.append(0.0 if prev == 0 else (curr - prev) / prev)
 
-    min_idx = 20
+    min_idx = max(cfg.feature_window, 20)
     rows: List[Dict[str, Any]] = []
     for i in range(min_idx, len(closes) - cfg.horizon):
         mean_5 = sum(closes[i - 4 : i + 1]) / 5
@@ -124,6 +125,7 @@ def build_features_for_bars(
         "rows": len(rows),
         "horizon": cfg.horizon,
         "target": cfg.target,
+        "feature_window": cfg.feature_window,
         "features": FEATURE_COLUMNS,
     }
     return rows, meta
@@ -172,12 +174,14 @@ def main() -> None:
     parser.add_argument("--bars", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--horizon", type=int, default=5)
+    parser.add_argument("--feature-window", type=int, default=64)
     parser.add_argument("--target", choices=["log_return", "delta_price"], default="log_return")
     args = parser.parse_args()
 
     cfg = FeatureConfig(
         horizon=args.horizon,
         target=args.target,
+        feature_window=args.feature_window,
     )
 
     files = list(_iter_json_files(Path(args.bars)))
