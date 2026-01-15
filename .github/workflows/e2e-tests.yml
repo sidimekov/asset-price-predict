@@ -17,6 +17,15 @@ jobs:
       - name: Поднять сервисы (dev)
         run: docker compose up -d --build
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
       - name: Дождаться web
         run: pnpm dlx wait-on http://localhost:3000
 
