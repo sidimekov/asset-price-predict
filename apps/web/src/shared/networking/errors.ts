@@ -78,6 +78,12 @@ export const normalizeHttpError = (error: ErrorPayload): HttpError => {
         code: 'custom_error',
       };
     }
+
+    return {
+      status: 0,
+      message: error.error ?? 'Request failed',
+      code: 'unknown_error',
+    };
   }
 
   return {
