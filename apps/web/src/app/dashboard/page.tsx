@@ -9,6 +9,7 @@ import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
+import { predictRequested } from '@/entities/forecast/model/forecastSlice';
 import {
   addRecent,
   setSelected,
@@ -16,11 +17,6 @@ import {
   selectRecent,
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
-import {
-  timeseriesRequested,
-  buildTimeseriesKey,
-} from '@/entities/timeseries/model/timeseriesSlice';
-import { DEFAULT_TIMEFRAME } from '@/config/market';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
@@ -36,18 +32,19 @@ export default function Dashboard() {
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
-  const [factorsState, setFactorsState] = React.useState<State>('idle');
 
   const [selectedModel, setSelectedModel] = React.useState('');
   const [selectedDate, setSelectedDate] = React.useState(() => {
     const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}-${String(today.getDate()).padStart(2, '0')}`;
   });
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setParamsState('success');
-      setFactorsState('ready');
     }, 1200);
     return () => clearTimeout(timer);
   }, []);
@@ -67,11 +64,6 @@ export default function Dashboard() {
     symbol: string;
     provider: 'binance' | 'moex' | 'mock';
   }) => {
-    const normalizedProvider =
-      provider === 'mock'
-        ? 'MOCK'
-        : (provider.toUpperCase() as 'BINANCE' | 'MOEX');
-
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));
 
@@ -80,8 +72,21 @@ export default function Dashboard() {
   };
 
   const handlePredict = () => {
-    if (!selectedSymbol || !selectedAsset) return;
+    if (!selectedAsset?.symbol || !selectedAsset?.provider) return;
 
+    // forecast только по trigger
+    dispatch(
+      predictRequested({
+        symbol: selectedAsset.symbol,
+        provider: selectedAsset.provider, // ui provider: 'moex' | 'binance'
+        tf: '1h',
+        window: 200,
+        horizon: 24,
+        model: selectedModel || null,
+      }),
+    );
+
+    // Переход на forecast страницу — оставляем как было
     const parts = [`ticker=${encodeURIComponent(selectedAsset.symbol)}`];
     if (selectedModel) parts.push(`model=${encodeURIComponent(selectedModel)}`);
     if (selectedDate) parts.push(`to=${encodeURIComponent(selectedDate)}`);
@@ -105,17 +110,7 @@ export default function Dashboard() {
   const handleRecentSelect = (symbol: string) => {
     const asset = recentAssets.find((a) => a.symbol === symbol);
     if (asset) {
-      dispatch(setSelected(asset));
-
-      const normalizedProvider = asset.provider.toUpperCase() as
-        | 'BINANCE'
-        | 'MOEX';
-      const key = buildTimeseriesKey(
-        normalizedProvider,
-        asset.symbol,
-        DEFAULT_TIMEFRAME,
-      );
-      dispatch(timeseriesRequested({ key }));
+      dispatch(setSelected({ symbol: asset.symbol, provider: asset.provider }));
     }
   };
 
@@ -130,7 +125,7 @@ export default function Dashboard() {
             state={derivedAssetState}
             assets={recentAssets.map((a) => ({
               symbol: a.symbol,
-              price: '—', // Цена остается "—" как в оригинале
+              price: '—',
               provider: a.provider,
             }))}
             selected={selectedSymbol}
