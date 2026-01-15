@@ -244,8 +244,10 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     // чтобы ожидания были стабильные — чистим вызовы перед predict
+    // чтобы ожидания были стабильные — чистим вызовы перед predict
     vi.clearAllMocks();
 
+    // 1) диспатчим PREDICT (без прокрутки таймеров)
     await act(async () => {
       store.dispatch({
         type: 'PREDICT',
@@ -258,11 +260,19 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
           model: null,
         },
       });
+    });
+
+    // 2) даём React применить effect, который поставит setTimeout
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // 3) теперь исполняем debounce
+    await act(async () => {
       vi.advanceTimersByTime(300);
     });
 
     const runForecastMock = (ForecastManager as any).runForecast as Mock;
-
     expect(runForecastMock).toHaveBeenCalledTimes(1);
 
     const [ctxArg, depsArg] = runForecastMock.mock.calls[0];
@@ -300,7 +310,25 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     );
 
     await act(async () => {
-      vi.advanceTimersByTime(400);
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'binance',
+          tf: '1h',
+          window: 0, // <-- ВАЖНО: invalid
+          horizon: 24,
+          model: null,
+        },
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
 
     const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
