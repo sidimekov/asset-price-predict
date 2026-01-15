@@ -1,6 +1,7 @@
 import type {
   ForecastCreateReq,
   ForecastCreateRes,
+  ForecastId,
 } from '@assetpredict/shared';
 
 function isoNow() {
@@ -11,7 +12,7 @@ export class ForecastController {
   createForecast(req: ForecastCreateReq): ForecastCreateRes {
     // Заглушка - series пустые
     return {
-      id: 'mock-forecast-id',
+      id: 'mock-forecast-id' as ForecastId,
       symbol: req.symbol,
       timeframe: req.timeframe,
       horizon: req.horizon,

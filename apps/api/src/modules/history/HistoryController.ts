@@ -1,4 +1,8 @@
-import type { ForecastDetailRes, ForecastListRes } from '@assetpredict/shared';
+import type {
+  ForecastDetailRes,
+  ForecastId,
+  ForecastListRes,
+} from '@assetpredict/shared';
 
 function isoNow() {
   return new Date().toISOString();
@@ -13,7 +17,7 @@ export class HistoryController {
     // /forecasts/invalid -> возврат невалидных series (разные длины) и должно быть 500
     if (id === 'invalid') {
       return {
-        id,
+        id: id as ForecastId,
         symbol: 'BTCUSDT',
         timeframe: '1d',
         horizon: 12,
@@ -25,7 +29,7 @@ export class HistoryController {
     }
 
     return {
-      id,
+      id: id as ForecastId,
       symbol: 'BTCUSDT',
       timeframe: '1d',
       horizon: 12,

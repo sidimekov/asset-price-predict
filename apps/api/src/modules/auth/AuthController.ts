@@ -1,8 +1,12 @@
-import type { LoginRes } from '@assetpredict/shared';
+import type { LoginRes, UserId } from '@assetpredict/shared';
 
 const mockAuthResponse = (): LoginRes => ({
   token: 'mock',
-  user: { id: 'u1', email: 'user@example.com', username: 'Demo' },
+  user: {
+    id: 'u1' as UserId,
+    email: 'user@example.com',
+    username: 'Demo',
+  },
 });
 
 export class AuthController {

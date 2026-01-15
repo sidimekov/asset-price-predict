@@ -1,10 +1,10 @@
-import type { AccountRes } from '@assetpredict/shared';
+import type { AccountId, AccountRes } from '@assetpredict/shared';
 
 export class AccountController {
   getAccount(): AccountRes {
     // мок профиль
     return {
-      id: 'u1',
+      id: 'u1' as AccountId,
       username: 'Demo',
       login: 'demo',
       email: 'demo@example.com',
