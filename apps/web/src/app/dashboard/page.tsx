@@ -75,15 +75,6 @@ export default function Dashboard() {
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));
 
-    if (provider !== 'mock') {
-      const key = buildTimeseriesKey(
-        normalizedProvider,
-        symbol,
-        DEFAULT_TIMEFRAME,
-      );
-      dispatch(timeseriesRequested({ key }));
-    }
-
     setIsCatalogOpen(false);
     setModalQuery('');
   };
