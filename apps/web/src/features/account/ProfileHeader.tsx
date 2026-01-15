@@ -1,18 +1,24 @@
 'use client';
+
 import React from 'react';
-import profile from '@/mocks/profile.json';
 import Skeleton from '@/shared/ui/Skeleton';
 
 interface ProfileHeaderProps {
+  profile?: {
+    avatarUrl?: string;
+    username: string;
+    login: string;
+  };
   loading?: boolean;
   onClick?: () => void;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
+  profile,
   loading = false,
   onClick,
 }) => {
-  if (loading) {
+  if (loading || !profile) {
     return (
       <div className="profile-header">
         <Skeleton width="128px" height="128px" />
@@ -24,19 +30,21 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     );
   }
 
+  const { avatarUrl, username, login } = profile;
+
   return (
     <div className="profile-header" onClick={onClick}>
       <img
-        src={profile.avatarUrl}
-        alt={`${profile.username} avatar`}
+        src={avatarUrl || '/images/profile-avatar.png'}
+        alt={`${username} avatar`}
         className="profile-header-avatar"
       />
+
       <div className="profile-header-text">
         <p className="profile-header-username">
-          Username:{' '}
-          <span className="profile-header-username">{profile.username}</span>
+          Username: <span className="profile-header-username">{username}</span>
         </p>
-        <p className="profile-header-login">Login: {profile.login}</p>
+        <p className="profile-header-login">Login: {login}</p>
       </div>
     </div>
   );

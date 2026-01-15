@@ -1,4 +1,5 @@
 'use client';
+
 import React from 'react';
 import { Button } from '@/shared/ui/Button';
 import Skeleton from '@/shared/ui/Skeleton';
@@ -8,30 +9,28 @@ interface ActionsListProps {
   onClick?: (label: string) => void;
 }
 
+const ACTIONS = [
+  'Edit photo',
+  'Change password',
+  'Change username',
+  'Change login',
+] as const;
+
 export const ActionsList: React.FC<ActionsListProps> = ({
   loading = false,
   onClick,
 }) => {
-  const actions = [
-    'Edit photo',
-    'Change password',
-    'Change username',
-    'Change login',
-  ];
-
-  const handleClick = (label: string) => (e: React.MouseEvent<any>) => {
+  const handleClick = (label: string) => (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!loading) {
-      alert(`${label} — Not implemented`);
-      onClick?.(label);
-    }
+    if (loading) return;
+    onClick?.(label);
   };
 
   return (
     <div className="actions-list">
       {loading
-        ? actions.map((_, idx) => <Skeleton key={idx} height="48px" />)
-        : actions.map((label) => (
+        ? ACTIONS.map((_, idx) => <Skeleton key={idx} height="48px" />)
+        : ACTIONS.map((label) => (
             <Button key={label} onClick={handleClick(label)}>
               {label}
             </Button>
@@ -40,7 +39,7 @@ export const ActionsList: React.FC<ActionsListProps> = ({
       {loading ? (
         <Skeleton height="48px" />
       ) : (
-        <Button onClick={handleClick('Log out')} variant="danger">
+        <Button variant="danger" onClick={handleClick('Log out')}>
           Log out
         </Button>
       )}
