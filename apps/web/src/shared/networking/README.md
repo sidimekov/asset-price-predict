@@ -4,7 +4,6 @@
 Компоненты и оркестратор не работают напрямую с `fetch` и URL - вся
 сетевуха инкапсулирована в `baseQuery`
 
-
 - `baseQuery` - единственная точка входа для REST-запросов в `backendApi`.
 - Авторизация: если в `localStorage` есть `auth.token`, он добавляется как
   `Authorization: Bearer <token>`.
@@ -57,15 +56,15 @@ export const forecastApi = backendApi.injectEndpoints({
 Доступные модули для работы с backend API:
 
 - `auth.api.ts`
-   - `useLoginMutation()` : POST `/auth/login` (сохраняет `auth.token`)
+  - `useLoginMutation()` : POST `/auth/login` (сохраняет `auth.token`)
 - `account.api.ts`
-   - `useGetMeQuery()` : GET `/account`
+  - `useGetMeQuery()` : GET `/account`
 - `forecast.api.ts`
-   - `useCreateForecastMutation()` : POST `/forecast`
-   - `useGetForecastsQuery()` : GET `/forecasts`
-   - `useGetForecastByIdQuery()` : GET `/forecasts/:id`
+  - `useCreateForecastMutation()` : POST `/forecast`
+  - `useGetForecastsQuery()` : GET `/forecasts`
+  - `useGetForecastByIdQuery()` : GET `/forecasts/:id`
 - `history.api.ts`
-   - `useGetHistoryQuery()` : GET `/forecasts` (алиас для истории)
+  - `useGetHistoryQuery()` : GET `/forecasts` (алиас для истории)
 
 ## Ошибки
 

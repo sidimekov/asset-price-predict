@@ -54,8 +54,11 @@ export const baseQuery: BaseQueryFn<
   {},
   FetchBaseQueryMeta
 > = async (args, api, extraOptions) => {
-  const result: QueryReturnValue<unknown, FetchBaseQueryError, FetchBaseQueryMeta> =
-    await rawBaseQuery(args, api, extraOptions);
+  const result: QueryReturnValue<
+    unknown,
+    FetchBaseQueryError,
+    FetchBaseQueryMeta
+  > = await rawBaseQuery(args, api, extraOptions);
 
   if (process.env.NODE_ENV === 'development') {
     const { method, url } = getRequestInfo(args);
