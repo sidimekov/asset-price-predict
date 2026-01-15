@@ -2,12 +2,17 @@ import type {
   BaseQueryFn,
   FetchArgs,
   FetchBaseQueryError,
+  QueryReturnValue,
 } from '@reduxjs/toolkit/query';
 import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { normalizeHttpError } from './errors';
 import type { HttpError } from './types';
 
-const rawBaseQuery = fetchBaseQuery({
+const rawBaseQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = fetchBaseQuery({
   baseUrl: '/api',
   timeout: 10_000,
   prepareHeaders: (headers) => {
@@ -44,23 +49,23 @@ export const baseQuery: BaseQueryFn<
   unknown,
   HttpError
 > = async (args, api, extraOptions) => {
-  const result = (await rawBaseQuery(args, api, extraOptions)) as {
-    error?: FetchBaseQueryError;
-  };
+  const result: QueryReturnValue<unknown, FetchBaseQueryError, {}> =
+    await rawBaseQuery(args, api, extraOptions);
 
   if (process.env.NODE_ENV === 'development') {
     const { method, url } = getRequestInfo(args);
-    const status = result.error
-      ? result.error.status
-      : result.meta?.response?.status;
+    const status =
+      'error' in result && result.error
+        ? result.error.status
+        : result.meta?.response?.status;
 
     // eslint-disable-next-line no-console
     console.debug('[Networking]', method, url, status ?? 'no-status');
   }
 
-  if (result.error) {
+  if ('error' in result && result.error) {
     return { error: normalizeHttpError(result.error) };
   }
 
-  return result;
+  return { data: result.data, meta: result.meta };
 };
