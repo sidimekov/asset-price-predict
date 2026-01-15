@@ -39,12 +39,12 @@ import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 
 type Selected = { symbol: string; provider: string } | undefined;
 type Params =
-    | { tf: string; window: number | string; horizon: number; model?: any }
-    | undefined;
+  | { tf: string; window: number | string; horizon: number; model?: any }
+  | undefined;
 
 const catalogReducer = (
-    state = { selected: undefined as Selected },
-    action: any,
+  state = { selected: undefined as Selected },
+  action: any,
 ) => {
   switch (action.type) {
     case 'SET_SELECTED':
@@ -55,11 +55,11 @@ const catalogReducer = (
 };
 
 const forecastReducer = (
-    state = {
-      params: undefined as Params,
-      predict: { requestId: 0, request: null as any },
-    },
-    action: any,
+  state = {
+    params: undefined as Params,
+    predict: { requestId: 0, request: null as any },
+  },
+  action: any,
 ) => {
   switch (action.type) {
     case 'SET_PARAMS':
@@ -104,12 +104,12 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
   });
 
   const createTestStore = () =>
-      configureStore({
-        reducer: {
-          catalog: catalogReducer,
-          forecast: forecastReducer,
-        },
-      });
+    configureStore({
+      reducer: {
+        catalog: catalogReducer,
+        forecast: forecastReducer,
+      },
+    });
 
   it('does nothing when selected is missing (even if params exist)', async () => {
     const store = createTestStore();
@@ -120,9 +120,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -149,9 +149,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -192,9 +192,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -240,9 +240,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -275,9 +275,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
       });
 
       render(
-          <Provider store={store}>
-            <TestComponent />
-          </Provider>,
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
       );
 
       await act(async () => {
@@ -316,9 +316,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
       });
 
       render(
-          <Provider store={store}>
-            <TestComponent />
-          </Provider>,
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
       );
 
       await act(async () => {
@@ -336,9 +336,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     const store = createTestStore();
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -385,9 +385,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     // сначала авто ts
@@ -427,9 +427,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -480,9 +480,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     await act(async () => {
@@ -550,9 +550,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
       });
 
       render(
-          <Provider store={store}>
-            <TestComponent />
-          </Provider>,
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
       );
 
       await act(async () => {
@@ -603,9 +603,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
       // Не диспатчим params - они должны быть взяты из дефолтных значений
 
       render(
-          <Provider store={store}>
-            <TestComponent />
-          </Provider>,
+        <Provider store={store}>
+          <TestComponent />
+        </Provider>,
       );
 
       await act(async () => {
@@ -632,9 +632,9 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     });
 
     const { unmount } = render(
-        <Provider store={store}>
-          <TestComponent />
-        </Provider>,
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
     );
 
     // Запускаем таймер, но не даем ему выполниться
