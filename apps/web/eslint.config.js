@@ -54,6 +54,8 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         HTMLSelectElement: 'readonly',
+        KeyboardEvent: 'readonly',
+        HTMLButtonElement: 'readonly',
       },
     },
     rules: {
