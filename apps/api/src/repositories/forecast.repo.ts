@@ -53,7 +53,10 @@ export async function getForecastById(id: string, userId: string) {
   return result.rows[0] ?? null;
 }
 
-export async function listForecasts(userId: string, { page, limit }: Pagination) {
+export async function listForecasts(
+  userId: string,
+  { page, limit }: Pagination,
+) {
   const safeLimit = Math.max(1, Math.min(limit, 100));
   const safePage = Math.max(1, page);
   const offset = (safePage - 1) * safeLimit;
