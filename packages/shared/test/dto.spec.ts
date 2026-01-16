@@ -1,6 +1,11 @@
 import { describe, it, expectTypeOf } from 'vitest';
 import type { AccountProfile, AccountRes } from '../src/dto/account.js';
-import type { AuthUser, LoginReq, LoginRes } from '../src/dto/auth.js';
+import type {
+  AuthUser,
+  LoginReq,
+  LoginRes,
+  RegisterReq,
+} from '../src/dto/auth.js';
 import type {
   ForecastCreateReq,
   ForecastDetailRes,
@@ -12,7 +17,6 @@ describe('DTO types', () => {
     const profile: AccountProfile = {
       id: 'u1' as AccountProfile['id'],
       username: 'Demo',
-      login: 'demo',
       email: 'demo@example.com',
     };
 
@@ -23,11 +27,18 @@ describe('DTO types', () => {
     const user: AuthUser = {
       id: 'u1' as AuthUser['id'],
       email: 'user@example.com',
+      username: 'demo',
     };
 
     const loginReq: LoginReq = {
       email: 'user@example.com',
       password: 'secret',
+    };
+
+    const registerReq: RegisterReq = {
+      email: 'user@example.com',
+      password: 'secret',
+      username: 'demo',
     };
 
     const loginRes: LoginRes = {
@@ -36,6 +47,7 @@ describe('DTO types', () => {
     };
 
     expectTypeOf(loginReq).toMatchTypeOf<LoginReq>();
+    expectTypeOf(registerReq).toMatchTypeOf<RegisterReq>();
     expectTypeOf(loginRes.user).toMatchTypeOf<AuthUser>();
   });
 

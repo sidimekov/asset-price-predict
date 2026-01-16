@@ -190,8 +190,7 @@ packages/shared/
   {
     id: AccountId;
     username: string;
-    login: string;
-    email?: string;
+    email: string;
   }
   ```
 
@@ -212,6 +211,16 @@ packages/shared/
   {
     token: string;
     user: AuthUser;
+  }
+  ```
+
+- **RegisterReq**: запрос на регистрацию
+
+  ```typescript
+  {
+    email: string;
+    password: string;
+    username?: string;
   }
   ```
 
