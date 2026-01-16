@@ -17,6 +17,7 @@ export * from './dto/forecast.js';
 export * from './schemas/market.schema.js';
 export * from './schemas/common.schema.js';
 export * from './schemas/forecast.schema.js';
+export * from './schemas/auth.schema.js'
 
 // Утилиты
 export * from './utils/zodErrors.js';

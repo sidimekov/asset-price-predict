@@ -4,9 +4,9 @@ export type UserId = BrandedId<'user'> & string;
 
 export interface AuthUser {
   id: UserId;
-  email?: string;
-  username?: string;
-  login?: string;
+  email: string;
+  username: string;
+  avatarUrl?: string;
 }
 
 export interface LoginReq {
@@ -18,3 +18,11 @@ export interface LoginRes {
   token: string;
   user: AuthUser;
 }
+
+export interface RegisterReq {
+  email: string;
+  password: string;
+  username?: string;
+}
+
+export type RegisterRes = LoginRes;
