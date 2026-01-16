@@ -29,7 +29,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-assetpredict}:${POSTGRES_PASSWORD:-assetpredict}@postgres:5432/${POSTGRES_DB:-assetpredict}
       NODE_ENV: production
     ports:
-      - '${API_PORT:-3001}:${API_PORT:-3001}'
+      - '${API_PORT:-3001}:3001'
     depends_on:
       postgres:
         condition: service_healthy
