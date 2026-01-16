@@ -26,6 +26,12 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: API e2e tests
+        run: pnpm --filter @assetpredict/api e2e
+
       - name: Дождаться web
         run: pnpm dlx wait-on http://localhost:3000
 
