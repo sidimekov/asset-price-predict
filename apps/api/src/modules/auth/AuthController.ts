@@ -1,21 +1,19 @@
-import type { LoginRes, UserId } from '@assetpredict/shared';
+import type { LoginReq, LoginRes, RegisterReq } from '@assetpredict/shared';
 
-const mockAuthResponse = (): LoginRes => ({
-  token: 'mock',
-  user: {
-    id: 'u1' as UserId,
-    email: 'user@example.com',
-    username: 'Demo',
-  },
-});
+import { AuthService } from './AuthService.js';
 
 export class AuthController {
-  login(): LoginRes {
-    // мок JWT + мок пользователь
-    return mockAuthResponse();
+  private service: AuthService;
+
+  constructor(service: AuthService = new AuthService()) {
+    this.service = service;
   }
 
-  logout(): LoginRes {
-    return mockAuthResponse();
+  async register(input: RegisterReq): Promise<LoginRes> {
+    return this.service.register(input);
+  }
+
+  async login(input: LoginReq): Promise<LoginRes> {
+    return this.service.login(input);
   }
 }
