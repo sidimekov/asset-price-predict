@@ -1,10 +1,7 @@
 import type { LoginReq, LoginRes, RegisterReq } from '@assetpredict/shared';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
-import {
-  createUser,
-  findUserByEmail,
-} from '../../repositories/user.repo.js';
+import { createUser, findUserByEmail } from '../../repositories/user.repo.js';
 import type { UserRow } from '../../types/db.js';
 import { signAuthToken } from './jwt.js';
 

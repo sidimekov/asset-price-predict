@@ -45,7 +45,7 @@ export class HistoryController {
     return {
       id: row.id as ForecastId,
       symbol: row.symbol,
-      timeframe: row.timeframe  as ForecastCreateRes['timeframe'],
+      timeframe: row.timeframe as ForecastCreateRes['timeframe'],
       horizon: Number(row.horizon),
       createdAt: row.created_at.toISOString(),
       series: row.series as ForecastDetailRes['series'],

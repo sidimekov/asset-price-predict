@@ -27,36 +27,32 @@ export async function historyRoutes(app: FastifyInstance) {
     );
   });
 
-  app.get(
-    '/forecasts/:id',
-    { preHandler: requireAuth },
-    async (req, reply) => {
-      const user = req.user;
-      if (!user) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
+  app.get('/forecasts/:id', { preHandler: requireAuth }, async (req, reply) => {
+    const user = req.user;
+    if (!user) {
+      return reply.status(401).send({ error: 'Unauthorized' });
+    }
 
-      const params = (req.params ?? {}) as { id?: string };
-      const dto = await controller.getForecastDetail(
-        params.id ?? 'mock-forecast-id',
-        user.id,
+    const params = (req.params ?? {}) as { id?: string };
+    const dto = await controller.getForecastDetail(
+      params.id ?? 'mock-forecast-id',
+      user.id,
+    );
+
+    if (!dto) {
+      return reply.status(404).send({ error: 'Forecast not found' });
+    }
+
+    // Валидация ответа перед отправкой :contentReference[oaicite:4]{index=4}
+    const parsed = parseOr500(zForecastDetailRes, dto);
+    if (!parsed.ok) {
+      req.log.error(
+        { err: parsed.error },
+        'Invalid ForecastDetailRes produced by API',
       );
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
 
-      if (!dto) {
-        return reply.status(404).send({ error: 'Forecast not found' });
-      }
-
-      // Валидация ответа перед отправкой :contentReference[oaicite:4]{index=4}
-      const parsed = parseOr500(zForecastDetailRes, dto);
-      if (!parsed.ok) {
-        req.log.error(
-          { err: parsed.error },
-          'Invalid ForecastDetailRes produced by API',
-        );
-        return reply.status(500).send({ error: 'Internal server error' });
-      }
-
-      return parsed.data;
-    },
-  );
+    return parsed.data;
+  });
 }

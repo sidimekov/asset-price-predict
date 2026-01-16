@@ -121,5 +121,9 @@ export async function verifyAuthToken(token: string) {
     throw new Error('Token expired');
   }
 
-  return { id: decoded.sub as UserId, email: decoded.email, username: decoded.username };
+  return {
+    id: decoded.sub as UserId,
+    email: decoded.email,
+    username: decoded.username,
+  };
 }

@@ -2,10 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 
 import { verifyAuthToken } from '../../modules/auth/jwt.js';
 
-export async function requireAuth(
-  req: FastifyRequest,
-  reply: FastifyReply,
-) {
+export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return reply.status(401).send({ error: 'Unauthorized' });
