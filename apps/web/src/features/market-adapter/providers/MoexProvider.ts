@@ -1,4 +1,3 @@
-// apps/web/src/features/market-adapter/providers/MoexProvider.ts
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
@@ -16,9 +15,6 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
-/**
- * Получение таймсерий с MOEX через RTK Query.
- */
 export async function fetchMoexTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
@@ -47,6 +43,12 @@ export async function fetchMoexTimeseries(
 
   try {
     return await queryResult.unwrap();
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+    console.error('MOEX timeseries fetch failed:', err);
+    throw new Error(`MOEX timeseries fetch failed: ${err.message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
@@ -55,10 +57,6 @@ export async function fetchMoexTimeseries(
   }
 }
 
-/**
- * Поиск символов на MOEX по строке запроса.
- * Возвращает сырой ответ провайдера (без нормализации).
- */
 export async function searchMoexSymbols(
   dispatch: AppDispatch,
   query: string,
@@ -68,7 +66,6 @@ export async function searchMoexSymbols(
   throwIfAborted(signal);
 
   const q = query.trim();
-  if (!q) return [];
 
   const queryResult = dispatch(
     marketApi.endpoints.searchMoexSymbols.initiate(q),
@@ -84,6 +81,13 @@ export async function searchMoexSymbols(
 
   try {
     return await queryResult.unwrap();
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+    console.warn('MOEX symbols search failed:', err);
+    // Возвращаем пустой массив вместо выброса ошибки
+    return [];
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
