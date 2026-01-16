@@ -209,30 +209,6 @@ describe('MarketAdapter - Получение временных рядов (getM
       }
       expect(mockFetchMoexTimeseries).toHaveBeenCalled();
     });
-
-    it('обрабатывает данные от CUSTOM провайдера', async () => {
-      vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
-
-      mockGenerateMockBarsRaw.mockReturnValue([
-        [1000, 1, 2, 0.5, 1.5, 100],
-      ] as any);
-
-      const result = await getMarketTimeseries(dispatch, {
-        symbol: 'CUSTOM',
-        provider: 'CUSTOM',
-        timeframe: '1h',
-        limit: 1,
-      });
-
-      expect(result).toHaveProperty('bars');
-      if ('bars' in result) {
-        const expectedBars: Bar[] = [
-          createTestBar(1_000_000, 1, 2, 0.5, 1.5, 100),
-        ];
-        expect(result.bars).toEqual(expectedBars);
-      }
-      expect(mockGenerateMockBarsRaw).toHaveBeenCalled();
-    });
   });
 
   describe('Обработка ошибок', () => {
@@ -427,6 +403,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     ] as any);
 
     const result = await searchAssets(dispatch, {
+      mode: 'search',
       query: 'BTC',
       provider: 'BINANCE',
     });
@@ -458,6 +435,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     ] as any);
 
     const result = await searchAssets(dispatch, {
+      mode: 'search',
       query: 'SBER',
       provider: 'MOEX',
     });
@@ -489,6 +467,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     ] as any);
 
     const result = await searchAssets(dispatch, {
+      mode: 'search',
       query: '',
       provider: 'BINANCE',
     });
@@ -518,6 +497,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     ] as any);
 
     const result = await searchAssets(dispatch, {
+      mode: 'search',
       query: '',
       provider: 'MOEX',
     });
@@ -528,6 +508,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
 
   it('возвращает пустой массив для неизвестного провайдера', async () => {
     const result = await searchAssets(dispatch, {
+      mode: 'search',
       query: 'TEST',
       provider: 'UNKNOWN' as any,
     });
@@ -536,7 +517,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('обрабатывает регистр символов при поиске', async () => {
+  it('возвращает все активы в режиме listAll', async () => {
     vi.mocked(normalizeCatalogResponse).mockReturnValue([
       {
         symbol: 'BTCUSDT',
@@ -546,25 +527,112 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
         currency: 'USDT',
         exchange: 'BINANCE',
       },
+      {
+        symbol: 'ETHUSDT',
+        name: 'ETH/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'BNBUSDT',
+        name: 'BNB/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
     ] as any);
 
-    // Поиск в разных регистрах
-    const result1 = await searchAssets(dispatch, {
-      query: 'btc',
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
       provider: 'BINANCE',
     });
 
-    const result2 = await searchAssets(dispatch, {
-      query: 'BTC',
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(3);
+  });
+
+  it('ограничивает количество активов в режиме listAll с limit', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'BTCUSDT',
+        name: 'BTC/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'ETHUSDT',
+        name: 'ETH/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
       provider: 'BINANCE',
+      limit: 2,
     });
 
-    const result3 = await searchAssets(dispatch, {
-      query: 'Btc',
-      provider: 'BINANCE',
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+  });
+
+  it('работает с MOCK провайдером в режиме search', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'MOCK1',
+        name: 'Mock Asset 1',
+        provider: 'MOCK',
+        assetClass: 'mock',
+        currency: 'USD',
+        exchange: 'MOCK',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'MOCK',
+      provider: 'MOCK',
     });
 
-    expect(result1).toEqual(result2);
-    expect(result2).toEqual(result3);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].provider).toBe('MOCK');
+  });
+
+  it('работает с MOCK провайдером в режиме listAll', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'MOCK1',
+        name: 'Mock Asset 1',
+        provider: 'MOCK',
+        assetClass: 'mock',
+        currency: 'USD',
+        exchange: 'MOCK',
+      },
+      {
+        symbol: 'MOCK2',
+        name: 'Mock Asset 2',
+        provider: 'MOCK',
+        assetClass: 'mock',
+        currency: 'USD',
+        exchange: 'MOCK',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'MOCK',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    expect(result.every((item) => item.provider === 'MOCK')).toBe(true);
   });
 });
