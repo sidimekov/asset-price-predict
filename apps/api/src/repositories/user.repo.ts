@@ -1,8 +1,12 @@
 import { db } from '../db/index.js';
 import type { UserRow } from '../types/db.js';
 
-export async function createUser(email: string, passwordHash: string) {
-  const username = email;
+export async function createUser(input: {
+  email: string;
+  username: string;
+  passwordHash: string;
+}) {
+  const { email, username, passwordHash } = input;
   const result = await db.query<UserRow>(
     `
       INSERT INTO users (username, email, password_hash)
