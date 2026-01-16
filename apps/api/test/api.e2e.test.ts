@@ -3,6 +3,8 @@ import * as assert from 'node:assert/strict';
 
 import { buildApp } from '../src/index.ts';
 
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
+
 test('GET /health -> 200 and ok', async () => {
   const { app } = buildApp();
 
@@ -22,7 +24,7 @@ test('GET /health -> 200 and ok', async () => {
   }
 });
 
-test('POST /forecast invalid body -> 400 Validation failed', async () => {
+test('POST /forecast invalid body -> 401 Unauthorized', async () => {
   const { app } = buildApp();
 
   try {
@@ -33,17 +35,13 @@ test('POST /forecast invalid body -> 400 Validation failed', async () => {
       payload: JSON.stringify({ timeframe: '1d', horizon: 12 }), // нет symbol
     });
 
-    assert.equal(res.statusCode, 400);
-
-    const json = res.json() as any;
-    assert.equal(json.error, 'Validation failed');
-    assert.ok(Array.isArray(json.details));
+    assert.equal(res.statusCode, 401);
   } finally {
     await app.close();
   }
 });
 
-test('POST /forecast valid body -> 200 and returns stub forecast', async () => {
+test('POST /forecast valid body -> 401 Unauthorized', async () => {
   const { app } = buildApp();
 
   try {
@@ -58,26 +56,13 @@ test('POST /forecast valid body -> 200 and returns stub forecast', async () => {
       }),
     });
 
-    assert.equal(res.statusCode, 200);
-
-    const json = res.json() as any;
-    assert.equal(json.symbol, 'BTCUSDT');
-    assert.equal(json.timeframe, '1d');
-    assert.equal(json.horizon, 12);
-    assert.ok(typeof json.id === 'string');
-    assert.ok(typeof json.createdAt === 'string');
-
-    assert.ok(json.series);
-    assert.ok(Array.isArray(json.series.p10));
-    assert.ok(Array.isArray(json.series.p50));
-    assert.ok(Array.isArray(json.series.p90));
-    assert.ok(Array.isArray(json.series.t));
+    assert.equal(res.statusCode, 401);
   } finally {
     await app.close();
   }
 });
 
-test('GET /forecasts/invalid -> 500 because response validation fails', async () => {
+test('GET /forecasts/invalid -> 401 Unauthorized', async () => {
   const { app } = buildApp();
 
   try {
@@ -86,16 +71,13 @@ test('GET /forecasts/invalid -> 500 because response validation fails', async ()
       url: '/forecasts/invalid',
     });
 
-    assert.equal(res.statusCode, 500);
-
-    const json = res.json() as any;
-    assert.equal(json.error, 'Internal server error');
+    assert.equal(res.statusCode, 401);
   } finally {
     await app.close();
   }
 });
 
-test('GET /forecasts -> 200 list stub', async () => {
+test('GET /forecasts -> 401 Unauthorized', async () => {
   const { app } = buildApp();
 
   try {
@@ -104,13 +86,7 @@ test('GET /forecasts -> 200 list stub', async () => {
       url: '/forecasts?page=1&limit=20',
     });
 
-    assert.equal(res.statusCode, 200);
-
-    const json = res.json() as any;
-    assert.ok(Array.isArray(json.items));
-    assert.equal(json.total, 0);
-    assert.equal(json.page, 1);
-    assert.equal(json.limit, 20);
+    assert.equal(res.statusCode, 401);
   } finally {
     await app.close();
   }

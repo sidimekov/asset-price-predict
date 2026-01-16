@@ -24,7 +24,7 @@ export async function insertForecast(forecast: ForecastInsert) {
       forecast.userId,
       forecast.symbol,
       forecast.timeframe,
-      forecast.horizon,
+      String(forecast.horizon),
       forecast.series,
       forecast.metrics ?? null,
       forecast.factors ?? null,
@@ -74,4 +74,18 @@ export async function listForecasts(
   );
 
   return result.rows;
+}
+
+export async function countForecasts(userId: string) {
+  const result = await db.query<{ total: string }>(
+    `
+      SELECT COUNT(*)::text AS total
+      FROM forecasts
+      WHERE user_id = $1
+    `,
+    [userId],
+  );
+
+  const total = result.rows[0]?.total ?? '0';
+  return Number(total);
 }

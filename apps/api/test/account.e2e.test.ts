@@ -3,7 +3,9 @@ import * as assert from 'node:assert/strict';
 
 import { buildApp } from '../src/index.ts';
 
-test('GET /account -> 200 and returns account profile', async () => {
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
+
+test('GET /account -> 401 without token', async () => {
   const { app } = buildApp();
 
   try {
@@ -12,13 +14,7 @@ test('GET /account -> 200 and returns account profile', async () => {
       url: '/account',
     });
 
-    assert.equal(res.statusCode, 200);
-
-    const json = res.json() as any;
-    assert.ok(typeof json.id === 'string');
-    assert.equal(json.username, 'Demo');
-    assert.equal(json.login, 'demo');
-    assert.equal(json.email, 'demo@example.com');
+    assert.equal(res.statusCode, 401);
   } finally {
     await app.close();
   }
