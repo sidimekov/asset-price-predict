@@ -19,7 +19,6 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "20": "^3.1.9",
     "@assetpredict/shared": "workspace:^",
     "@playwright/test": "^1.56.0",
     "@reduxjs/toolkit": "^2.10.1",
