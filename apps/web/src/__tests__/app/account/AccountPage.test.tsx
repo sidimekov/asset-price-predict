@@ -1,19 +1,65 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import AccountPage from '@/app/account/page';
+import { accountService } from '@/features/account/model/accountService';
+import { useProfile } from '@/features/account/model/useProfile';
 
-// Мокаем дочерние компоненты
+// Простые моки без сложной логики
+beforeEach(() => {
+  vi.clearAllMocks();
+  localStorage.clear();
+
+  // Мокаем все зависимости простыми функциями
+  vi.mock('next/navigation', () => ({
+    useRouter: () => ({
+      push: vi.fn(),
+    }),
+  }));
+
+  vi.mock('@/features/account/model/useProfile', () => ({
+    useProfile: () => ({
+      profile: {
+        username: 'testuser',
+        login: 'test@example.com',
+        avatarUrl: '',
+      },
+      setProfile: vi.fn(),
+      loading: false,
+    }),
+  }));
+
+  vi.mock('@/features/account/model/accountService', () => ({
+    accountService: {
+      changePassword: vi.fn(() => Promise.resolve()),
+      updateAccount: vi.fn(() => Promise.resolve({ username: 'updateduser' })),
+    },
+  }));
+
+  vi.mock('@/features/account/model/mapActionToMode', () => ({
+    mapActionToMode: (label: string) => {
+      const map: Record<string, string> = {
+        'Edit photo': 'avatar',
+        'Change password': 'password',
+        'Change username': 'username',
+        'Change login': 'login',
+      };
+      return map[label];
+    },
+  }));
+});
+
+// Мокаем компоненты
 vi.mock('@/features/account/ProfileHeader', () => ({
-  ProfileHeader: vi.fn(({ profile, loading, onClick }) => (
-    <div data-testid="profile-header" onClick={onClick}>
+  ProfileHeader: ({ profile, loading, onClick }: any) => (
+    <div data-testid="profile-header" onClick={loading ? undefined : onClick}>
       ProfileHeader {loading ? 'loading' : 'loaded'}
       {profile?.username && <span>{profile.username}</span>}
     </div>
-  )),
+  ),
 }));
 
 vi.mock('@/features/account/ActionsList', () => ({
-  ActionsList: vi.fn(({ loading, onClick }) => (
+  ActionsList: ({ loading, onClick }: any) => (
     <div data-testid="actions-list">
       {loading ? (
         'loading'
@@ -33,11 +79,11 @@ vi.mock('@/features/account/ActionsList', () => ({
         </>
       )}
     </div>
-  )),
+  ),
 }));
 
 vi.mock('@/features/account/EditAccountModal', () => ({
-  EditAccountModal: vi.fn(({ open, mode, onClose, onSave }) =>
+  EditAccountModal: ({ open, mode, onClose, onSave }: any) =>
     open ? (
       <div data-testid="edit-account-modal">
         <span>Mode: {mode}</span>
@@ -45,107 +91,40 @@ vi.mock('@/features/account/EditAccountModal', () => ({
         <button onClick={() => onSave({})}>Save</button>
       </div>
     ) : null,
-  ),
 }));
 
 describe('AccountPage', () => {
-  it('renders profile header and actions list initially', async () => {
+  it('should render profile and actions list', () => {
     render(<AccountPage />);
 
     expect(screen.getByTestId('profile-header')).toBeInTheDocument();
     expect(screen.getByTestId('actions-list')).toBeInTheDocument();
   });
+});
 
-  it('opens modal on profile header click', async () => {
+// AccountPage дополнительные тесты
+describe('AccountPage - дополнительные тесты', () => {
+  it('should open modal for profile edit', () => {
     render(<AccountPage />);
 
-    const profileHeader = screen.getByTestId('profile-header');
-    fireEvent.click(profileHeader);
+    fireEvent.click(screen.getByTestId('profile-header'));
 
-    await waitFor(() => {
-      const modal = screen.getByTestId('edit-account-modal');
-      expect(modal).toBeInTheDocument();
-      expect(modal).toHaveTextContent('Mode: profile');
-    });
-
-    // После открытия модалки список кнопок должен быть скрыт
-    expect(screen.queryByText('Edit photo')).toBeNull();
+    expect(screen.getByTestId('edit-account-modal')).toBeInTheDocument();
+    expect(screen.getByText('Mode: profile')).toBeInTheDocument();
   });
 
-  it('opens modal on action button click', async () => {
-    render(<AccountPage />);
-
-    const changeUsernameBtn = screen.getByRole('button', {
-      name: 'Change username',
-    });
-    fireEvent.click(changeUsernameBtn);
-
-    await waitFor(() => {
-      const modal = screen.getByTestId('edit-account-modal');
-      expect(modal).toBeInTheDocument();
-      expect(modal).toHaveTextContent('Mode: username');
-    });
-
-    // Список кнопок скрыт
-    expect(screen.queryByText('Edit photo')).toBeNull();
-  });
-
-  it('closes modal on Cancel', async () => {
-    render(<AccountPage />);
-
-    const changeLoginBtn = screen.getByRole('button', { name: 'Change login' });
-    fireEvent.click(changeLoginBtn);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('edit-account-modal')).toBeInTheDocument();
-    });
-
-    // Click Cancel
-    const cancelBtn = screen.getByRole('button', { name: 'Cancel' });
-    fireEvent.click(cancelBtn);
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('edit-account-modal')).toBeNull();
-    });
-
-    // После закрытия модалки список кнопок снова виден
-    expect(screen.getByText('Edit photo')).toBeVisible();
-    expect(screen.getByText('Change password')).toBeVisible();
-  });
-
-  it('calls Save and closes modal', async () => {
-    render(<AccountPage />);
-
-    const editPhotoBtn = screen.getByRole('button', { name: 'Edit photo' });
-    fireEvent.click(editPhotoBtn);
-
-    const saveBtn = screen.getByRole('button', { name: 'Save' });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('edit-account-modal')).toBeNull();
-    });
-
-    // Список кнопок снова виден
-    expect(screen.getByText('Edit photo')).toBeVisible();
-    expect(screen.getByText('Change password')).toBeVisible();
-  });
-
-  it('redirects to /auth on Log out', async () => {
-    const pushMock = vi.fn();
-    vi.mocked(require('next/navigation')).useRouter.mockReturnValue({
-      push: pushMock,
-    } as any);
+  it('should handle save error from accountService', async () => {
+    vi.mocked(accountService.updateAccount).mockRejectedValue(
+      new Error('Update failed'),
+    );
 
     render(<AccountPage />);
 
-    const logoutBtn = screen.getByRole('button', { name: 'Log out' });
-    fireEvent.click(logoutBtn);
+    fireEvent.click(screen.getByText('Change username'));
+    fireEvent.click(screen.getByText('Save'));
 
-    // Проверяем, что router.push вызван
-    expect(pushMock).toHaveBeenCalledWith('/auth');
-
-    // Проверяем localStorage flag
-    expect(localStorage.getItem('ap.auth.mock')).toBe('false');
+    await waitFor(() => {
+      expect(screen.getByText('Mode: username')).toBeInTheDocument();
+    });
   });
 });

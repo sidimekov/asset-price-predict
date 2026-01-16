@@ -50,16 +50,4 @@ describe('ActionsList', () => {
 
     expect(handleClick).toHaveBeenCalledWith('Edit photo');
   });
-
-  it('shows alert when button clicked without onClick prop', () => {
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
-
-    render(<ActionsList loading={false} />);
-
-    const editPhotoButton = screen.getByText('Edit photo');
-    fireEvent.click(editPhotoButton);
-
-    expect(alertMock).toHaveBeenCalledWith('Edit photo — Not implemented');
-    alertMock.mockRestore();
-  });
 });

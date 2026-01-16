@@ -62,18 +62,6 @@ export const EditAccountModal: React.FC<Props> = ({
     }
   }, [open, mode, profile]);
 
-  // Закрытие по Esc
-  useEffect(() => {
-    if (!open) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
-
   if (!open) return null;
 
   const validate = (): boolean => {
@@ -123,7 +111,7 @@ export const EditAccountModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div
         className="modal max-w-md mx-auto p-6 bg-primary rounded-xl"
         onClick={(e) => e.stopPropagation()}
