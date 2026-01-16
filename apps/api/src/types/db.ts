@@ -1,3 +1,5 @@
+import type { Timeframe } from '@assetpredict/shared';
+
 export type UserRow = {
   id: string;
   username: string;
@@ -28,8 +30,8 @@ export type ForecastRow = {
 export type ForecastInsert = {
   userId: string;
   symbol: string;
-  timeframe: string;
-  horizon: string;
+  timeframe: Timeframe;
+  horizon: number;
   series: unknown;
   metrics?: unknown | null;
   factors?: unknown | null;

@@ -17,8 +17,7 @@ export async function requireAuth(
   }
 
   try {
-    const user = await verifyAuthToken(token);
-    req.user = user;
+    req.user = await verifyAuthToken(token);
   } catch {
     return reply.status(401).send({ error: 'Unauthorized' });
   }

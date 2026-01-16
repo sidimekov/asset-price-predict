@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { readEnv } from '../../config/env.js';
+import { UserId } from '@assetpredict/shared';
 
 export type AuthTokenPayload = {
   sub: string;
@@ -120,5 +121,5 @@ export async function verifyAuthToken(token: string) {
     throw new Error('Token expired');
   }
 
-  return { id: decoded.sub, email: decoded.email, username: decoded.username };
+  return { id: decoded.sub as UserId, email: decoded.email, username: decoded.username };
 }
