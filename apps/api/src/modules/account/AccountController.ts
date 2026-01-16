@@ -6,7 +6,6 @@ export class AccountController {
     return {
       id: 'u1' as AccountId,
       username: 'Demo',
-      login: 'demo',
       email: 'demo@example.com',
     };
   }
