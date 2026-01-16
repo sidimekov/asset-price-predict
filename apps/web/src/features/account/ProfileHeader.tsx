@@ -44,7 +44,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <p className="profile-header-username">
           Username: <span className="profile-header-username">{username}</span>
         </p>
-        <p className="profile-header-login">Login: {login}</p>
+        <p className="profile-header-login">Email: {login}</p>
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ describe('mapActionToMode', () => {
   });
 
   it('should map "Change login" to "login"', () => {
-    expect(mapActionToMode('Change login')).toBe('login');
+    expect(mapActionToMode('Change email')).toBe('login');
   });
 
   it('should map "Change password" to "password"', () => {

@@ -13,7 +13,7 @@ const ACTIONS = [
   'Edit photo',
   'Change password',
   'Change username',
-  'Change login',
+  'Change email',
 ] as const;
 
 export const ActionsList: React.FC<ActionsListProps> = ({

@@ -16,7 +16,7 @@ describe('ProfileHeader', () => {
     // Проверяем что отображаются данные профиля
     expect(screen.getByText(/Username:/)).toBeInTheDocument();
     expect(screen.getByText('testuser')).toBeInTheDocument();
-    expect(screen.getByText(/Login: test@example.com/)).toBeInTheDocument();
+    expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument();
   });
 
   it('uses fallback avatar when avatarUrl is not provided', () => {

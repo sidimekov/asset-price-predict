@@ -89,7 +89,7 @@ export const EditAccountModal: React.FC<Props> = ({
 
     if (form.login !== undefined) {
       if (trim(form.login).length < 3) {
-        setLocalError('Login must be at least 3 characters');
+        setLocalError('Email must be at least 3 characters');
         return false;
       }
     }
@@ -106,7 +106,7 @@ export const EditAccountModal: React.FC<Props> = ({
     profile: 'Account settings',
     avatar: 'Edit photo',
     username: 'Change username',
-    login: 'Change login',
+    login: 'Change email',
     password: 'Change password',
   };
 
@@ -155,7 +155,7 @@ export const EditAccountModal: React.FC<Props> = ({
               {'login' in form && (
                 <Input
                   ariaDescribedby="login"
-                  placeholder="Login"
+                  placeholder="Email"
                   value={form.login ?? ''}
                   onChange={(e) => setForm({ ...form, login: e.target.value })}
                 />

@@ -36,7 +36,7 @@ describe('ActionsList', () => {
     expect(buttons[0]).toHaveTextContent('Edit photo');
     expect(buttons[1]).toHaveTextContent('Change password');
     expect(buttons[2]).toHaveTextContent('Change username');
-    expect(buttons[3]).toHaveTextContent('Change login');
+    expect(buttons[3]).toHaveTextContent('Change email');
     expect(buttons[4]).toHaveTextContent('Log out');
     expect(buttons[4]).toHaveAttribute('data-variant', 'danger');
   });

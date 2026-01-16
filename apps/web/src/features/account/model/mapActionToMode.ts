@@ -6,7 +6,7 @@ export const mapActionToMode = (label: string): EditAccountMode | null => {
       return 'avatar';
     case 'Change username':
       return 'username';
-    case 'Change login':
+    case 'Change email':
       return 'login';
     case 'Change password':
       return 'password';

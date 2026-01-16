@@ -48,7 +48,7 @@ describe('EditAccountModal', () => {
     expect(
       screen.getByLabelText('Username', { selector: 'input' }),
     ).toHaveValue('testuser');
-    expect(screen.getByLabelText('Login', { selector: 'input' })).toHaveValue(
+    expect(screen.getByLabelText('Email', { selector: 'input' })).toHaveValue(
       'test@example.com',
     );
     expect(
@@ -303,7 +303,7 @@ describe('EditAccountModal', () => {
       />,
     );
 
-    const loginInput = screen.getByLabelText('Login', { selector: 'input' });
+    const loginInput = screen.getByLabelText('Email', { selector: 'input' });
 
     fireEvent.change(loginInput, {
       target: { value: 'ab' },
@@ -312,7 +312,7 @@ describe('EditAccountModal', () => {
     fireEvent.click(screen.getByText('Save'));
 
     expect(
-      screen.getByText('Login must be at least 3 characters'),
+      screen.getByText('Email must be at least 3 characters'),
     ).toBeInTheDocument();
     expect(mockOnSave).not.toHaveBeenCalled();
   });
@@ -411,7 +411,7 @@ describe('EditAccountModal', () => {
       />,
     );
 
-    const loginInput = screen.getByLabelText('Login', { selector: 'input' });
+    const loginInput = screen.getByLabelText('Email', { selector: 'input' });
 
     fireEvent.change(loginInput, {
       target: { value: '' },
