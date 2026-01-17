@@ -82,9 +82,7 @@ describe('authApi token handling', () => {
     });
 
     const store = createTestStore();
-    const result = store.dispatch(
-      authApi.endpoints.logout.initiate() as any,
-    );
+    const result = store.dispatch(authApi.endpoints.logout.initiate() as any);
 
     await result.unwrap();
 
