@@ -47,9 +47,9 @@ services:
     working_dir: /repo
     command:
       [
-        "sh",
-        "-lc",
-        "pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/api dev"
+        'sh',
+        '-lc',
+        'pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/api dev',
       ]
 
   web:
@@ -75,9 +75,9 @@ services:
     working_dir: /repo
     command:
       [
-        "sh",
-        "-lc",
-        "pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/web dev"
+        'sh',
+        '-lc',
+        'pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/web dev',
       ]
 
 volumes:
