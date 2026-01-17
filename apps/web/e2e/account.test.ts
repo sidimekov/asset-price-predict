@@ -7,7 +7,7 @@ test.describe('Account Page', () => {
 
     // Проверяем, что профиль загружен
     await expect(page.getByText('Username:')).toBeVisible();
-    await expect(page.getByText('Login:')).toBeVisible();
+    await expect(page.getByText('Email:')).toBeVisible();
   });
 
   test('should display action buttons when no form is open', async ({
@@ -26,7 +26,7 @@ test.describe('Account Page', () => {
       page.getByRole('button', { name: 'Change username' }),
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Change login' }),
+      page.getByRole('button', { name: 'Change email' }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
   });
@@ -59,7 +59,7 @@ test.describe('Account Page', () => {
   }) => {
     await page.goto(buildUrl('/account'));
 
-    await page.getByRole('button', { name: 'Change login' }).click();
+    await page.getByRole('button', { name: 'Change email' }).click();
 
     // Cancel закрывает форму
     await page.getByRole('button', { name: 'Cancel' }).click();
