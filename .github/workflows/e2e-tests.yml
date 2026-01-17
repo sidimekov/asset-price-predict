@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: build shared files
+        run: pnpm --filter @assetpredict/shared build
+
       - name: API e2e tests
         run: pnpm --filter @assetpredict/api e2e
 
