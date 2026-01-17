@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { zUpdateAccountReq } from '@assetpredict/shared';
+import type { MultipartFile } from '@fastify/multipart';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 import {
   AccountController,
