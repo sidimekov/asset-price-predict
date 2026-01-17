@@ -56,7 +56,7 @@ export default [
         HTMLSelectElement: 'readonly',
         KeyboardEvent: 'readonly',
         HTMLButtonElement: 'readonly',
-        Storage: 'readonly'
+        Storage: 'readonly',
       },
     },
     rules: {
