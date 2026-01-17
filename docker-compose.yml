@@ -1,5 +1,7 @@
 services:
   postgres:
+    env_file:
+      - .env
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-assetpredict}
@@ -20,6 +22,8 @@ services:
       retries: 20
 
   api:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -35,6 +39,8 @@ services:
         condition: service_healthy
 
   web:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: apps/web/Dockerfile
