@@ -1,4 +1,4 @@
-import type { AccountRes } from '@assetpredict/shared';
+import type { AccountRes, UpdateAccountReq } from '@assetpredict/shared';
 import { backendApi } from '@/shared/api/backendApi';
 
 export const accountApi = backendApi.injectEndpoints({
@@ -9,7 +9,14 @@ export const accountApi = backendApi.injectEndpoints({
         method: 'GET',
       }),
     }),
+    updateMe: builder.mutation<AccountRes, UpdateAccountReq>({
+      query: (payload) => ({
+        url: '/account',
+        method: 'PATCH',
+        body: payload,
+      }),
+    }),
   }),
 });
 
-export const { useGetMeQuery } = accountApi;
+export const { useGetMeQuery, useUpdateMeMutation } = accountApi;
