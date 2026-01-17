@@ -14,6 +14,7 @@ import type {
 
 const ctx = self as DedicatedWorkerGlobalScope;
 const MODEL = forecastMinimalConfig;
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 // простой доверительный коридор вокруг p50 (пока нет настоящих p10/p90)
 const BAND = 0.01; // +/-1%
@@ -25,8 +26,7 @@ function setOrtEnv() {
   ort.env.wasm.simd = true;
 
   ort.env.wasm.wasmPaths =
-    ort.env.wasm.wasmPaths ||
-    'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
+    ort.env.wasm.wasmPaths || `${BASE_PATH}/onnxruntime/`;
 }
 
 async function getSession(): Promise<ort.InferenceSession> {
