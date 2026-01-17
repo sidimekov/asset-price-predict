@@ -1,31 +1,10 @@
 import type { LoginReq, LoginRes, RegisterReq } from '@assetpredict/shared';
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 
 import { createUser, findUserByEmail } from '../../repositories/user.repo.js';
 import type { UserRow } from '../../types/db.js';
 import { signAuthToken } from './jwt.js';
-
-const PASSWORD_HASH_KEYLEN = 64;
-
-function hashPassword(password: string) {
-  const salt = randomBytes(16).toString('base64');
-  const hash = scryptSync(password, salt, PASSWORD_HASH_KEYLEN).toString(
-    'base64',
-  );
-  return `scrypt$${salt}$${hash}`;
-}
-
-function verifyPassword(password: string, stored: string) {
-  const [algo, salt, expected] = stored.split('$');
-  if (algo !== 'scrypt' || !salt || !expected) return false;
-  const derived = scryptSync(password, salt, PASSWORD_HASH_KEYLEN).toString(
-    'base64',
-  );
-  return (
-    derived.length === expected.length &&
-    timingSafeEqual(Buffer.from(derived), Buffer.from(expected))
-  );
-}
+import { hashPassword, verifyPassword } from './password.js';
 
 function deriveUsername(email: string) {
   const [local] = email.split('@');
