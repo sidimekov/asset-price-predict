@@ -51,7 +51,11 @@ describe('authApi token handling', () => {
               ? input.toString()
               : input.url;
 
-          const safeInit = init ? { ...init, signal: undefined } : init;
+          const safeInit = init ? { ...init } : init;
+          if (safeInit && 'signal' in safeInit) {
+            delete (safeInit as RequestInitType).signal;
+          }
+
           super(new URL(requestUrl, baseUrl).toString(), safeInit);
         }
       },
@@ -65,7 +69,7 @@ describe('authApi token handling', () => {
   it('stores auth token after login', async () => {
     fetchMock.mockImplementation((input) => {
       const url = getRequestUrl(input);
-      if (url.includes('/auth/login')) {
+      if (url.endsWith('/api/auth/login')) {
         return Promise.resolve(
           resolveJson({
             token: 'login-token',
@@ -94,7 +98,7 @@ describe('authApi token handling', () => {
 
     fetchMock.mockImplementation((input) => {
       const url = getRequestUrl(input);
-      if (url.includes('/auth/logout')) {
+      if (url.endsWith('/api/auth/logout')) {
         return Promise.resolve(resolveJson({ ok: true }));
       }
       throw new Error(`Unexpected request: ${url}`);

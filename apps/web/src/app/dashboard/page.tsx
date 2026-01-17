@@ -172,7 +172,9 @@ export default function Dashboard() {
           ? 'ready'
           : 'empty';
 
-  const historySeries = bars?.map((bar, index) => [index, bar[4]] as [number, number]);
+  const historySeries = bars?.map(
+    (bar, index) => [index, bar[4]] as [number, number],
+  );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
 

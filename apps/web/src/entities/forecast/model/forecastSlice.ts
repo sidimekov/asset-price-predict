@@ -33,7 +33,6 @@ export type ForecastSliceState = ForecastState & {
   predict: PredictState;
 };
 
-  params: undefined,
 const initialState: ForecastSliceState = {
   params: undefined,
   byKey: {},
