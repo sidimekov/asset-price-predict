@@ -13,12 +13,15 @@ const createTestStore = () =>
   });
 
 const resolveJson = (data: unknown) =>
-  new Response(JSON.stringify(data), {
+  new globalThis.Response(JSON.stringify(data), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
 
-const getRequestUrl = (input: RequestInfo | URL) => {
+type RequestInput = Parameters<typeof globalThis.fetch>[0];
+type RequestInitType = Parameters<typeof globalThis.fetch>[1];
+
+const getRequestUrl = (input: RequestInput | URL) => {
   if (typeof input === 'string') {
     return input;
   }
@@ -42,7 +45,7 @@ describe('authApi token handling', () => {
     vi.stubGlobal(
       'Request',
       class extends NativeRequest {
-        constructor(input: RequestInfo | URL, init?: RequestInit) {
+        constructor(input: RequestInput | URL, init?: RequestInitType) {
           const requestUrl =
             typeof input === 'string' || input instanceof URL
               ? input.toString()
