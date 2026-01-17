@@ -1,42 +1,56 @@
 import type {
+  ForecastCreateRes,
   ForecastDetailRes,
   ForecastId,
   ForecastListRes,
 } from '@assetpredict/shared';
 
-function isoNow() {
-  return new Date().toISOString();
-}
+import {
+  countForecasts,
+  getForecastById,
+  listForecasts,
+} from '../../repositories/forecast.repo.js';
 
 export class HistoryController {
-  listForecasts(_opts: { page: number; limit: number }): ForecastListRes {
-    return { items: [], total: 0, page: 1, limit: 20 };
-  }
-
-  getForecastDetail(id: string): ForecastDetailRes {
-    // /forecasts/invalid -> возврат невалидных series (разные длины) и должно быть 500
-    if (id === 'invalid') {
-      return {
-        id: id as ForecastId,
-        symbol: 'BTCUSDT',
-        timeframe: '1d',
-        horizon: 12,
-        createdAt: isoNow(),
-        series: { p10: [1], p50: [], p90: [], t: [] }, // невалидно по zForecastSeries
-        factors: [],
-        metrics: {},
-      };
-    }
+  async listForecasts(
+    opts: { page: number; limit: number },
+    userId: string,
+  ): Promise<ForecastListRes> {
+    const [rows, total] = await Promise.all([
+      listForecasts(userId, opts),
+      countForecasts(userId),
+    ]);
 
     return {
-      id: id as ForecastId,
-      symbol: 'BTCUSDT',
-      timeframe: '1d',
-      horizon: 12,
-      createdAt: isoNow(),
-      series: { p10: [], p50: [], p90: [], t: [] },
-      factors: [],
-      metrics: {},
+      items: rows.map((row) => ({
+        id: row.id as ForecastId,
+        symbol: row.symbol,
+        timeframe: row.timeframe as ForecastCreateRes['timeframe'],
+        horizon: Number(row.horizon),
+        createdAt: row.created_at.toISOString(),
+      })),
+      total,
+      page: opts.page,
+      limit: opts.limit,
+    };
+  }
+
+  async getForecastDetail(
+    id: string,
+    userId: string,
+  ): Promise<ForecastDetailRes | null> {
+    const row = await getForecastById(id, userId);
+    if (!row) return null;
+
+    return {
+      id: row.id as ForecastId,
+      symbol: row.symbol,
+      timeframe: row.timeframe as ForecastCreateRes['timeframe'],
+      horizon: Number(row.horizon),
+      createdAt: row.created_at.toISOString(),
+      series: row.series as ForecastDetailRes['series'],
+      factors: (row.factors as ForecastDetailRes['factors']) ?? undefined,
+      metrics: (row.metrics as ForecastDetailRes['metrics']) ?? undefined,
     };
   }
 }

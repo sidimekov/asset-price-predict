@@ -8,6 +8,7 @@ import { readEnv } from './config/env.js';
 import { buildLoggerOptions } from './infra/logger.js';
 import { registerErrorHandler } from './infra/errorHandler.js';
 import { registerRouter } from './http/router.js';
+import { checkDbConnection } from './db/index.js';
 
 export function buildApp() {
   const env = readEnv();
@@ -38,6 +39,8 @@ export function buildApp() {
 
 async function main() {
   const { app, env } = buildApp();
+
+  await checkDbConnection(app.log);
 
   try {
     await app.listen({ port: env.port, host: '0.0.0.0' });

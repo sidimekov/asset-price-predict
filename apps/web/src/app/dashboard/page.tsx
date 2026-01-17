@@ -9,6 +9,7 @@ import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
+import { predictRequested } from '@/entities/forecast/model/forecastSlice';
 import {
   addRecent,
   setSelected,
@@ -17,7 +18,6 @@ import {
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
-import { predictRequested } from '@/entities/forecast/model/forecastSlice';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -62,7 +62,7 @@ export default function Dashboard() {
     provider,
   }: {
     symbol: string;
-    provider: 'binance' | 'moex';
+    provider: 'binance' | 'moex' | 'mock';
   }) => {
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));

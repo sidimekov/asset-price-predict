@@ -3,7 +3,9 @@ import * as assert from 'node:assert/strict';
 
 import { buildApp } from '../src/index.ts';
 
-test('POST /auth/login -> 200 and returns auth payload', async () => {
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
+
+test('POST /auth/login -> 400 when body missing', async () => {
   const { app } = buildApp();
 
   try {
@@ -12,19 +14,13 @@ test('POST /auth/login -> 200 and returns auth payload', async () => {
       url: '/auth/login',
     });
 
-    assert.equal(res.statusCode, 200);
-
-    const json = res.json() as any;
-    assert.equal(json.token, 'mock');
-    assert.ok(typeof json.user?.id === 'string');
-    assert.equal(json.user?.email, 'user@example.com');
-    assert.equal(json.user?.username, 'Demo');
+    assert.equal(res.statusCode, 400);
   } finally {
     await app.close();
   }
 });
 
-test('POST /auth/logout -> 200 and returns auth payload', async () => {
+test('POST /auth/logout -> 200 and returns ok payload', async () => {
   const { app } = buildApp();
 
   try {
@@ -36,8 +32,7 @@ test('POST /auth/logout -> 200 and returns auth payload', async () => {
     assert.equal(res.statusCode, 200);
 
     const json = res.json() as any;
-    assert.equal(json.token, 'mock');
-    assert.ok(typeof json.user?.id === 'string');
+    assert.equal(json.ok, true);
   } finally {
     await app.close();
   }

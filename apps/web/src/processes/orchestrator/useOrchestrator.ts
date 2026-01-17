@@ -1,5 +1,4 @@
 'use client';
-/* global AbortController */
 
 import { useEffect, useRef } from 'react';
 import { useStore } from 'react-redux';
@@ -18,9 +17,6 @@ const ORCHESTRATOR_DEBOUNCE_MS = 250;
 function mapProviderToMarket(
   provider: string,
 ): MarketDataProvider | 'MOCK' | null {
-  // DEV override (временно): всегда моковые таймсерии
-  if (process.env.NODE_ENV !== 'production') return 'MOCK';
-
   switch (provider.toLowerCase()) {
     case 'binance':
       return 'BINANCE';
