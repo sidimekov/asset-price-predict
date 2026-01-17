@@ -10,6 +10,7 @@ import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import { predictRequested } from '@/entities/forecast/model/forecastSlice';
+import { DEFAULT_TIMEFRAME, type MarketDataProvider } from '@/config/market';
 import {
   addRecent,
   setSelected,
@@ -18,9 +19,36 @@ import {
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { selectPriceChangeByAsset } from '@/entities/timeseries/model/selectors';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
+
+const mapProviderToMarket = (
+  provider: 'binance' | 'moex' | 'mock',
+): MarketDataProvider => {
+  switch (provider) {
+    case 'binance':
+      return 'BINANCE';
+    case 'moex':
+      return 'MOEX';
+    case 'mock':
+      return 'MOCK';
+    default:
+      return 'MOCK';
+  }
+};
+
+const resolveCurrency = (
+  provider: 'binance' | 'moex' | 'mock',
+  symbol: string,
+): 'RUB' | 'USDT' | 'USD' | undefined => {
+  if (provider === 'moex') return 'RUB';
+  if (provider === 'binance' && symbol.toUpperCase().endsWith('USDT')) {
+    return 'USDT';
+  }
+  return undefined;
+};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -28,6 +56,24 @@ export default function Dashboard() {
 
   const recentAssets = useAppSelector(selectRecent);
   const selectedAsset = useAppSelector(selectSelectedAsset);
+  const recentAssetsWithStats = useAppSelector((state) =>
+    recentAssets.map((asset) => {
+      const provider = mapProviderToMarket(asset.provider);
+      const stats = selectPriceChangeByAsset(
+        state,
+        provider,
+        asset.symbol,
+        DEFAULT_TIMEFRAME,
+      );
+      return {
+        symbol: asset.symbol,
+        provider: asset.provider,
+        lastPrice: stats.lastPrice,
+        changePct: stats.changePct,
+        currency: resolveCurrency(asset.provider, asset.symbol),
+      };
+    }),
+  );
 
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
@@ -123,11 +169,7 @@ export default function Dashboard() {
         <div className="col-span-12">
           <RecentAssetsBar
             state={derivedAssetState}
-            assets={recentAssets.map((a) => ({
-              symbol: a.symbol,
-              price: '—',
-              provider: a.provider,
-            }))}
+            assets={recentAssetsWithStats}
             selected={selectedSymbol}
             onSelect={handleRecentSelect}
             onRemove={handleRemoveAsset}

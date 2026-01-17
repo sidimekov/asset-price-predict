@@ -2,7 +2,13 @@
 import React from 'react';
 import Pill from '../../shared/ui/Pill';
 
-type Asset = { symbol: string; price: string };
+type Asset = {
+  symbol: string;
+  provider: 'binance' | 'moex' | 'mock';
+  lastPrice?: number;
+  changePct?: number;
+  currency?: 'RUB' | 'USDT' | 'USD';
+};
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 
 interface RecentAssetsBarProps {

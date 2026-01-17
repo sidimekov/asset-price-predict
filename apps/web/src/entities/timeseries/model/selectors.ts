@@ -1,6 +1,11 @@
 import type { RootState } from '@/shared/store';
 import type { Bar } from '@shared/types/market';
-import { type TimeseriesKey, isTimeseriesStaleByKey } from './timeseriesSlice';
+import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+import {
+  type TimeseriesKey,
+  buildTimeseriesKey,
+  isTimeseriesStaleByKey,
+} from './timeseriesSlice';
 
 export const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 минут
 
@@ -52,3 +57,34 @@ export const selectIsStale = (
   ttlMs: number = DEFAULT_TTL_MS,
   nowMs: number = Date.now(),
 ): boolean => isTimeseriesStaleByKey(state, key, ttlMs, nowMs);
+
+export type PriceChangeSnapshot = {
+  lastPrice?: number;
+  changePct?: number;
+};
+
+export const selectPriceChangeByAsset = (
+  state: RootState,
+  provider: MarketDataProvider,
+  symbol: string,
+  timeframe: MarketTimeframe,
+): PriceChangeSnapshot => {
+  const key = buildTimeseriesKey(provider, symbol, timeframe);
+  const bars = selectBarsByKey(state, key);
+  if (!bars?.length) return {};
+
+  const lastClose = bars[bars.length - 1]?.[4];
+  const lastPrice = Number.isFinite(lastClose) ? lastClose : undefined;
+
+  if (bars.length < 2 || lastPrice === undefined) {
+    return { lastPrice };
+  }
+
+  const prevClose = bars[bars.length - 2]?.[4];
+  if (!Number.isFinite(prevClose) || prevClose === 0) {
+    return { lastPrice };
+  }
+
+  const changePct = ((lastPrice - prevClose) / prevClose) * 100;
+  return { lastPrice, changePct };
+};
