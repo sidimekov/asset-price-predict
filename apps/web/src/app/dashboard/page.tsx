@@ -183,12 +183,18 @@ export default function Dashboard() {
                       <CandlesChartPlaceholder state={chartState} />
                     )}
                   </div>
+                  <div className="w-[330px] flex-none" />
                 </div>
 
-                <XAxis
-                  className="text-[#8480C9]"
-                  timestamps={historyTimestamps}
-                />
+                <div className="flex">
+                  <div className="flex-1">
+                    <XAxis
+                      className="text-[#8480C9] w-full"
+                      timestamps={historyTimestamps}
+                    />
+                  </div>
+                  <div className="w-[330px]" />
+                </div>
               </div>
             </div>
           </div>
