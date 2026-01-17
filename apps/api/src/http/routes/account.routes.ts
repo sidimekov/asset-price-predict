@@ -53,26 +53,74 @@ export async function accountRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post('/account/avatar', { preHandler: requireAuth }, async (req, reply) => {
-    const user = req.user;
-    if (!user) {
-      return sendError(reply, 401, 'UNAUTHORIZED', 'Unauthorized');
-    }
+  app.post(
+    '/account/avatar',
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      const user = req.user;
+      if (!user) {
+        return sendError(reply, 401, 'UNAUTHORIZED', 'Unauthorized');
+      }
 
-    if (!req.isMultipart()) {
-      return sendError(
-        reply,
-        400,
-        'INVALID_REQUEST',
-        'Expected multipart/form-data',
-      );
-    }
+      if (!req.isMultipart()) {
+        return sendError(
+          reply,
+          400,
+          'INVALID_REQUEST',
+          'Expected multipart/form-data',
+        );
+      }
 
-    let file: MultipartFile | undefined;
-    try {
-      file = await req.file();
-    } catch (err) {
-      if ((err as { code?: string })?.code === 'FST_REQ_FILE_TOO_LARGE') {
+      let file: MultipartFile | undefined;
+      try {
+        file = await req.file();
+      } catch (err) {
+        if ((err as { code?: string })?.code === 'FST_REQ_FILE_TOO_LARGE') {
+          return sendError(
+            reply,
+            400,
+            'FILE_TOO_LARGE',
+            'Avatar exceeds maximum size',
+            { maxBytes: MAX_AVATAR_SIZE },
+          );
+        }
+        throw err;
+      }
+
+      if (!file) {
+        return sendError(reply, 400, 'MISSING_FILE', 'Avatar file is required');
+      }
+
+      if (!ALLOWED_AVATAR_MIME_TYPES.includes(file.mimetype)) {
+        return sendError(
+          reply,
+          400,
+          'INVALID_FILE',
+          'Invalid avatar file type',
+          {
+            allowed: ALLOWED_AVATAR_MIME_TYPES,
+            received: file.mimetype,
+          },
+        );
+      }
+
+      let buffer: Buffer;
+      try {
+        buffer = await file.toBuffer();
+      } catch (err) {
+        if ((err as { code?: string })?.code === 'FST_REQ_FILE_TOO_LARGE') {
+          return sendError(
+            reply,
+            400,
+            'FILE_TOO_LARGE',
+            'Avatar exceeds maximum size',
+            { maxBytes: MAX_AVATAR_SIZE },
+          );
+        }
+        throw err;
+      }
+
+      if (buffer.length > MAX_AVATAR_SIZE) {
         return sendError(
           reply,
           400,
@@ -81,55 +129,17 @@ export async function accountRoutes(app: FastifyInstance) {
           { maxBytes: MAX_AVATAR_SIZE },
         );
       }
-      throw err;
-    }
 
-    if (!file) {
-      return sendError(reply, 400, 'MISSING_FILE', 'Avatar file is required');
-    }
+      await mkdir(avatarsDir, { recursive: true });
+      await writeFile(buildAvatarPath(user.id), buffer);
 
-    if (!ALLOWED_AVATAR_MIME_TYPES.includes(file.mimetype)) {
-      return sendError(reply, 400, 'INVALID_FILE', 'Invalid avatar file type', {
-        allowed: ALLOWED_AVATAR_MIME_TYPES,
-        received: file.mimetype,
-      });
-    }
-
-    let buffer: Buffer;
-    try {
-      buffer = await file.toBuffer();
-    } catch (err) {
-      if ((err as { code?: string })?.code === 'FST_REQ_FILE_TOO_LARGE') {
-        return sendError(
-          reply,
-          400,
-          'FILE_TOO_LARGE',
-          'Avatar exceeds maximum size',
-          { maxBytes: MAX_AVATAR_SIZE },
-        );
+      const avatarUrl = buildAvatarUrl(user.id);
+      const updated = await updateUserProfile({ id: user.id, avatarUrl });
+      if (!updated) {
+        return sendError(reply, 404, 'ACCOUNT_NOT_FOUND', 'Account not found');
       }
-      throw err;
-    }
 
-    if (buffer.length > MAX_AVATAR_SIZE) {
-      return sendError(
-        reply,
-        400,
-        'FILE_TOO_LARGE',
-        'Avatar exceeds maximum size',
-        { maxBytes: MAX_AVATAR_SIZE },
-      );
-    }
-
-    await mkdir(avatarsDir, { recursive: true });
-    await writeFile(buildAvatarPath(user.id), buffer);
-
-    const avatarUrl = buildAvatarUrl(user.id);
-    const updated = await updateUserProfile({ id: user.id, avatarUrl });
-    if (!updated) {
-      return sendError(reply, 404, 'ACCOUNT_NOT_FOUND', 'Account not found');
-    }
-
-    return { avatarUrl };
-  });
+      return { avatarUrl };
+    },
+  );
 }
