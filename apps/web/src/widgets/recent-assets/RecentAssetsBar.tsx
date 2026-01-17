@@ -39,10 +39,7 @@ function formatWithMinMax(value: number, min: number, max: number): string {
   return `${intPart}.${dec}`;
 }
 
-function formatPrice(
-  value: number,
-  provider: Asset['provider'],
-): string {
+function formatPrice(value: number, provider: Asset['provider']): string {
   const rule = PRICE_RULES[provider];
   return formatWithMinMax(value, rule.min, rule.max);
 }
