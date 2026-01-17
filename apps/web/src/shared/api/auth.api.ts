@@ -1,4 +1,9 @@
-import type { LoginReq, LoginRes, RegisterReq, RegisterRes } from '@assetpredict/shared';
+import type {
+  LoginReq,
+  LoginRes,
+  RegisterReq,
+  RegisterRes,
+} from '@assetpredict/shared';
 import { backendApi } from '@/shared/api/backendApi';
 
 type LogoutRes = { ok: boolean };
@@ -64,4 +69,5 @@ export const authApi = backendApi.injectEndpoints({
   }),
 });
 
-export const { useLoginMutation, useRegisterMutation, useLogoutMutation } = authApi;
+export const { useLoginMutation, useRegisterMutation, useLogoutMutation } =
+  authApi;
