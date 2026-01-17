@@ -26,8 +26,7 @@ function setOrtEnv() {
   ort.env.wasm.simd = true;
 
   ort.env.wasm.wasmPaths =
-    ort.env.wasm.wasmPaths ||
-    `${BASE_PATH}/onnxruntime/`;
+    ort.env.wasm.wasmPaths || `${BASE_PATH}/onnxruntime/`;
 }
 
 async function getSession(): Promise<ort.InferenceSession> {
