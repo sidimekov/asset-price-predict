@@ -43,6 +43,7 @@ apps/api/dist/
 apps/api/build/
 apps/api/.tsbuildinfo
 apps/api/.turbo/
+apps/api/uploads/
 
 # Shared
 packages/**/dist/

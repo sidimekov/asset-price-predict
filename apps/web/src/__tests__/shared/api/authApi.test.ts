@@ -32,11 +32,26 @@ const getRequestUrl = (input: RequestInfo | URL) => {
 
 describe('authApi token handling', () => {
   const fetchMock = vi.fn();
+  const NativeRequest = globalThis.Request;
+  const baseUrl = 'http://localhost';
 
   beforeEach(() => {
     localStorage.clear();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal(
+      'Request',
+      class extends NativeRequest {
+        constructor(input: RequestInfo | URL, init?: RequestInit) {
+          const requestUrl =
+            typeof input === 'string' || input instanceof URL
+              ? input.toString()
+              : input.url;
+
+          super(new URL(requestUrl, baseUrl).toString(), init);
+        }
+      },
+    );
   });
 
   afterEach(() => {
@@ -82,7 +97,9 @@ describe('authApi token handling', () => {
     });
 
     const store = createTestStore();
-    const result = store.dispatch(authApi.endpoints.logout.initiate() as any);
+    const result = store.dispatch(
+      authApi.endpoints.logout.initiate() as any,
+    );
 
     await result.unwrap();
 
