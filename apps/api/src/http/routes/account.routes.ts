@@ -7,6 +7,7 @@ import {
 } from '../../modules/account/AccountController.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { parseOr400 } from '../validation.js';
+import { sendError } from '../errors';
 
 export async function accountRoutes(app: FastifyInstance) {
   const controller = new AccountController();
@@ -14,12 +15,12 @@ export async function accountRoutes(app: FastifyInstance) {
   app.get('/account', { preHandler: requireAuth }, async (req, reply) => {
     const user = req.user;
     if (!user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      return sendError(reply, 401, 'UNAUTHORIZED', 'Unauthorized');
     }
 
     const profile = await controller.getAccount(user.id);
     if (!profile) {
-      return reply.status(404).send({ error: 'Account not found' });
+      return sendError(reply, 404, 'ACCOUNT_NOT_FOUND', 'Account not found');
     }
 
     return profile;
@@ -28,7 +29,7 @@ export async function accountRoutes(app: FastifyInstance) {
   app.patch('/account', { preHandler: requireAuth }, async (req, reply) => {
     const user = req.user;
     if (!user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      return sendError(reply, 401, 'UNAUTHORIZED', 'Unauthorized');
     }
 
     const parsed = parseOr400(reply, zUpdateAccountReq, req.body);
@@ -38,7 +39,7 @@ export async function accountRoutes(app: FastifyInstance) {
       return await controller.updateAccount(user.id, parsed.data);
     } catch (err) {
       if (err instanceof AccountError) {
-        return reply.status(err.statusCode).send({ error: err.message });
+        return sendError(reply, err.statusCode, 'ACCOUNT_ERROR', err.message);
       }
       throw err;
     }

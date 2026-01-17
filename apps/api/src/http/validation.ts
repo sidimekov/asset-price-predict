@@ -2,10 +2,10 @@ import type { FastifyReply } from 'fastify';
 import type { ZodError, ZodTypeAny } from 'zod';
 
 import { formatZodErrors } from '@assetpredict/shared';
+import { sendError } from './errors.js';
 
 export function sendValidationError(reply: FastifyReply, err: ZodError) {
-  return reply.status(400).send({
-    error: 'Validation failed',
+  return sendError(reply, 400, 'VALIDATION_ERROR', 'Validation failed', {
     details: formatZodErrors(err),
   });
 }
