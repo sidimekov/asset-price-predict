@@ -14,7 +14,7 @@ export async function insertForecast(forecast: ForecastInsert) {
         factors,
         provider,
         model,
-        window,
+        "window",
         params
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)

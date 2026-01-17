@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS forecasts (
   factors jsonb,
   provider text,
   model text,
-  window int,
+  "window" int,
   params jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
