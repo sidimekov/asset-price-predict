@@ -1,4 +1,8 @@
-import type { AccountId, AccountRes, UpdateAccountReq } from '@assetpredict/shared';
+import type {
+  AccountId,
+  AccountRes,
+  UpdateAccountReq,
+} from '@assetpredict/shared';
 
 import {
   findUserByEmail,
