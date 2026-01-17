@@ -354,7 +354,7 @@ Authorization: Bearer <token>
 ### Регистрация
 
 ```bash
-curl -X POST http://localhost:3000/auth/register \
+curl -X POST http://localhost:3001/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"secret123"}'
 ```
@@ -362,17 +362,17 @@ curl -X POST http://localhost:3000/auth/register \
 ### Логин + запрос профиля
 
 ```bash
-TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:3001/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"secret123"}' | jq -r .token)
 
-curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/account
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3001/account
 ```
 
 ### Создание прогноза
 
 ```bash
-curl -X POST http://localhost:3000/forecast \
+curl -X POST http://localhost:3001/forecast \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"symbol":"BTCUSDT","timeframe":"1d","horizon":30}'
