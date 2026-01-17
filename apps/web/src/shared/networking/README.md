@@ -55,10 +55,15 @@ export const forecastApi = backendApi.injectEndpoints({
 
 Доступные модули для работы с backend API:
 
+- `health.api.ts`
+  - `useGetHealthQuery()` : GET `/health`
 - `auth.api.ts`
   - `useLoginMutation()` : POST `/auth/login` (сохраняет `auth.token`)
+  - `useRegisterMutation()` : POST `/auth/register` (сохраняет `auth.token`)
+  - `useLogoutMutation()` : POST `/auth/logout` (очищает `auth.token`)
 - `account.api.ts`
   - `useGetMeQuery()` : GET `/account`
+  - `useUpdateMeMutation()` : PATCH `/account`
 - `forecast.api.ts`
   - `useCreateForecastMutation()` : POST `/forecast`
   - `useGetForecastsQuery()` : GET `/forecasts`
