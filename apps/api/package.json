@@ -18,6 +18,8 @@
     "@assetpredict/shared": "workspace:*",
     "@fastify/cors": "^9.0.1",
     "fastify": "^4.28.1",
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/static": "^7.0.4",
     "pg": "^8.13.1",
     "pino": "^9.4.0",
     "zod": "^3.24.1"
