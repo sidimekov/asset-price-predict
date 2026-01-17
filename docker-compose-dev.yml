@@ -1,5 +1,7 @@
 services:
   postgres:
+    env_file:
+      - .env
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-assetpredict}
@@ -20,6 +22,8 @@ services:
       retries: 20
 
   api:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: apps/api/Dockerfile.dev
@@ -28,6 +32,7 @@ services:
       # Внутри compose хост БД = postgres
       DATABASE_URL: postgres://${POSTGRES_USER:-assetpredict}:${POSTGRES_PASSWORD:-assetpredict}@postgres:5432/${POSTGRES_DB:-assetpredict}
       NODE_ENV: development
+      PNPM_STORE_DIR: /pnpm-store
     ports:
       - '${API_PORT:-3001}:${API_PORT:-3001}'
     depends_on:
@@ -35,35 +40,50 @@ services:
         condition: service_healthy
     volumes:
       - .:/repo
-      - api_node_modules:/repo/node_modules
-      - api_app_node_modules:/repo/apps/api/node_modules
-      - packages_node_modules:/repo/packages/shared/node_modules
+      - repo_node_modules:/repo/node_modules
+      - api_node_modules:/repo/apps/api/node_modules
+      - shared_node_modules:/repo/packages/shared/node_modules
+      - pnpm_store:/pnpm-store
     working_dir: /repo
-    command: ['pnpm', '--filter', '@assetpredict/api', 'dev']
+    command:
+      [
+        "sh",
+        "-lc",
+        "pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/api dev"
+      ]
 
   web:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: apps/web/Dockerfile.dev
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3001}
+      PNPM_STORE_DIR: /pnpm-store
     ports:
       - '3000:3000'
     depends_on:
       - api
     volumes:
       - .:/repo
-      - web_node_modules:/repo/node_modules
-      - web_app_node_modules:/repo/apps/web/node_modules
-      - packages_node_modules:/repo/packages/shared/node_modules
+      - repo_node_modules:/repo/node_modules
+      - web_node_modules:/repo/apps/web/node_modules
+      - shared_node_modules:/repo/packages/shared/node_modules
+      - pnpm_store:/pnpm-store
     working_dir: /repo
-    command: ['pnpm', '--filter', '@assetpredict/web', 'dev']
+    command:
+      [
+        "sh",
+        "-lc",
+        "pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/web dev"
+      ]
 
 volumes:
   pgdata:
+  repo_node_modules:
   api_node_modules:
   web_node_modules:
-  api_app_node_modules:
-  web_app_node_modules:
-  packages_node_modules:
+  shared_node_modules:
+  pnpm_store:
