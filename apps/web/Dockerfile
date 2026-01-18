@@ -4,6 +4,9 @@ WORKDIR /repo
 
 RUN corepack enable
 
+ARG NEXT_PUBLIC_YM_ID
+ENV NEXT_PUBLIC_YM_ID=$NEXT_PUBLIC_YM_ID
+
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 COPY tsconfig.base.json tsconfig.base.json
 COPY apps/api/package.json apps/api/package.json

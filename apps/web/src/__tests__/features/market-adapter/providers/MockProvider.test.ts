@@ -96,4 +96,19 @@ describe('MockProvider', () => {
       searchMockSymbols('btc', { signal: controller.signal }),
     ).rejects.toMatchObject({ name: 'AbortError' });
   });
+
+  it('searchMockSymbols возвращает все элементы при пустом запросе', async () => {
+    const result = await searchMockSymbols('');
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('searchMockSymbols фильтрует по символу и имени', async () => {
+    const bySymbol = await searchMockSymbols('BTC');
+    const byName = await searchMockSymbols('bitcoin');
+
+    expect(bySymbol.length).toBeGreaterThan(0);
+    expect(byName.length).toBeGreaterThan(0);
+  });
 });

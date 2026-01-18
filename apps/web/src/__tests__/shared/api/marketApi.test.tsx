@@ -31,7 +31,10 @@ describe('marketApi endpoints', () => {
       store.dispatch(
         marketApi.endpoints.getMoexTimeseries.initiate({
           symbol: 'SBER',
-          timeframe: '1h',
+          engine: 'stock',
+          market: 'shares',
+          board: 'TQBR',
+          interval: 60,
           limit: 10,
         }) as any,
       );

@@ -3,6 +3,7 @@ import { zLoginReq, zRegisterReq } from '@assetpredict/shared';
 
 import { AuthController } from '../../modules/auth/AuthController.js';
 import { AuthError } from '../../modules/auth/AuthService.js';
+import { sendError } from '../errors.js';
 import { parseOr400 } from '../validation.js';
 
 export async function authRoutes(app: FastifyInstance) {
@@ -16,7 +17,7 @@ export async function authRoutes(app: FastifyInstance) {
       return await controller.register(parsed.data);
     } catch (err) {
       if (err instanceof AuthError) {
-        return reply.status(err.statusCode).send({ error: err.message });
+        return sendError(reply, err.statusCode, 'AUTH_ERROR', err.message);
       }
       throw err;
     }
@@ -30,7 +31,7 @@ export async function authRoutes(app: FastifyInstance) {
       return await controller.login(parsed.data);
     } catch (err) {
       if (err instanceof AuthError) {
-        return reply.status(err.statusCode).send({ error: err.message });
+        return sendError(reply, err.statusCode, 'AUTH_ERROR', err.message);
       }
       throw err;
     }

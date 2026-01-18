@@ -4,7 +4,10 @@
 import * as ort from 'onnxruntime-web';
 import { forecastMinimalConfig } from '@/config/ml';
 
-import { buildFeatures } from './featurePipeline';
+import {
+  buildFeaturesWithBackend,
+  type FeatureBackend,
+} from './featurePipeline';
 import { postprocessDelta } from './postprocess';
 import type {
   InferRequestMessage,
@@ -14,22 +17,63 @@ import type {
 
 const ctx = self as DedicatedWorkerGlobalScope;
 const MODEL = forecastMinimalConfig;
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
+const BACKEND_PREF = (
+  process.env.NEXT_PUBLIC_ORT_BACKEND || 'auto'
+).toLowerCase();
+
+const FEATURES_BACKEND_PREF = (
+  process.env.NEXT_PUBLIC_FEATURES_BACKEND || 'auto'
+).toLowerCase();
 
 // простой доверительный коридор вокруг p50 (пока нет настоящих p10/p90)
 const BAND = 0.01; // +/-1%
 
-let sessionPromise: Promise<ort.InferenceSession> | null = null;
+type SessionInfo = {
+  session: ort.InferenceSession;
+  backend: 'webgpu' | 'wasm';
+};
+
+let sessionPromise: Promise<SessionInfo> | null = null;
 
 function setOrtEnv() {
   ort.env.wasm.numThreads = 1;
   ort.env.wasm.simd = true;
 
   ort.env.wasm.wasmPaths =
-    ort.env.wasm.wasmPaths ||
-    'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
+    ort.env.wasm.wasmPaths || `${BASE_PATH}/onnxruntime/`;
 }
 
-async function getSession(): Promise<ort.InferenceSession> {
+function shouldUseWebGpu(): boolean {
+  if (BACKEND_PREF === 'wasm') return false;
+  if (BACKEND_PREF === 'webgpu') return true;
+  return Boolean((ctx as any).navigator?.gpu);
+}
+
+async function tryCreateSession(
+  provider: 'webgpu' | 'wasm',
+  candidates: string[],
+): Promise<ort.InferenceSession | null> {
+  let lastError: unknown;
+
+  for (const candidate of candidates) {
+    try {
+      return await ort.InferenceSession.create(candidate, {
+        executionProviders: [provider],
+      });
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+}
+
+async function getSession(): Promise<SessionInfo> {
   if (sessionPromise) return sessionPromise;
 
   setOrtEnv();
@@ -39,16 +83,27 @@ async function getSession(): Promise<ort.InferenceSession> {
     : [MODEL.path];
 
   sessionPromise = (async () => {
+    const useWebGpu = shouldUseWebGpu();
     let lastError: unknown;
 
-    for (const candidate of candidates) {
+    if (useWebGpu) {
       try {
-        return await ort.InferenceSession.create(candidate, {
-          executionProviders: ['wasm'], // webgpu позже
-        });
+        const session = await tryCreateSession('webgpu', candidates);
+        if (session) {
+          return { session, backend: 'webgpu' };
+        }
       } catch (err) {
         lastError = err;
       }
+    }
+
+    try {
+      const session = await tryCreateSession('wasm', candidates);
+      if (session) {
+        return { session, backend: 'wasm' };
+      }
+    } catch (err) {
+      lastError = err;
     }
 
     throw lastError || new Error('Unable to load ONNX session');
@@ -95,10 +150,14 @@ ctx.addEventListener(
         return;
       }
       // 1) features
-      const features = buildFeatures(tail);
+      const { features, backend: featuresBackend } =
+        await buildFeaturesWithBackend(
+          tail,
+          FEATURES_BACKEND_PREF as FeatureBackend,
+        );
 
       // 2) session
-      const session = await getSession();
+      const { session, backend } = await getSession();
 
       // 3) run
       const inputName = (session as any).inputNames?.[0] ?? 'input';
@@ -137,7 +196,8 @@ ctx.addEventListener(
           p90,
           diag: {
             runtime_ms: t1 - t0,
-            backend: 'wasm',
+            backend,
+            features_backend: featuresBackend,
             model_ver: MODEL.modelVer,
           },
         },
