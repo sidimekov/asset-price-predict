@@ -329,7 +329,18 @@ export async function getMarketTimeseries(
     opts,
   );
 
-  if (!resolved.ok) return resolved.error;
+  if (!resolved.ok) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[timeseries] getMarketTimeseries:error', {
+        provider,
+        symbol,
+        timeframe,
+        limit,
+        error: resolved.error,
+      });
+    }
+    return resolved.error;
+  }
 
   if (process.env.NODE_ENV === 'development') {
     const rawPreview = Array.isArray(resolved.raw)

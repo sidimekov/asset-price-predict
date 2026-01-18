@@ -16,13 +16,19 @@ function throwIfAborted(signal?: AbortSignal): void {
 }
 
 function getErrorMessage(err: any, fallback: string): string {
-  return (
+  const status =
+    typeof err?.status === 'number'
+      ? err.status
+      : typeof err?.originalStatus === 'number'
+        ? err.originalStatus
+        : undefined;
+  const base =
     err?.message ||
     err?.data?.message ||
     err?.data?.error ||
     err?.error ||
-    fallback
-  );
+    fallback;
+  return status ? `${base} (status ${status})` : base;
 }
 
 function mapTimeframeToBinanceInterval(
