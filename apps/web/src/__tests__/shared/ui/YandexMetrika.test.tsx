@@ -116,4 +116,18 @@ describe('YandexMetrika', () => {
       expect(component.props).toEqual({});
     });
   });
+
+  describe('YandexMetrika edge cases', () => {
+    it('возвращает null если NEXT_PUBLIC_YM_ID пустая строка', () => {
+      vi.stubEnv('NEXT_PUBLIC_YM_ID', '');
+      const { container } = render(<YandexMetrika />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it('рендерит скрипт даже если ymId = 0', () => {
+      vi.stubEnv('NEXT_PUBLIC_YM_ID', '0');
+      const { container } = render(<YandexMetrika />);
+      expect(container.querySelector('script')).toBeTruthy();
+    });
+  });
 });
