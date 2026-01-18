@@ -1,5 +1,5 @@
 // apps/web/src/__tests__/features/market-adapter/MarketAdapter.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AppDispatch } from '@/shared/store';
 
 // Используем vi.hoisted для создания моков, которые будут доступны при hoisting'е
