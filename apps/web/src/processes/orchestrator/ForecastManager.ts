@@ -28,6 +28,9 @@ import {
 import { historyRepository } from '@/entities/history/repository';
 import type { HistoryEntry } from '@/entities/history/model';
 
+import { track } from '@/shared/analytics';
+import { AnalyticsEvent } from '@/shared/analytics/events';
+
 export type OrchestratorInput = {
   symbol: Symbol;
   provider: MarketDataProvider | 'MOCK';
@@ -56,10 +59,9 @@ function makeAbortError(): Error & { code?: string } {
 
 /**
  * ForecastManager - центр оркестратора
- *  - history (timeseries) можно грузить отдельно
- *  - forecast считается только по trigger (Predict)
  */
 export class ForecastManager {
+  /** Универсальный entry-point для запуска прогноза */
   static async run(
     ctx: OrchestratorInput,
     deps: OrchestratorDeps,
@@ -68,8 +70,8 @@ export class ForecastManager {
   }
 
   /**
-   * авто-подгрузка таймсерии (без инференса)
-   * Используется на Dashboard: выбрали актив - история появилась в timeseriesSlice
+   * Авто-подгрузка таймсерии (без инференса)
+   * Используется на Dashboard: выбрали актив → история появляется в timeseriesSlice
    */
   static async ensureTimeseriesOnly(
     ctx: Pick<OrchestratorInput, 'symbol' | 'provider' | 'tf' | 'window'>,
@@ -90,14 +92,12 @@ export class ForecastManager {
     } catch (err: any) {
       if (isAbortError(err) || signal?.aborted) return;
       if (process.env.NODE_ENV !== 'production') {
-        console.error('[Orchestrator] ensureTimeseriesOnly error', err);
+        console.error('[ForecastManager] ensureTimeseriesOnly error', err);
       }
     }
   }
 
-  /**
-   * Model A: прогноз считается только по кнопке Predict
-   */
+  /** Прогноз по кнопке Predict */
   static async runForecast(
     ctx: OrchestratorInput,
     deps: OrchestratorDeps,
@@ -114,21 +114,7 @@ export class ForecastManager {
     });
 
     orchestratorState.status = 'running';
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Orchestrator] runForecast', {
-        symbol,
-        provider,
-        tf,
-        window,
-        horizon,
-        model,
-        tsKey,
-        fcKey,
-      });
-    }
-
-    // старт прогноза
+    const startedAt = performance.now();
     dispatch(forecastRequested(fcKey));
 
     try {
@@ -137,7 +123,7 @@ export class ForecastManager {
         return;
       }
 
-      // 1) ensure timeseries (из store + TTL; если надо — MarketAdapter)
+      // 1) ensure timeseries
       const bars = await ForecastManager.ensureTimeseries(
         { tsKey, symbol, provider, tf, window },
         { dispatch, getState, signal },
@@ -150,17 +136,15 @@ export class ForecastManager {
 
       const lastTs = bars.length ? bars[bars.length - 1][0] : Date.now();
 
-      // 2) tail for worker
+      // 2) tail
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
-      // 3) infer (with abort)
+      // 3) infer
       const inferResult = await inferForecast(
         tail,
         horizon,
         model ?? undefined,
-        {
-          signal,
-        } as any,
+        { signal } as any,
       );
 
       if (signal?.aborted) {
@@ -168,7 +152,7 @@ export class ForecastManager {
         return;
       }
 
-      // 4) store entry
+      // 4) store forecast
       const storeEntry = ForecastManager.buildStoreForecastEntry(
         {
           series: {
@@ -182,74 +166,69 @@ export class ForecastManager {
         lastTs,
       );
 
-      dispatch(
-        forecastReceived({
-          key: fcKey,
-          entry: storeEntry,
-        }),
-      );
+      dispatch(forecastReceived({ key: fcKey, entry: storeEntry }));
 
+      // analytics success
+      track(AnalyticsEvent.PREDICT_SUCCESS, {
+        symbol,
+        provider,
+        tf,
+        window,
+        horizon,
+        model: model ?? null,
+        points: inferResult.p50?.length,
+        runtime_ms: Math.round(performance.now() - startedAt),
+      });
+
+      // save history
       try {
         const historyEntry = ForecastManager.buildHistoryEntry(
           {
             id: ForecastManager.generateHistoryId(),
             created_at: new Date().toISOString(),
           },
-          {
-            symbol,
-            tf,
-            horizon,
-            provider,
-          },
+          { symbol, tf, horizon, provider },
           storeEntry,
           inferResult,
         );
         await historyRepository.save(historyEntry);
-      } catch (err) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[Orchestrator] history save failed', err);
-        }
-      }
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Orchestrator] forecast ready', {
-          fcKey,
-          horizon,
-          points: inferResult.p50.length,
-        });
+      } catch {
+        // no-op
       }
     } catch (err: any) {
       if (signal?.aborted || isAbortError(err)) {
         dispatch(forecastCancelled(fcKey));
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[Orchestrator] aborted', { fcKey });
-        }
         return;
       }
 
       const message = err?.message || 'Failed to run forecast orchestrator';
       orchestratorState.status = 'error';
 
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('[Orchestrator] forecast error', {
-          fcKey,
-          message,
-        });
-      }
+      // analytics error
+      track(AnalyticsEvent.PREDICT_ERROR, {
+        symbol,
+        provider,
+        tf,
+        window,
+        horizon,
+        model: model ?? null,
+        message,
+        type:
+          err?.name === 'NetworkError'
+            ? 'network'
+            : err?.name === 'WorkerError'
+              ? 'worker'
+              : 'unknown',
+      });
 
-      dispatch(
-        forecastFailed({
-          key: fcKey,
-          error: message,
-        }),
-      );
+      dispatch(forecastFailed({ key: fcKey, error: message }));
     } finally {
-      if (orchestratorState.status !== 'error') {
+      if (orchestratorState.status !== 'error')
         orchestratorState.status = 'idle';
-      }
     }
   }
 
+  /** Подгрузка таймсерии из store или MarketAdapter */
   private static async ensureTimeseries(
     args: {
       tsKey: string;
@@ -265,45 +244,23 @@ export class ForecastManager {
 
     if (signal?.aborted) throw makeAbortError();
 
-    // 0) check store cache + TTL
     const state = getState();
     const isStale = isTimeseriesStaleByKey(
       state,
       tsKey as any,
       TIMESERIES_TTL_MS,
     );
-
     const entry = (state as any).timeseries?.byKey?.[tsKey] as
       | { bars: Bar[]; fetchedAt: string }
       | undefined;
 
-    if (entry && !isStale) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[Orchestrator] using store timeseries cache', { tsKey });
-      }
-      return entry.bars;
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Orchestrator] loading timeseries with MarketAdapter', {
-        tsKey,
-        symbol,
-        provider,
-        tf,
-        window,
-      });
-    }
+    if (entry && !isStale) return entry.bars;
 
     dispatch(timeseriesRequested({ key: tsKey as any }));
 
     const adapterRes = await getMarketTimeseries(
       dispatch,
-      {
-        symbol,
-        provider,
-        timeframe: tf,
-        limit: window,
-      } as any,
+      { symbol, provider, timeframe: tf, limit: window } as any,
       { signal },
     );
 
@@ -311,20 +268,13 @@ export class ForecastManager {
 
     if ('code' in adapterRes) {
       const message = adapterRes.message || 'Failed to load timeseries';
-
-      if ((adapterRes as any).code === 'ABORTED') {
-        throw makeAbortError();
-      }
-
+      if ((adapterRes as any).code === 'ABORTED') throw makeAbortError();
       dispatch(timeseriesFailed({ key: tsKey as any, error: message }));
       throw new Error(message);
     }
 
     dispatch(
-      timeseriesReceived({
-        key: tsKey as any,
-        bars: adapterRes.bars as any,
-      }),
+      timeseriesReceived({ key: tsKey as any, bars: adapterRes.bars as any }),
     );
 
     return adapterRes.bars as any;
@@ -336,10 +286,7 @@ export class ForecastManager {
   ): Array<[number, number]> {
     if (!bars.length) return [];
     const tailSize = Math.max(horizon * 2, 128);
-    const slice = bars.slice(-tailSize);
-
-    // Bar = [ts(ms), o, h, l, c, v?]
-    return slice.map((b) => [b[0], b[4]] as [number, number]);
+    return bars.slice(-tailSize).map((b) => [b[0], b[4]] as [number, number]);
   }
 
   private static buildStoreForecastEntry(
@@ -351,15 +298,10 @@ export class ForecastManager {
     lastTs: number,
   ) {
     const stepMs = ForecastManager.timeframeToMs(tf);
-
     const makeSeries = (values: number[]) =>
-      values.map((value, index) => {
-        const ts = lastTs + stepMs * (index + 1);
-        return [ts, value] as [number, number];
-      });
+      values.map((v, i) => [lastTs + stepMs * (i + 1), v] as [number, number]);
 
     const { series, meta } = entry;
-
     return {
       p50: makeSeries(series.p50),
       p10: series.p10?.length ? makeSeries(series.p10) : undefined,
@@ -403,13 +345,8 @@ export class ForecastManager {
   }
 
   private static generateHistoryId(): string {
-    if (
-      typeof globalThis !== 'undefined' &&
-      typeof globalThis.crypto !== 'undefined' &&
-      typeof globalThis.crypto.randomUUID === 'function'
-    ) {
+    if (typeof globalThis?.crypto?.randomUUID === 'function')
       return globalThis.crypto.randomUUID();
-    }
     return `fc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   }
 

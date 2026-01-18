@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import Skeleton from '@/shared/ui/Skeleton';
 import type { HistoryEntry } from '@/entities/history/model';
+import { track } from '@/shared/analytics';
+import { AnalyticsEvent } from '@/shared/analytics/events';
 
 function formatDate(value: string): string {
   const parsed = new Date(value);
@@ -70,7 +72,20 @@ export default function HistoryTable({
               return (
                 <tr key={entry.id}>
                   <td>
-                    <Link href={`/forecast/${entry.id}`}>{entry.symbol}</Link>
+                    <Link
+                      href={`/forecast/${entry.id}`}
+                      onClick={() =>
+                        track(AnalyticsEvent.OPEN_FORECAST_FROM_HISTORY, {
+                          id: entry.id,
+                          symbol: entry.symbol,
+                          provider: entry.provider,
+                          tf: entry.tf,
+                          horizon: entry.horizon,
+                        })
+                      }
+                    >
+                      {entry.symbol}
+                    </Link>
                   </td>
                   <td>{formatDate(entry.created_at)}</td>
                   <td>{entry.meta.model_ver ?? '—'}</td>

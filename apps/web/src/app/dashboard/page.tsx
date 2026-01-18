@@ -18,6 +18,8 @@ import {
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { track } from '@/shared/analytics';
+import { AnalyticsEvent } from '@/shared/analytics/events';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -74,11 +76,19 @@ export default function Dashboard() {
   const handlePredict = () => {
     if (!selectedAsset?.symbol || !selectedAsset?.provider) return;
 
-    // forecast только по trigger
+    track(AnalyticsEvent.PREDICT_START, {
+      symbol: selectedAsset.symbol,
+      provider: selectedAsset.provider,
+      tf: '1h',
+      window: 200,
+      horizon: 24,
+      model: selectedModel || null,
+    });
+
     dispatch(
       predictRequested({
         symbol: selectedAsset.symbol,
-        provider: selectedAsset.provider, // ui provider: 'moex' | 'binance'
+        provider: selectedAsset.provider,
         tf: '1h',
         window: 200,
         horizon: 24,

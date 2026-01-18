@@ -1,4 +1,5 @@
 'use client';
+
 import React, {
   useCallback,
   useEffect,
@@ -23,6 +24,8 @@ import {
 import { searchAssets } from '@/features/market-adapter/MarketAdapter';
 import type { CatalogItem } from '@shared/types/market';
 import debounce from 'lodash.debounce';
+import { track } from '@/shared/analytics';
+import { AnalyticsEvent } from '@/shared/analytics/events';
 
 const DEBOUNCE_MS = 400;
 
@@ -232,7 +235,15 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
 
   const performSearch = useCallback(
     async (q: string) => {
-      console.log(`Поиск: "${q}", провайдер: ${provider}, фильтры:`, filters);
+      if (q.length >= 2) {
+        track(AnalyticsEvent.SEARCH_ASSET, {
+          provider,
+          query_len: q.length,
+          filters_active_count: Object.values(filters.categories).filter(
+            Boolean,
+          ).length,
+        });
+      }
 
       abortRef.current?.abort();
       abortRef.current = new AbortController();
@@ -248,19 +259,18 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
           | 'MOEX'
           | 'MOCK';
 
-        if (q.length < 2) {
-          items = await searchAssets(
-            dispatch,
-            { mode: 'listAll', provider: upperProvider },
-            { signal },
-          );
-        } else {
-          items = await searchAssets(
-            dispatch,
-            { mode: 'search', query: q, provider: upperProvider },
-            { signal },
-          );
-        }
+        items =
+          q.length < 2
+            ? await searchAssets(
+                dispatch,
+                { mode: 'listAll', provider: upperProvider },
+                { signal },
+              )
+            : await searchAssets(
+                dispatch,
+                { mode: 'search', query: q, provider: upperProvider },
+                { signal },
+              );
 
         const filteredItems = applyFiltersToItems(items, filters, provider);
 
@@ -268,11 +278,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
           dispatch(searchSucceeded(filteredItems));
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') {
-          // Просто игнорируем отмену запроса
-          console.log('Search aborted');
-        } else {
-          console.error('Ошибка поиска:', err);
+        if (err.name !== 'AbortError') {
           dispatch(searchFailed(err.message || 'Search failed'));
         }
       }
@@ -330,6 +336,13 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
 
   const handleAddClick = () => {
     if (!selectedForAdd) return;
+
+    track(AnalyticsEvent.SELECT_ASSET, {
+      provider: selectedForAdd.provider,
+      symbol: selectedForAdd.symbol,
+      source: 'search',
+    });
+
     dispatch(setSelected(selectedForAdd));
     dispatch(addRecent(selectedForAdd));
     onSelect?.(selectedForAdd);
@@ -340,6 +353,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     symbol: string;
     provider: 'binance' | 'moex' | 'mock';
   }) => {
+    track(AnalyticsEvent.SELECT_ASSET, {
+      provider: recentItem.provider,
+      symbol: recentItem.symbol,
+      source: 'recent',
+    });
+
     dispatch(setSelected(recentItem));
     dispatch(addRecent(recentItem));
     onSelect?.(recentItem);
