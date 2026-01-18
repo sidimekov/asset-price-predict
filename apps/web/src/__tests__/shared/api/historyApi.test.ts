@@ -67,8 +67,9 @@ describe('historyApi', () => {
     const store = createTestStore();
     const result = store.dispatch(
       historyApi.endpoints.getHistory.initiate({
+        page: 1,
+        limit: 10,
         symbol: 'BTC',
-        tf: '1h',
       }) as any,
     );
 
@@ -78,6 +79,5 @@ describe('historyApi', () => {
     const url = getRequestUrl(input);
     expect(url).toContain('/api/forecasts');
     expect(url).toContain('symbol=BTC');
-    expect(url).toContain('tf=1h');
   });
 });

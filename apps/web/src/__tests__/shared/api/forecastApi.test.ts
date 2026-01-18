@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { backendApi } from '@/shared/api/backendApi';
+import type { ForecastId } from '@assetpredict/shared';
 import { forecastApi } from '@/shared/api/forecast.api';
 
 const createTestStore = () =>
@@ -33,7 +34,10 @@ const getRequestUrl = (input: RequestInput | URL) => {
   return input.url;
 };
 
-const getRequestMethod = (input: RequestInput | URL, init?: RequestInitType) => {
+const getRequestMethod = (
+  input: RequestInput | URL,
+  init?: RequestInitType,
+) => {
   if (init?.method) {
     return init.method;
   }
@@ -80,10 +84,8 @@ describe('forecastApi', () => {
     const result = store.dispatch(
       forecastApi.endpoints.createForecast.initiate({
         symbol: 'BTC',
-        tf: '1h',
-        window: 200,
+        timeframe: '1h',
         horizon: 24,
-        provider: 'binance',
       }) as any,
     );
 
@@ -101,9 +103,9 @@ describe('forecastApi', () => {
     const store = createTestStore();
     const result = store.dispatch(
       forecastApi.endpoints.getForecasts.initiate({
+        page: 1,
+        limit: 10,
         symbol: 'BTC',
-        tf: '1h',
-        provider: 'binance',
       }) as any,
     );
 
@@ -113,16 +115,15 @@ describe('forecastApi', () => {
     const url = getRequestUrl(input);
     expect(url).toContain('/api/forecasts');
     expect(url).toContain('symbol=BTC');
-    expect(url).toContain('tf=1h');
-    expect(url).toContain('provider=binance');
   });
 
   it('requests a forecast by id', async () => {
     fetchMock.mockResolvedValue(resolveJson({ id: 'forecast-1' }));
 
     const store = createTestStore();
+    const forecastId = 'forecast-1' as ForecastId;
     const result = store.dispatch(
-      forecastApi.endpoints.getForecastById.initiate('forecast-1') as any,
+      forecastApi.endpoints.getForecastById.initiate(forecastId) as any,
     );
 
     await result.unwrap();
