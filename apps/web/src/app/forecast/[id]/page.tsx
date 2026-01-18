@@ -66,10 +66,11 @@ export default function ForecastPage() {
 
   const resolvedParams = React.useMemo(() => {
     const base = storedParams ?? defaultParams;
-    const parsedWindow = windowQuery ? Number(windowQuery) : undefined;
+    const fallbackWindow = base.window ?? defaultParams.window;
+    const parsedWindow = windowQuery ? Number(windowQuery) : Number.NaN;
     const safeWindow = Number.isFinite(parsedWindow)
       ? parsedWindow
-      : base.window;
+      : fallbackWindow;
 
     return {
       ...base,
