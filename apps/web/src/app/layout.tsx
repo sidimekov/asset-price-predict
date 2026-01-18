@@ -11,6 +11,7 @@ import { StoreProvider } from '@/app/providers/StoreProvider';
 import { useGetMeQuery } from '@/shared/api/account.api';
 import { backendApi } from '@/shared/api/backendApi';
 import { useAppDispatch } from '@/shared/store/hooks';
+import type { HttpError } from '@/shared/networking/types';
 
 const publicPaths = ['/auth', '/'];
 
@@ -47,7 +48,13 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   }, [token, isPublicPage, isAuthChecked, router]);
 
   useEffect(() => {
-    if (token && accountError && accountError.status === 401) {
+    const isHttpError = (error: unknown): error is HttpError =>
+      typeof error === 'object' &&
+      error !== null &&
+      'status' in error &&
+      typeof (error as HttpError).status === 'number';
+
+    if (token && isHttpError(accountError) && accountError.status === 401) {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('auth.token');
       }
