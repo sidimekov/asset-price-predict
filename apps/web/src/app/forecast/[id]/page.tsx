@@ -143,10 +143,32 @@ export default function ForecastPage() {
           : 'empty';
 
   const historySeries = bars?.map(
-    (bar) => [bar[0], bar[4]] as [number, number],
+    (bar, index) => [index, bar[4]] as [number, number],
   );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
+  const forecastTimestamps = forecastEntry?.p50?.map((point) => point[0]) ?? [];
+  const forecastValues = [
+    ...(forecastEntry?.p50?.map((point) => point[1]) ?? []),
+    ...(forecastEntry?.p10?.map((point) => point[1]) ?? []),
+    ...(forecastEntry?.p90?.map((point) => point[1]) ?? []),
+  ].filter((value) => Number.isFinite(value));
+
+  const combinedValues = [...historyValues, ...forecastValues].filter(
+    (value) => Number.isFinite(value),
+  );
+  const sharedRange =
+    combinedValues.length > 0
+      ? {
+          min: Math.min(...combinedValues),
+          max: Math.max(...combinedValues),
+        }
+      : undefined;
+
+  const historyAxisTimestamps =
+    historyTimestamps.length > 0 ? historyTimestamps : undefined;
+  const forecastAxisTimestamps =
+    forecastTimestamps.length > 0 ? forecastTimestamps : undefined;
 
   React.useEffect(() => {
     if (!selectedAsset && providerValue && selectedSymbol) {
@@ -228,6 +250,7 @@ export default function ForecastPage() {
                         p50={forecastEntry?.p50}
                         p10={forecastEntry?.p10}
                         p90={forecastEntry?.p90}
+                        yRange={sharedRange}
                       />
                     </div>
                   </div>
@@ -236,14 +259,15 @@ export default function ForecastPage() {
                     <div className="flex-1">
                       <XAxis
                         className="text-[#8480C9] w-full"
-                        timestamps={
-                          historyTimestamps.length > 0
-                            ? historyTimestamps
-                            : undefined
-                        }
+                        timestamps={historyAxisTimestamps}
                       />
                     </div>
-                    <div className="w-[330px]" />
+                    <div className="w-[330px]">
+                      <XAxis
+                        className="text-[#8480C9] w-full"
+                        timestamps={forecastAxisTimestamps}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
