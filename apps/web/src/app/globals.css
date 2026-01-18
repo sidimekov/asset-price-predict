@@ -1031,6 +1031,37 @@ body {
   border: 2px dashed #8480c9;
 }
 
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: #2b2854;
+  border: 1px solid rgba(132, 128, 201, 0.35);
+}
+
+.segmented-control .segmented-option {
+  border: none;
+  background: transparent;
+  color: #b7b4e6;
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.segmented-control .segmented-option-active {
+  background: #3c3780;
+  color: #ffffff;
+}
+
+.segmented-md .segmented-option {
+  padding: 0.35rem 1rem;
+  font-size: 0.85rem;
+}
+
 /* HistoryPage Component */
 .history-page {
   position: fixed;
