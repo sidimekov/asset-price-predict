@@ -21,6 +21,7 @@ import {
   timeseriesRequested,
   timeseriesReceived,
   timeseriesFailed,
+  timeseriesCancelled,
   buildTimeseriesKey,
   isTimeseriesStaleByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
@@ -263,7 +264,10 @@ export class ForecastManager {
     const { tsKey, symbol, provider, tf, window } = args;
     const { dispatch, getState, signal } = deps;
 
-    if (signal?.aborted) throw makeAbortError();
+    if (signal?.aborted) {
+      dispatch(timeseriesCancelled({ key: tsKey as any }));
+      throw makeAbortError();
+    }
 
     // 0) check store cache + TTL
     const state = getState();
@@ -296,18 +300,30 @@ export class ForecastManager {
 
     dispatch(timeseriesRequested({ key: tsKey as any }));
 
-    const adapterRes = await getMarketTimeseries(
-      dispatch,
-      {
-        symbol,
-        provider,
-        timeframe: tf,
-        limit: window,
-      } as any,
-      { signal },
-    );
+    let adapterRes: Awaited<ReturnType<typeof getMarketTimeseries>>;
+    try {
+      adapterRes = await getMarketTimeseries(
+        dispatch,
+        {
+          symbol,
+          provider,
+          timeframe: tf,
+          limit: window,
+        } as any,
+        { signal },
+      );
+    } catch (err: any) {
+      if (isAbortError(err) || signal?.aborted) {
+        dispatch(timeseriesCancelled({ key: tsKey as any }));
+        throw makeAbortError();
+      }
+      throw err;
+    }
 
-    if (signal?.aborted) throw makeAbortError();
+    if (signal?.aborted) {
+      dispatch(timeseriesCancelled({ key: tsKey as any }));
+      throw makeAbortError();
+    }
 
     if ('code' in adapterRes) {
       const message = adapterRes.message || 'Failed to load timeseries';
