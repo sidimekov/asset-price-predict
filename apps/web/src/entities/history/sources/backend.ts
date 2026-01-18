@@ -13,9 +13,13 @@ import type {
 } from '../repository';
 
 const makeBaseQueryApi = (): BaseQueryApi => ({
-  signal: undefined,
-  dispatch: () => undefined,
+  signal: new AbortController().signal,
+  abort: () => undefined,
+  dispatch: (() => undefined) as BaseQueryApi['dispatch'],
   getState: () => ({}),
+  extra: undefined,
+  endpoint: '',
+  type: 'query',
 });
 
 const mapListItem = (item: ForecastListItem): HistoryEntry => ({
@@ -52,14 +56,17 @@ const zipSeries = (series?: { t?: number[] }, values?: number[]) => {
 
 const mapDetail = (item: ForecastDetailRes): HistoryEntry => {
   const explain =
-    item.factors?.map((factor) => ({
-      name: factor.name,
-      group: 'model',
-      sign: factor.impact >= 0 ? '+' : '-',
-      impact_abs: Math.abs(factor.impact),
-      shap: factor.shap,
-      confidence: factor.conf,
-    })) ?? undefined;
+    item.factors?.map((factor) => {
+      const sign: '+' | '-' = factor.impact >= 0 ? '+' : '-';
+      return {
+        name: factor.name,
+        group: 'model',
+        sign,
+        impact_abs: Math.abs(factor.impact),
+        shap: factor.shap,
+        confidence: factor.conf,
+      };
+    }) ?? undefined;
 
   return {
     id: item.id,

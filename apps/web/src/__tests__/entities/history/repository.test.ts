@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import type { HistoryEntry } from '@/entities/history/model';
 
 const createMockSource = () => ({
