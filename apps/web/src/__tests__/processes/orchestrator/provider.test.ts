@@ -15,7 +15,7 @@ describe('mapProviderToMarket', () => {
   it('returns MOCK in non-production', () => {
     process.env.NODE_ENV = 'development';
     expect(mapProviderToMarket('binance')).toBe('BINANCE');
-    expect(mapProviderToMarket('moex')).toBe('MOCK');
+    expect(mapProviderToMarket('moex')).toBe('MOEX');
   });
 
   it('maps providers in production', () => {
