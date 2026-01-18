@@ -67,7 +67,9 @@ tsconfig.tsbuildinfo
 **/*.tsbuildinfo
 
 # Images / data caches
-/data
+/data/features
+/data/normalized
+/data/raw
 /data/cache/
 **/.cache/
 

@@ -30,8 +30,12 @@ def _mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 def evaluate(
     y_true: np.ndarray, y_pred: np.ndarray, last_close: np.ndarray
 ) -> dict:
-    p50_true = y_true + last_close[:, None]
-    p50_pred = y_pred + last_close[:, None]
+    if y_true.ndim == 1:
+        p50_true = y_true + last_close
+        p50_pred = y_pred + last_close
+    else:
+        p50_true = y_true + last_close[:, None]
+        p50_pred = y_pred + last_close[:, None]
     return {
         "mae_delta": float(mean_absolute_error(y_true, y_pred)),
         "mape_price": _mape(p50_true, p50_pred),
@@ -53,6 +57,12 @@ def main() -> None:
     parser.add_argument("--depth", type=int, default=7)
     parser.add_argument("--learning-rate", type=float, default=0.05)
     parser.add_argument("--max-rows", type=int, default=None)
+    parser.add_argument(
+        "--target-index",
+        type=int,
+        default=1,
+        help="1-based target column index (target_1 is 1).",
+    )
     args = parser.parse_args()
 
     train = load_split(args.data_dirs, "train", max_rows=args.max_rows)
@@ -62,8 +72,20 @@ def main() -> None:
     X_train = zscore_apply(train.X, mean, std)
     X_val = zscore_apply(val.X, mean, std)
 
+    if not train.target_columns:
+        raise ValueError("No target columns found in training data.")
+    if args.target_index < 1 or args.target_index > len(train.target_columns):
+        raise ValueError(
+            f"target-index {args.target_index} is out of range (1..{len(train.target_columns)})"
+        )
+
+    target_idx = args.target_index - 1
+    target_column = train.target_columns[target_idx]
+    y_train = train.y[:, target_idx]
+    y_val = val.y[:, target_idx]
+
     model = CatBoostRegressor(
-        loss_function="MultiRMSE",
+        loss_function="RMSE",
         iterations=args.iterations,
         depth=args.depth,
         learning_rate=args.learning_rate,
@@ -71,10 +93,10 @@ def main() -> None:
         verbose=200,
         allow_writing_files=False,
     )
-    model.fit(X_train, train.y, eval_set=(X_val, val.y))
+    model.fit(X_train, y_train, eval_set=(X_val, y_val))
 
     val_pred = model.predict(X_val)
-    metrics = evaluate(val.y, val_pred, val.last_close)
+    metrics = evaluate(y_val, val_pred, val.last_close)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -84,7 +106,7 @@ def main() -> None:
     meta = {
         "model_name": args.model_name,
         "features": FEATURE_COLUMNS,
-        "target_columns": train.target_columns,
+        "target_columns": [target_column],
         "normalization": {"type": "zscore", "mean": mean.tolist(), "std": std.tolist()},
         "metrics": metrics,
         "splits": {"train": len(train.X), "val": len(val.X)},
@@ -94,6 +116,7 @@ def main() -> None:
             "depth": args.depth,
             "learning_rate": args.learning_rate,
             "random_state": args.random_state,
+            "target_index": args.target_index,
         },
     }
     meta_path = out_dir / f"{args.model_name}.meta.json"

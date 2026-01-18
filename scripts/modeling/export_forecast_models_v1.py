@@ -83,10 +83,12 @@ def _load_bars(path: Path) -> List[List[float]]:
     return json.loads(path.read_text())
 
 
-def _pick_tails(bars: List[List[float]], count: int = 2) -> List[List[List[float]]]:
-    if len(bars) < TAIL_SIZE + FEATURE_WINDOW + HORIZON:
+def _pick_tails(
+    bars: List[List[float]], horizon: int, count: int = 2
+) -> List[List[List[float]]]:
+    if len(bars) < TAIL_SIZE + FEATURE_WINDOW + horizon:
         raise ValueError("Not enough bars to build test vectors.")
-    step = max(1, (len(bars) - TAIL_SIZE - HORIZON) // count)
+    step = max(1, (len(bars) - TAIL_SIZE - horizon) // count)
     tails: List[List[List[float]]] = []
     for i in range(count):
         end = TAIL_SIZE + i * step
@@ -157,6 +159,8 @@ def build_test_vectors(
     std: List[float],
     tails: List[List[List[float]]],
     model_ver: str,
+    horizon: int,
+    input_name: str,
 ) -> Dict[str, object]:
     cases = []
     for idx, tail in enumerate(tails):
@@ -164,7 +168,9 @@ def build_test_vectors(
         features = _build_features(closes[-FEATURE_WINDOW:])
         features = _normalize(features, mean, std)
         inp = features.reshape(1, -1)
-        output = session.run(None, {"input": inp})[0].astype(np.float32).flatten()
+        output = session.run(None, {input_name: inp})[0].astype(np.float32).flatten()
+        if output.size > horizon:
+            output = output[:horizon]
         last_close = closes[-1]
         p50 = (output + last_close).tolist()
         cases.append(
@@ -179,7 +185,7 @@ def build_test_vectors(
 
     return {
         "model_ver": model_ver,
-        "horizon": HORIZON,
+        "horizon": horizon,
         "window": FEATURE_WINDOW,
         "feature_count": len(FEATURE_COLUMNS),
         "rtol": 1e-3,
@@ -200,7 +206,8 @@ def main() -> None:
     args = parser.parse_args()
 
     bars = _load_bars(Path(args.data_bars))
-    tails = _pick_tails(bars, count=2)
+    lgbm_horizon = HORIZON
+    tails = _pick_tails(bars, lgbm_horizon, count=2)
 
     lgbm_meta = json.loads(Path(args.lgbm_meta).read_text())
     cat_meta = json.loads(Path(args.cat_meta).read_text())
@@ -232,10 +239,14 @@ def main() -> None:
         lgbm_meta["normalization"]["std"],
         tails,
         args.lgbm_ver,
+        lgbm_horizon,
+        "input",
     )
     cat_tv = None
     if cat_exported:
         try:
+            cat_horizon = max(1, len(cat_meta.get("target_columns", [])))
+            cat_tails = _pick_tails(bars, cat_horizon, count=2)
             cat_sess = ort.InferenceSession(
                 cat_out.as_posix(), providers=["CPUExecutionProvider"]
             )
@@ -243,8 +254,10 @@ def main() -> None:
                 cat_sess,
                 cat_meta["normalization"]["mean"],
                 cat_meta["normalization"]["std"],
-                tails,
+                cat_tails,
                 args.cat_ver,
+                cat_horizon,
+                cat_sess.get_inputs()[0].name,
             )
         except Exception as exc:
             print(f"[export] CatBoost ONNX validation failed: {exc}")
