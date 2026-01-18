@@ -262,6 +262,32 @@ describe('MarketAdapter - Получение временных рядов (getM
       }
     });
 
+    it('нормализует MOEX свечи без таймзоны как UTC', async () => {
+      vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
+
+      const ts = '2024-01-02 00:00:00';
+      mockFetchMoexTimeseries.mockResolvedValue({
+        candles: {
+          columns: ['begin', 'open', 'high', 'low', 'close', 'volume'],
+          data: [[ts, 10, 12, 9, 11, 500]],
+        },
+      } as any);
+
+      const result = await getMarketTimeseries(dispatch, {
+        symbol: 'SBER',
+        provider: 'MOEX',
+        timeframe: '1d',
+        limit: 1,
+      });
+
+      expect(result).toHaveProperty('bars');
+      if ('bars' in result) {
+        expect(result.bars).toEqual([
+          [Date.parse('2024-01-02T00:00:00Z'), 10, 12, 9, 11, 500],
+        ]);
+      }
+    });
+
     it('возвращает пустые бары при невалидных данных от MOCK провайдера', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
       mockFetchMockTimeseries.mockResolvedValue('not-an-array' as any);

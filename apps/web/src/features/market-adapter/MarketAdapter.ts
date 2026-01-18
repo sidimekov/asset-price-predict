@@ -58,6 +58,10 @@ export interface MarketAdapterError {
   message: string;
 }
 
+const MARKET_MOCK_MODE =
+  process.env.NEXT_PUBLIC_MARKET_MOCK === '1' ||
+  (process.env.CI === 'true' && process.env.NODE_ENV !== 'test');
+
 // TIMESERIES
 
 const providerSchema = zProvider.or(z.literal('MOCK'));
@@ -214,6 +218,16 @@ async function resolveProviderData(
   opts: AdapterCallOpts = {},
 ): Promise<ProviderResolveResult> {
   try {
+    if (MARKET_MOCK_MODE && provider !== 'MOCK') {
+      const mockRaw = await fetchMockTimeseries(dispatch, params, opts);
+      return {
+        ok: true,
+        raw: mockRaw,
+        normalized: normalizeBarsFinal(normalizeRawBars(mockRaw)),
+        source: 'LOCAL',
+      };
+    }
+
     switch (provider) {
       case 'BINANCE': {
         const klines = await fetchBinanceTimeseries(dispatch, params, opts);
@@ -369,10 +383,18 @@ async function fetchProviderCatalog(
       mode,
       query,
       limit,
+      mockMode: MARKET_MOCK_MODE,
     });
   }
 
   try {
+    if (MARKET_MOCK_MODE && provider !== 'MOCK') {
+      const symbols =
+        mode === 'search' && query
+          ? await searchMockSymbols(query, opts)
+          : MOCK_SYMBOLS;
+      raw = symbols.slice(0, limit ?? Infinity);
+    } else {
     switch (provider) {
       case 'BINANCE':
         if (mode === 'listAll') {
@@ -435,6 +457,7 @@ async function fetchProviderCatalog(
 
       default:
         return [];
+    }
     }
   } catch (err: any) {
     if (err.name === 'AbortError') {
