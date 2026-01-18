@@ -15,8 +15,9 @@ import type {
 const ctx = self as DedicatedWorkerGlobalScope;
 const MODEL = forecastMinimalConfig;
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
-const BACKEND_PREF =
-  (process.env.NEXT_PUBLIC_ORT_BACKEND || 'auto').toLowerCase();
+const BACKEND_PREF = (
+  process.env.NEXT_PUBLIC_ORT_BACKEND || 'auto'
+).toLowerCase();
 
 // простой доверительный коридор вокруг p50 (пока нет настоящих p10/p90)
 const BAND = 0.01; // +/-1%
