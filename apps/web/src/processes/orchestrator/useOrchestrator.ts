@@ -10,10 +10,24 @@ import { ForecastManager } from './ForecastManager';
 import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
-import type { MarketTimeframe } from '@/config/market';
-import { mapProviderToMarket } from './provider';
+const DEFAULT_WINDOW =
+  process.env.NODE_ENV !== 'production' ? 200 : DEFAULT_LIMIT;
+
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_TIMEFRAME,
+  type MarketTimeframe,
+} from '@/config/market';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
+
+const DEFAULT_FORECAST_PARAMS = {
+  tf: DEFAULT_TIMEFRAME,
+  window: DEFAULT_WINDOW,
+  horizon: 24,
+  model: null,
+};
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
@@ -22,11 +36,7 @@ export function useOrchestrator() {
   const selected = useAppSelector(selectSelectedAsset);
   const paramsFromStore = useAppSelector(selectForecastParams);
 
-  const params =
-    paramsFromStore ??
-    (process.env.NODE_ENV !== 'production'
-      ? { tf: '1h', window: 200, horizon: 24, model: null }
-      : undefined);
+  const params = paramsFromStore ?? DEFAULT_FORECAST_PARAMS;
 
   const predictRequestId = useAppSelector(
     (s: RootState) => (s as any).forecast?.predict?.requestId ?? 0,
@@ -112,7 +122,6 @@ export function useOrchestrator() {
   useEffect(() => {
     if (!predictRequestId) return;
     if (predictRequestId === fcLastRequestIdRef.current) return;
-    fcLastRequestIdRef.current = predictRequestId;
 
     const req = predictRequest;
 
@@ -131,6 +140,8 @@ export function useOrchestrator() {
     const windowNum = typeof window === 'string' ? Number(window) : window;
     if (!Number.isFinite(windowNum) || windowNum <= 0) return;
 
+    const requestId = predictRequestId;
+
     if (fcTimeoutRef.current) {
       clearTimeout(fcTimeoutRef.current);
       fcTimeoutRef.current = null;
@@ -144,6 +155,7 @@ export function useOrchestrator() {
     fcAbortRef.current = abortController;
 
     fcTimeoutRef.current = setTimeout(() => {
+      fcLastRequestIdRef.current = requestId;
       ForecastManager.runForecast(
         {
           symbol: symbol as any,
