@@ -467,6 +467,56 @@ describe('useOrchestrator (split timeseries/forecast)', () => {
     expect(runForecastMock).toHaveBeenCalledTimes(1);
   });
 
+  it('uses predict request provider when provided (overrides selected)', async () => {
+    const store = createTestStore();
+
+    store.dispatch({
+      type: 'SET_SELECTED',
+      payload: { symbol: 'SBER', provider: 'binance' },
+    });
+    store.dispatch({
+      type: 'SET_PARAMS',
+      payload: { tf: '1h', window: 200, horizon: 24, model: null },
+    });
+
+    render(
+      <Provider store={store}>
+        <TestComponent />
+      </Provider>,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+
+    vi.clearAllMocks();
+
+    await act(async () => {
+      store.dispatch({
+        type: 'PREDICT',
+        payload: {
+          symbol: 'SBER',
+          provider: 'moex',
+          tf: '1h',
+          window: 200,
+          horizon: 24,
+          model: null,
+        },
+      });
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      vi.advanceTimersByTime(300);
+    });
+
+    const runForecastMock = (ForecastManager as any).runForecast as Mock;
+    expect(runForecastMock).toHaveBeenCalledTimes(1);
+
+    const [ctxArg] = runForecastMock.mock.calls[0];
+    expect(ctxArg.provider).toBe('MOEX');
+  });
+
   it('debounce: two quick predicts -> only latest forecast call happens', async () => {
     const store = createTestStore();
 

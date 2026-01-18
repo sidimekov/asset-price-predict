@@ -5,6 +5,9 @@ import {
   forecastRequested,
   forecastReceived,
   forecastFailed,
+  forecastCancelled,
+  predictRequested,
+  predictCleared,
   clearForecast,
   clearAllForecasts,
 } from '@/entities/forecast/model/forecastSlice';
@@ -108,5 +111,66 @@ describe('forecastSlice', () => {
 
     // должно остаться как было
     expect(state).toEqual(initial);
+  });
+
+  it('predictRequested увеличивает requestId и сохраняет запрос', () => {
+    const initial = getInitial();
+
+    const state = forecastReducer(
+      initial,
+      predictRequested({
+        symbol: 'SBER',
+        provider: 'binance',
+        tf: '1h',
+        window: 200,
+        horizon: 24,
+        model: null,
+      }),
+    );
+
+    expect(state.predict.requestId).toBe(1);
+    expect(state.predict.request).toEqual({
+      symbol: 'SBER',
+      provider: 'binance',
+      tf: '1h',
+      window: 200,
+      horizon: 24,
+      model: null,
+    });
+  });
+
+  it('predictCleared сбрасывает запрос, но не меняет requestId', () => {
+    const initial = getInitial();
+
+    const withRequest = forecastReducer(
+      initial,
+      predictRequested({
+        symbol: 'SBER',
+        provider: 'binance',
+        tf: '1h',
+        window: 200,
+        horizon: 24,
+        model: null,
+      }),
+    );
+
+    const state = forecastReducer(withRequest, predictCleared());
+
+    expect(state.predict.requestId).toBe(1);
+    expect(state.predict.request).toBeNull();
+  });
+
+  it('forecastCancelled снимает loading без изменения ошибки', () => {
+    const initial = getInitial();
+    const requested = forecastReducer(initial, forecastRequested('k'));
+    const failed = forecastReducer(
+      requested,
+      forecastFailed({ key: 'k', error: 'boom' }),
+    );
+
+    const state = forecastReducer(failed, forecastCancelled('k'));
+
+    expect(state.loadingByKey['k']).toBe(false);
+    expect(state.errorByKey['k']).toBe('boom');
   });
 });
