@@ -292,7 +292,10 @@ export default function ForecastPage() {
                       </div>
                       {chartState === 'ready' && historySeries ? (
                         viewMode === 'candles' ? (
-                          <CandlesChart className="h-96 w-full" bars={bars ?? []} />
+                          <CandlesChart
+                            className="h-96 w-full"
+                            bars={bars ?? []}
+                          />
                         ) : (
                           <LineChart
                             className="h-96 w-full"
