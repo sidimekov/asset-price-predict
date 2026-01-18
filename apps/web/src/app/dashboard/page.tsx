@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
+import CandlesChart from '@/widgets/chart/CandlesChart';
 import LineChart from '@/widgets/chart/LineChart';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
@@ -11,50 +12,39 @@ import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import {
-  DEFAULT_LIMIT,
-  DEFAULT_TIMEFRAME,
-  type MarketDataProvider,
-} from '@/config/market';
-import {
   addRecent,
   setSelected,
   removeRecent,
   selectRecent,
   selectSelectedAsset,
-  type Provider,
 } from '@/features/asset-catalog/model/catalogSlice';
+import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
 import {
   selectTimeseriesByKey,
   selectTimeseriesLoadingByKey,
   selectTimeseriesErrorByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
-import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
-import {
-  forecastPredictRequested,
-  setForecastParams,
-} from '@/entities/forecast/model/forecastSlice';
-import { selectForecastParams } from '@/entities/forecast/model/selectors';
-import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
-import type { MarketTimeframe } from '@/config/market';
 import { selectPriceChangeByAsset } from '@/entities/timeseries/model/selectors';
+import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
+import SegmentedControl from '@/shared/ui/SegmentedControl';
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_TIMEFRAME,
+  type MarketTimeframe,
+} from '@/config/market';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
-type ParamsState = 'idle' | 'loading' | 'error' | 'success';
+type ChartViewMode = 'line' | 'candles';
 
-const mapProviderToMarket = (
-  provider: 'binance' | 'moex' | 'mock',
-): MarketDataProvider => {
-  switch (provider) {
-    case 'binance':
-      return 'BINANCE';
-    case 'moex':
-      return 'MOEX';
-    case 'mock':
-      return 'MOCK';
-    default:
-      return 'MOCK';
-  }
-};
+const SMALL_TIMEFRAMES = new Set(['1m', '5m', '15m']);
+const DEFAULT_WINDOW = 200;
+const VIEW_MODE_STORAGE_KEY = 'chart:viewMode';
+
+const isChartViewMode = (value: string | null): value is ChartViewMode =>
+  value === 'line' || value === 'candles';
 
 const resolveCurrency = (
   provider: 'binance' | 'moex' | 'mock',
@@ -73,23 +63,23 @@ export default function Dashboard() {
 
   const recentAssets = useAppSelector(selectRecent);
   const selectedAsset = useAppSelector(selectSelectedAsset);
-  const forecastParams = useAppSelector(selectForecastParams);
+  const params = useAppSelector(selectForecastParams);
 
-  const rawWindow = forecastParams?.window;
-  const windowNum =
-    typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
+  const rawWindow = params?.window;
+  const windowNum = typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
   const timeseriesWindow =
     Number.isFinite(windowNum) && windowNum && windowNum > 0
       ? windowNum
       : process.env.NODE_ENV !== 'production'
         ? 200
         : DEFAULT_LIMIT;
+
   const recentAssetsWithStats = useAppSelector((state) =>
     recentAssets.map((asset) => {
-      const provider = mapProviderToMarket(asset.provider);
+      const providerNorm = mapProviderToMarket(asset.provider) ?? 'MOCK';
       const stats = selectPriceChangeByAsset(
         state,
-        provider,
+        providerNorm,
         asset.symbol,
         DEFAULT_TIMEFRAME,
         timeseriesWindow,
@@ -106,49 +96,48 @@ export default function Dashboard() {
 
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
-  const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
 
-  const [selectedModel, setSelectedModel] = React.useState('');
-  const [selectedDate, setSelectedDate] = React.useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-      2,
-      '0',
-    )}-${String(today.getDate()).padStart(2, '0')}`;
+  const [viewMode, setViewMode] = React.useState<ChartViewMode>(() => {
+    if (typeof window === 'undefined') return 'line';
+    const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    return isChartViewMode(stored) ? stored : 'line';
+  });
+  const [hasUserSelectedView, setHasUserSelectedView] = React.useState(() => {
+    if (typeof window === 'undefined') return false;
+    return isChartViewMode(window.localStorage.getItem(VIEW_MODE_STORAGE_KEY));
   });
 
+  const defaultParams = React.useMemo(
+    () => ({ tf: DEFAULT_TIMEFRAME, window: 200, horizon: 24, model: null }),
+    [],
+  );
+
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setParamsState('success');
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!params) {
+      dispatch(setForecastParams(defaultParams));
+    }
+  }, [dispatch, params, defaultParams]);
+
+  const effectiveParams = params ?? defaultParams;
+  const effectiveTf = effectiveParams.tf as MarketTimeframe;
+  const effectiveWindowRaw = effectiveParams.window;
+  const effectiveWindow =
+    typeof effectiveWindowRaw === 'number'
+      ? effectiveWindowRaw
+      : Number(effectiveWindowRaw ?? DEFAULT_WINDOW) || DEFAULT_WINDOW;
 
   const selectedSymbol = selectedAsset?.symbol ?? null;
   const providerNorm = selectedAsset
     ? mapProviderToMarket(selectedAsset.provider)
     : null;
 
-  const defaultParams = React.useMemo(
-    () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
-    [],
-  );
-
-  React.useEffect(() => {
-    if (!forecastParams) {
-      dispatch(setForecastParams(defaultParams));
-    }
-  }, [dispatch, forecastParams, defaultParams]);
-
-  const effectiveParams = forecastParams ?? defaultParams;
-
   const tsKey =
     providerNorm && selectedSymbol
       ? makeTimeseriesKey({
           provider: providerNorm,
           symbol: selectedSymbol,
-          tf: effectiveParams.tf as MarketTimeframe,
-          window: effectiveParams.window,
+          tf: effectiveTf,
+          window: effectiveWindow,
         })
       : null;
 
@@ -168,12 +157,26 @@ export default function Dashboard() {
       ? 'empty'
       : 'ready';
 
+  React.useEffect(() => {
+    if (hasUserSelectedView) return;
+    const mode = SMALL_TIMEFRAMES.has(String(effectiveTf)) ? 'candles' : 'line';
+    setViewMode(mode);
+  }, [effectiveTf, hasUserSelectedView]);
+
+  const handleViewModeChange = (mode: ChartViewMode) => {
+    setHasUserSelectedView(true);
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    }
+  };
+
   const handleAssetSelect = ({
     symbol,
     provider,
   }: {
     symbol: string;
-    provider: Provider;
+    provider: 'binance' | 'moex' | 'mock';
   }) => {
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));
@@ -186,34 +189,15 @@ export default function Dashboard() {
     if (!selectedSymbol || !selectedAsset) return;
     dispatch(setSelected(selectedAsset));
     dispatch(setForecastParams(effectiveParams));
-    dispatch(
-      forecastPredictRequested({
-        symbol: selectedAsset.symbol,
-        provider: selectedAsset.provider,
-        tf: effectiveParams.tf,
-        window: effectiveParams.window,
-        horizon: effectiveParams.horizon,
-        model: effectiveParams.model ?? null,
-      }),
-    );
-    const searchParams = new globalThis.URLSearchParams({
+    const query = new URLSearchParams({
       provider: selectedAsset.provider,
+      tf: String(effectiveParams.tf),
+      window: String(effectiveParams.window),
     });
-
-    if (effectiveParams.tf) {
-      searchParams.set('tf', String(effectiveParams.tf));
-    }
-
-    if (effectiveParams.window) {
-      searchParams.set('window', String(effectiveParams.window));
-    }
-
-    router.push(
-      `/forecast/${encodeURIComponent(selectedAsset.symbol)}?${searchParams.toString()}`,
-    );
+    router.push(`/forecast/${encodeURIComponent(selectedAsset.symbol)}?${query}`);
   };
 
-  const handleRemoveAsset = (symbol: string, provider?: string) => {
+  const handleRemoveAsset = (symbol: string) => {
     const asset = recentAssets.find((a) => a.symbol === symbol);
     if (asset) {
       dispatch(
@@ -245,7 +229,7 @@ export default function Dashboard() {
           : 'empty';
 
   const historySeries = bars?.map(
-    (bar) => [bar[0], bar[4]] as [number, number],
+    (bar, index) => [index, bar[4]] as [number, number],
   );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
@@ -267,7 +251,17 @@ export default function Dashboard() {
 
         {/* Chart */}
         <div className="col-span-12 lg:col-span-8">
-          <div className="bg-surface-dark rounded-3xl p-6">
+          <div className="bg-surface-dark rounded-3xl p-6 relative">
+            <div className="absolute right-6 top-6">
+              <SegmentedControl<ChartViewMode>
+                value={viewMode}
+                options={[
+                  { value: 'line', label: 'Line' },
+                  { value: 'candles', label: 'Candles' },
+                ]}
+                onChange={handleViewModeChange}
+              />
+            </div>
             <div className="flex items-start">
               <YAxis
                 className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
@@ -278,10 +272,17 @@ export default function Dashboard() {
                 <div className="flex">
                   <div className="relative h-96 w-full">
                     {chartState === 'ready' && historySeries ? (
-                      <LineChart
-                        className="h-96 w-full"
-                        series={historySeries}
-                      />
+                      viewMode === 'candles' ? (
+                        <CandlesChart
+                          bars={bars ?? []}
+                          className="chart-container h-full w-full rounded-3xl"
+                        />
+                      ) : (
+                        <LineChart
+                          className="h-96 w-full"
+                          series={historySeries}
+                        />
+                      )
                     ) : barsError ? (
                       <div className="h-96 w-full flex items-center justify-center text-ink-muted">
                         Failed to load history
@@ -290,14 +291,18 @@ export default function Dashboard() {
                       <CandlesChartPlaceholder state={chartState} />
                     )}
                   </div>
+                  <div className="w-[330px] flex-none" />
                 </div>
 
-                <XAxis
-                  className="text-[#8480C9]"
-                  timestamps={
-                    historyTimestamps.length > 0 ? historyTimestamps : undefined
-                  }
-                />
+                <div className="flex">
+                  <div className="flex-1">
+                    <XAxis
+                      className="text-[#8480C9] w-full"
+                      timestamps={historyTimestamps}
+                    />
+                  </div>
+                  <div className="w-[330px]" />
+                </div>
               </div>
             </div>
           </div>
@@ -349,8 +354,6 @@ export default function Dashboard() {
             }
           />
         </div>
-
-        <div className="hidden lg:block col-span-1" />
       </div>
 
       {/* Asset Catalog Modal */}
