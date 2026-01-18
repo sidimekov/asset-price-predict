@@ -33,15 +33,12 @@ const getRequestUrl = (input: RequestInput | URL) => {
   return input.url;
 };
 
-const getRequestMethod = (
-  input: RequestInput | URL,
-  init?: RequestInitType,
-) => {
+const getRequestMethod = (input: RequestInput | URL, init?: RequestInitType) => {
   if (init?.method) {
     return init.method;
   }
 
-  if (input instanceof Request) {
+  if (input instanceof globalThis.Request) {
     return input.method;
   }
 
