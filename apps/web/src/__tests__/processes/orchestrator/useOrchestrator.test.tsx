@@ -176,9 +176,11 @@ describe('useOrchestrator', () => {
 
     const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
     expect(ensureMock).toHaveBeenCalledTimes(1);
+    const expectedWindow =
+      process.env.NODE_ENV !== 'production' ? 200 : DEFAULT_LIMIT;
     expect(ensureMock.mock.calls[0][0]).toMatchObject({
       tf: DEFAULT_TIMEFRAME,
-      window: DEFAULT_LIMIT,
+      window: expectedWindow,
     });
   });
 

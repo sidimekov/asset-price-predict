@@ -176,8 +176,8 @@ export default function ParamsPanel({
 
       <br />
       <div className="text-xs text-ink-muted text-center">
-        Window = количество исторических баров (lookback). Диапазон{' '}
-        {windowMin}–{windowMax}.
+        Window = количество исторических баров (lookback). Диапазон {windowMin}–
+        {windowMax}.
       </div>
       <br />
 

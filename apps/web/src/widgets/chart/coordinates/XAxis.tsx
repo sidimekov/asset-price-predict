@@ -161,7 +161,11 @@ export default function XAxis({
     labels !== undefined
       ? buildTicksFromLabels(labels)
       : timestamps
-        ? buildTicksFromTimestamps(timestamps, tickCount, getTimestampRange(timestamps))
+        ? buildTicksFromTimestamps(
+            timestamps,
+            tickCount,
+            getTimestampRange(timestamps),
+          )
         : buildTicksFromLabels(defaultTimeLabels);
 
   return (

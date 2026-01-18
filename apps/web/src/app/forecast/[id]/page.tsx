@@ -49,7 +49,9 @@ export default function ForecastPage() {
   const tfQuery = searchParams.get('tf');
   const windowQuery = searchParams.get('window');
   const providerValue = providerQuery || selectedAsset?.provider || null;
-  const providerNorm = providerValue ? mapProviderToMarket(providerValue) : null;
+  const providerNorm = providerValue
+    ? mapProviderToMarket(providerValue)
+    : null;
 
   const defaultParams = React.useMemo(
     () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
@@ -132,15 +134,16 @@ export default function ForecastPage() {
       })
     : [];
 
-  const chartState: State = !providerNorm || !selectedSymbol
-    ? 'empty'
-    : barsLoading
-      ? 'loading'
-      : barsError
-        ? 'empty'
-        : bars && bars.length
-          ? 'ready'
-          : 'empty';
+  const chartState: State =
+    !providerNorm || !selectedSymbol
+      ? 'empty'
+      : barsLoading
+        ? 'loading'
+        : barsError
+          ? 'empty'
+          : bars && bars.length
+            ? 'ready'
+            : 'empty';
 
   const historySeries = bars?.map(
     (bar, index) => [index, bar[4]] as [number, number],
@@ -154,8 +157,8 @@ export default function ForecastPage() {
     ...(forecastEntry?.p90?.map((point) => point[1]) ?? []),
   ].filter((value) => Number.isFinite(value));
 
-  const combinedValues = [...historyValues, ...forecastValues].filter(
-    (value) => Number.isFinite(value),
+  const combinedValues = [...historyValues, ...forecastValues].filter((value) =>
+    Number.isFinite(value),
   );
   const sharedRange =
     combinedValues.length > 0
@@ -165,10 +168,18 @@ export default function ForecastPage() {
         }
       : undefined;
 
-  const historyAxisTimestamps =
-    historyTimestamps.length > 0 ? historyTimestamps : undefined;
-  const forecastAxisTimestamps =
-    forecastTimestamps.length > 0 ? forecastTimestamps : undefined;
+  const combinedTimestamps = [
+    ...historyTimestamps,
+    ...forecastTimestamps,
+  ].filter((timestamp) => Number.isFinite(timestamp));
+  const xAxisTimestamps =
+    combinedTimestamps.length > 0 ? combinedTimestamps : undefined;
+
+  const historyCount = historyTimestamps.length;
+  const forecastCount = forecastTimestamps.length;
+  const historyWeight = historyCount > 0 ? historyCount : 1;
+  const forecastWeight = forecastCount > 0 ? forecastCount : 1;
+  const chartGridColumns = `${historyWeight}fr ${forecastWeight}fr`;
 
   React.useEffect(() => {
     if (!selectedAsset && providerValue && selectedSymbol) {
@@ -224,12 +235,15 @@ export default function ForecastPage() {
               <div className="flex items-start">
                 <YAxis
                   className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
-                  values={historyValues}
+                  values={combinedValues}
                 />
 
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex">
-                    <div className="relative h-96 flex-1">
+                  <div
+                    className="grid min-w-0"
+                    style={{ gridTemplateColumns: chartGridColumns }}
+                  >
+                    <div className="relative h-96 min-w-0">
                       {chartState === 'ready' && historySeries ? (
                         <LineChart
                           className="h-96 w-full"
@@ -244,7 +258,7 @@ export default function ForecastPage() {
                       )}
                     </div>
 
-                    <div className="relative h-96 w-[330px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
+                    <div className="relative h-96 min-w-[220px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel">
                       <ForecastShapePlaceholder
                         className="h-96 w-full"
                         p50={forecastEntry?.p50}
@@ -259,13 +273,7 @@ export default function ForecastPage() {
                     <div className="flex-1">
                       <XAxis
                         className="text-[#8480C9] w-full"
-                        timestamps={historyAxisTimestamps}
-                      />
-                    </div>
-                    <div className="w-[330px]">
-                      <XAxis
-                        className="text-[#8480C9] w-full"
-                        timestamps={forecastAxisTimestamps}
+                        timestamps={xAxisTimestamps}
                       />
                     </div>
                   </div>

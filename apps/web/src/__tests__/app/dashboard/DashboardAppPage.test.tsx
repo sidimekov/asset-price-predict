@@ -131,7 +131,9 @@ describe('Dashboard page', () => {
     fireEvent.click(screen.getByText('set model'));
     fireEvent.click(screen.getByText('predict'));
 
-    expect(pushMock).toHaveBeenCalledWith('/forecast/BTC');
+    expect(pushMock).toHaveBeenCalledWith(
+      '/forecast/BTC?provider=binance&tf=8h&window=150',
+    );
   });
 
   it('handles catalog selection and dispatches actions', () => {
