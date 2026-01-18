@@ -8,8 +8,6 @@ import LineChart from '@/widgets/chart/LineChart';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
-import FactorsTable from '@/features/factors/FactorsTable';
-import type { FactorRow } from '@/features/factors/FactorsTable';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
 import {
@@ -20,7 +18,6 @@ import {
 import {
   selectForecastByKey,
   selectForecastLoading,
-  selectForecastError,
   selectForecastParams,
 } from '@/entities/forecast/model/selectors';
 import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
@@ -97,27 +94,10 @@ export default function ForecastPage() {
   const forecastLoading = useAppSelector((state) =>
     fcKey ? selectForecastLoading(state, fcKey) : false,
   );
-  const forecastError = useAppSelector((state) =>
-    fcKey ? selectForecastError(state, fcKey) : null,
-  );
 
   const handleBackToAssets = () => {
     router.push('/dashboard');
   };
-
-  const factors: FactorRow[] =
-    forecastEntry?.explain?.map((f) => ({
-      name: f.name,
-      impact: f.impact !== undefined ? String(f.impact) : undefined,
-      shap: f.shap !== undefined ? String(f.shap) : undefined,
-      conf: f.conf !== undefined ? `${(f.conf * 100).toFixed(0)}%` : undefined,
-    })) ?? [];
-
-  const factorsState: State = forecastLoading
-    ? 'loading'
-    : forecastError || !forecastEntry?.explain?.length
-      ? 'empty'
-      : 'ready';
 
   const seriesRows = forecastEntry
     ? forecastEntry.p50.map((point, index) => {
@@ -246,15 +226,6 @@ export default function ForecastPage() {
         </div>
 
         <div className="hidden lg:block col-span-1" />
-
-        {/* Factors table */}
-        <div className="col-span-12 lg:col-span-7">
-          <div className="overflow-x-auto">
-            <div className="min-w-[600px] lg:min-w-0">
-              <FactorsTable state={factorsState} items={factors} />
-            </div>
-          </div>
-        </div>
 
         <div className="col-span-12 lg:col-span-8">
           <div className="bg-surface-dark rounded-3xl p-6">

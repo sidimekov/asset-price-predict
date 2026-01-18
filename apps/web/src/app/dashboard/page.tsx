@@ -6,7 +6,6 @@ import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
 import LineChart from '@/widgets/chart/LineChart';
 import ParamsPanel from '@/features/params/ParamsPanel';
-import FactorsTable from '@/features/factors/FactorsTable';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
@@ -25,13 +24,8 @@ import {
 } from '@/entities/timeseries/model/timeseriesSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
-import {
-  selectForecastByKey,
-  selectForecastLoading,
-  selectForecastError,
-  selectForecastParams,
-} from '@/entities/forecast/model/selectors';
-import { makeForecastKey, makeTimeseriesKey } from '@/processes/orchestrator/keys';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
+import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 import type { MarketTimeframe } from '@/config/market';
 
@@ -76,15 +70,6 @@ export default function Dashboard() {
         })
       : null;
 
-  const fcKey = selectedSymbol
-    ? makeForecastKey({
-        symbol: selectedSymbol,
-        tf: effectiveParams.tf as MarketTimeframe,
-        horizon: effectiveParams.horizon,
-        model: effectiveParams.model ?? undefined,
-      })
-    : null;
-
   const bars = useAppSelector((state) =>
     tsKey ? selectTimeseriesByKey(state, tsKey as any) : null,
   );
@@ -93,16 +78,6 @@ export default function Dashboard() {
   );
   const barsError = useAppSelector((state) =>
     tsKey ? selectTimeseriesErrorByKey(state, tsKey as any) : null,
-  );
-
-  const forecastEntry = useAppSelector((state) =>
-    fcKey ? selectForecastByKey(state, fcKey) : undefined,
-  );
-  const forecastLoading = useAppSelector((state) =>
-    fcKey ? selectForecastLoading(state, fcKey) : false,
-  );
-  const forecastError = useAppSelector((state) =>
-    fcKey ? selectForecastError(state, fcKey) : null,
   );
 
   const derivedAssetState: State = !selectedSymbol
@@ -166,20 +141,6 @@ export default function Dashboard() {
   const historySeries = bars?.map((bar, index) => [index, bar[4]] as [number, number]);
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
-
-  const factors =
-    forecastEntry?.explain?.map((f) => ({
-      name: f.name,
-      impact: f.impact !== undefined ? String(f.impact) : undefined,
-      shap: f.shap !== undefined ? String(f.shap) : undefined,
-      conf: f.conf !== undefined ? `${(f.conf * 100).toFixed(0)}%` : undefined,
-    })) ?? [];
-
-  const factorsState: State = forecastLoading
-    ? 'loading'
-    : forecastError || !forecastEntry?.explain?.length
-      ? 'empty'
-      : 'ready';
 
   return (
     <div className="min-h-screen bg-primary">
@@ -281,15 +242,6 @@ export default function Dashboard() {
         </div>
 
         <div className="hidden lg:block col-span-1" />
-
-        {/* Factors */}
-        <div className="col-span-12 lg:col-span-7">
-          <div className="overflow-x-auto">
-            <div className="min-w-[600px] lg:min-w-0">
-              <FactorsTable state={factorsState} items={factors} />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Asset Catalog Modal */}
