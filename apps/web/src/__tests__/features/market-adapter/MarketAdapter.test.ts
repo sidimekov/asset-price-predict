@@ -2,6 +2,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AppDispatch } from '@/shared/store';
 
+// Используем vi.hoisted для создания моков, которые будут доступны при hoisting'е
+const {
+  mockFetchBinanceTimeseries,
+  mockFetchMoexTimeseries,
+  mockFetchMockTimeseries,
+  mockGenerateMockBarsRaw,
+  mockSearchBinanceSymbols,
+  mockFetchBinanceExchangeInfo,
+  mockSearchMoexSymbols,
+  mockSearchMockSymbols,
+} = vi.hoisted(() => ({
+  mockFetchBinanceTimeseries: vi.fn(),
+  mockFetchMoexTimeseries: vi.fn(),
+  mockFetchMockTimeseries: vi.fn(),
+  mockGenerateMockBarsRaw: vi.fn(),
+  mockSearchBinanceSymbols: vi.fn(),
+  mockFetchBinanceExchangeInfo: vi.fn(),
+  mockSearchMoexSymbols: vi.fn(),
+  mockSearchMockSymbols: vi.fn(),
+}));
+
 // Сначала мокаем всё что нужно, ЗАТЕМ импортируем
 vi.mock('@/config/market', () => ({
   DEFAULT_PROVIDER: 'BINANCE',
@@ -20,18 +41,31 @@ vi.mock('@/features/market-adapter/cache/ClientTimeseriesCache', () => ({
   ),
 }));
 
-// Мокаем провайдеры
+// Мокаем провайдеры с использованием hoisted моков
 vi.mock('@/features/market-adapter/providers/BinanceProvider', () => ({
-  fetchBinanceTimeseries: vi.fn(),
+  fetchBinanceTimeseries: mockFetchBinanceTimeseries,
+  searchBinanceSymbols: mockSearchBinanceSymbols,
+  fetchBinanceExchangeInfo: mockFetchBinanceExchangeInfo,
 }));
 
 vi.mock('@/features/market-adapter/providers/MoexProvider', () => ({
-  fetchMoexTimeseries: vi.fn(),
+  fetchMoexTimeseries: mockFetchMoexTimeseries,
+  searchMoexSymbols: mockSearchMoexSymbols,
 }));
 
 vi.mock('@/features/market-adapter/providers/MockProvider', () => ({
-  fetchMockTimeseries: vi.fn(),
-  generateMockBarsRaw: vi.fn(),
+  fetchMockTimeseries: mockFetchMockTimeseries,
+  generateMockBarsRaw: mockGenerateMockBarsRaw,
+  searchMockSymbols: mockSearchMockSymbols,
+  MOCK_SYMBOLS: [
+    {
+      symbol: 'MOCK1',
+      name: 'Mock Asset 1',
+      exchange: 'MOCK',
+      class: 'mock',
+      currency: 'USD',
+    },
+  ],
 }));
 
 // Импортируем после моков
@@ -43,9 +77,6 @@ import {
   clientTimeseriesCache,
   makeTimeseriesCacheKey,
 } from '@/features/market-adapter/cache/ClientTimeseriesCache';
-import { fetchBinanceTimeseries } from '@/features/market-adapter/providers/BinanceProvider';
-import { fetchMoexTimeseries } from '@/features/market-adapter/providers/MoexProvider';
-import { fetchMockTimeseries } from '@/features/market-adapter/providers/MockProvider';
 
 vi.mock('@/features/asset-catalog/lib/normalizeCatalogItem', () => ({
   normalizeCatalogResponse: vi.fn(() => []),
@@ -91,7 +122,7 @@ describe('MarketAdapter - Получение временных рядов (getM
         100,
       );
       expect(clientTimeseriesCache.get).toHaveBeenCalled();
-      expect(fetchBinanceTimeseries).not.toHaveBeenCalled();
+      expect(mockFetchBinanceTimeseries).not.toHaveBeenCalled();
 
       expect(result).toHaveProperty('bars');
       if ('bars' in result) {
@@ -107,7 +138,7 @@ describe('MarketAdapter - Получение временных рядов (getM
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
 
       // Binance kline openTime=1000 (сек) -> 1_000_000 (мс)
-      vi.mocked(fetchBinanceTimeseries).mockResolvedValue([
+      mockFetchBinanceTimeseries.mockResolvedValue([
         [1000, '1', '2', '0.5', '1.5', '10', 1100, '1', 10, '1', '1', '0'],
       ] as any);
 
@@ -119,7 +150,7 @@ describe('MarketAdapter - Получение временных рядов (getM
       });
 
       expect(clientTimeseriesCache.get).toHaveBeenCalled();
-      expect(fetchBinanceTimeseries).toHaveBeenCalled();
+      expect(mockFetchBinanceTimeseries).toHaveBeenCalled();
       expect(clientTimeseriesCache.set).toHaveBeenCalled();
 
       expect(result).toHaveProperty('bars');
@@ -134,7 +165,7 @@ describe('MarketAdapter - Получение временных рядов (getM
   describe('Интеграция с разными провайдерами', () => {
     it('обрабатывает данные от Binance', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
-      vi.mocked(fetchBinanceTimeseries).mockResolvedValue([
+      mockFetchBinanceTimeseries.mockResolvedValue([
         [1000, '1', '2', '0.5', '1.5', '100', 1100, '1', 10, '1', '1', '0'],
       ] as any);
 
@@ -158,7 +189,7 @@ describe('MarketAdapter - Получение временных рядов (getM
 
       // вход может быть секундами -> адаптер приведёт к ms
       const rawBars: Bar[] = [createTestBar(1000, 1, 2, 0.5, 1.5, 100)];
-      vi.mocked(fetchMockTimeseries).mockResolvedValue(rawBars as any);
+      mockFetchMockTimeseries.mockResolvedValue(rawBars as any);
 
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'TEST',
@@ -174,14 +205,14 @@ describe('MarketAdapter - Получение временных рядов (getM
         ];
         expect(result.bars).toEqual(expectedBars);
       }
-      expect(fetchMockTimeseries).toHaveBeenCalled();
+      expect(mockFetchMockTimeseries).toHaveBeenCalled();
     });
 
     it('обрабатывает данные от MOEX провайдера', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
 
       const rawBars: Bar[] = [createTestBar(1000, 100, 110, 95, 105, 1000)];
-      vi.mocked(fetchMoexTimeseries).mockResolvedValue(rawBars as any);
+      mockFetchMoexTimeseries.mockResolvedValue(rawBars as any);
 
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'SBER',
@@ -197,16 +228,14 @@ describe('MarketAdapter - Получение временных рядов (getM
         ];
         expect(result.bars).toEqual(expectedBars);
       }
-      expect(fetchMoexTimeseries).toHaveBeenCalled();
+      expect(mockFetchMoexTimeseries).toHaveBeenCalled();
     });
   });
 
   describe('Обработка ошибок', () => {
     it('возвращает ошибку провайдера при сбое запроса', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
-      vi.mocked(fetchBinanceTimeseries).mockRejectedValue(
-        new Error('Network error'),
-      );
+      mockFetchBinanceTimeseries.mockRejectedValue(new Error('Network error'));
 
       const result = await getMarketTimeseries(dispatch, {
         symbol: 'BTCUSDT',
@@ -218,6 +247,22 @@ describe('MarketAdapter - Получение временных рядов (getM
       expect(result).toHaveProperty('code');
       if (!('bars' in result)) {
         expect(result.code).toBe('PROVIDER_ERROR');
+        expect(result.message).toBe('Network error');
+      }
+    });
+
+    it('возвращает ошибку INVALID_PARAMS при невалидных данных', async () => {
+      // Передаем невалидные данные
+      const result = await getMarketTimeseries(dispatch, {
+        symbol: '', // Пустой символ
+        provider: 'BINANCE',
+        timeframe: '1h',
+        limit: 100,
+      } as any);
+
+      expect(result).toHaveProperty('code');
+      if (!('bars' in result)) {
+        expect(result.code).toBe('INVALID_PARAMS');
       }
     });
   });
@@ -225,7 +270,7 @@ describe('MarketAdapter - Получение временных рядов (getM
   describe('Нормализация данных', () => {
     it('корректно нормализует строковые значения от Binance', async () => {
       vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
-      vi.mocked(fetchBinanceTimeseries).mockResolvedValue([
+      mockFetchBinanceTimeseries.mockResolvedValue([
         [
           1000,
           '1.5',
@@ -272,6 +317,82 @@ describe('MarketAdapter - Получение временных рядов (getM
         expect(result.bars).toEqual(expectedBars);
       }
     });
+
+    it('нормализует timestamp к миллисекундам', async () => {
+      vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
+      mockFetchBinanceTimeseries.mockResolvedValue([
+        [
+          1000, // секунды
+          '1',
+          '2',
+          '0.5',
+          '1.5',
+          '10',
+          1100,
+          '1',
+          10,
+          '1',
+          '1',
+          '0',
+        ],
+      ] as any);
+
+      const result = await getMarketTimeseries(dispatch, {
+        symbol: 'TEST',
+        provider: 'BINANCE',
+        limit: 1,
+      });
+
+      expect(result).toHaveProperty('bars');
+      if ('bars' in result) {
+        expect(result.bars[0][0]).toBe(1_000_000); // должно быть в миллисекундах
+      }
+    });
+
+    it('сортирует бары по времени', async () => {
+      vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
+      mockFetchBinanceTimeseries.mockResolvedValue([
+        [2000, '2', '3', '1.5', '2.5', '20', 2100, '1', 10, '1', '1', '0'],
+        [1000, '1', '2', '0.5', '1.5', '10', 1100, '1', 10, '1', '1', '0'],
+      ] as any);
+
+      const result = await getMarketTimeseries(dispatch, {
+        symbol: 'TEST',
+        provider: 'BINANCE',
+        limit: 2,
+      });
+
+      expect(result).toHaveProperty('bars');
+      if ('bars' in result) {
+        // Должны быть отсортированы по возрастанию
+        expect(result.bars[0][0]).toBeLessThan(result.bars[1][0]);
+        expect(result.bars[0][0]).toBe(1_000_000);
+        expect(result.bars[1][0]).toBe(2_000_000);
+      }
+    });
+
+    it('убирает дубликаты по времени', async () => {
+      vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
+      mockFetchBinanceTimeseries.mockResolvedValue([
+        [1000, '1', '2', '0.5', '1.5', '10', 1100, '1', 10, '1', '1', '0'],
+        [1000, '1.5', '2.5', '1.0', '2.0', '15', 1100, '1', 10, '1', '1', '0'], // Дубликат по времени
+        [2000, '2', '3', '1.5', '2.5', '20', 2100, '1', 10, '1', '1', '0'],
+      ] as any);
+
+      const result = await getMarketTimeseries(dispatch, {
+        symbol: 'TEST',
+        provider: 'BINANCE',
+        limit: 3,
+      });
+
+      expect(result).toHaveProperty('bars');
+      if ('bars' in result) {
+        // Должно быть 2 бара вместо 3
+        expect(result.bars).toHaveLength(2);
+        expect(result.bars[0][0]).toBe(1_000_000);
+        expect(result.bars[1][0]).toBe(2_000_000);
+      }
+    });
   });
 });
 
@@ -280,22 +401,268 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     vi.clearAllMocks();
     vi.mocked(normalizeCatalogResponse).mockClear();
     vi.mocked(normalizeCatalogResponse).mockReturnValue([]);
+    mockSearchMockSymbols.mockResolvedValue([
+      {
+        symbol: 'MOCK1',
+        name: 'Mock Asset 1',
+        exchange: 'MOCK',
+        class: 'mock',
+        currency: 'USD',
+      },
+    ] as any);
   });
 
-  it('возвращает результат поиска', async () => {
-    const mockItems = [
-      { symbol: 'BTCUSDT', provider: 'BINANCE' },
-      { symbol: 'ETHUSDT', provider: 'BINANCE' },
-    ];
-
-    // searchAssets внутри адаптера использует normalizeCatalogResponse
-    vi.mocked(normalizeCatalogResponse).mockReturnValue(mockItems as any);
+  it('возвращает результат поиска для Binance', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'BTCUSDT',
+        name: 'BTC/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'ETHUSDT',
+        name: 'ETH/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+    ] as any);
 
     const result = await searchAssets(dispatch, {
+      mode: 'search',
       query: 'BTC',
       provider: 'BINANCE',
-    } as any);
+    });
 
     expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(2);
+    expect(result[0].symbol).toBe('BTCUSDT');
+    expect(result[1].symbol).toBe('ETHUSDT');
+  });
+
+  it('возвращает результат поиска для MOEX', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'SBER',
+        name: 'Сбербанк',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+      {
+        symbol: 'GAZP',
+        name: 'Газпром',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'SBER',
+      provider: 'MOEX',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(2);
+    expect(result[0].symbol).toBe('SBER');
+    expect(result[1].symbol).toBe('GAZP');
+  });
+
+  it('возвращает все активы при пустом запросе для Binance', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'BTCUSDT',
+        name: 'BTC/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'ETHUSDT',
+        name: 'ETH/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'search',
+      query: '',
+      provider: 'BINANCE',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('возвращает все активы при пустом запросе для MOEX', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'SBER',
+        name: 'Сбербанк',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+      {
+        symbol: 'GAZP',
+        name: 'Газпром',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'search',
+      query: '',
+      provider: 'MOEX',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('возвращает пустой массив для неизвестного провайдера', async () => {
+    const result = await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'TEST',
+      provider: 'UNKNOWN' as any,
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(0);
+  });
+
+  it('возвращает все активы в режиме listAll', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'BTCUSDT',
+        name: 'BTC/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'ETHUSDT',
+        name: 'ETH/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'BNBUSDT',
+        name: 'BNB/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'BINANCE',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(3);
+  });
+
+  it('ограничивает количество активов в режиме listAll с limit', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'BTCUSDT',
+        name: 'BTC/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+      {
+        symbol: 'ETHUSDT',
+        name: 'ETH/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'BINANCE',
+      limit: 2,
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+  });
+
+  it('работает с MOCK провайдером в режиме search', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'MOCK1',
+        name: 'Mock Asset 1',
+        provider: 'MOCK',
+        assetClass: 'mock',
+        currency: 'USD',
+        exchange: 'MOCK',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'MOCK',
+      provider: 'MOCK',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0].provider).toBe('MOCK');
+  });
+
+  it('работает с MOCK провайдером в режиме listAll', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'MOCK1',
+        name: 'Mock Asset 1',
+        provider: 'MOCK',
+        assetClass: 'mock',
+        currency: 'USD',
+        exchange: 'MOCK',
+      },
+      {
+        symbol: 'MOCK2',
+        name: 'Mock Asset 2',
+        provider: 'MOCK',
+        assetClass: 'mock',
+        currency: 'USD',
+        exchange: 'MOCK',
+      },
+    ] as any);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'MOCK',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    expect(result.every((item) => item.provider === 'MOCK')).toBe(true);
   });
 });

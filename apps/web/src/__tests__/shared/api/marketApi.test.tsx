@@ -57,11 +57,6 @@ describe('marketApi endpoints', () => {
       store.dispatch(
         marketApi.endpoints.searchMoexSymbols.initiate('sber') as any,
       );
-
-      // Mock search
-      store.dispatch(
-        marketApi.endpoints.searchMockSymbols.initiate('test') as any,
-      );
     }).not.toThrow();
   });
 });

@@ -3,8 +3,6 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 import type { Bar } from '@shared/types/market';
 import { createBaseQuery } from '@/shared/networking/baseQuery';
 
-// Запросы без бизнес-логики, только HTTP
-
 export interface BinanceTimeseriesRequest {
   symbol: string;
   interval: string; // бинансовский interval (может совпадать с timeframe)
@@ -71,8 +69,19 @@ export type MoexSecuritiesResponse = {
 
 // ---- SEARCH ----
 
-// для простоты поисковые эндпоинты принимают просто строку запроса (q)
 export type SearchQuery = string;
+
+// Добавьте интерфейс для Binance Exchange Info
+export interface BinanceExchangeInfo {
+  timezone: string;
+  serverTime: number;
+  symbols: Array<{
+    symbol: string;
+    baseAsset: string;
+    quoteAsset: string;
+    status: string;
+  }>;
+}
 
 export const marketApi = createApi({
   reducerPath: 'marketApi',
@@ -86,6 +95,13 @@ export const marketApi = createApi({
       query: ({ symbol, interval, limit }) => ({
         url: 'binance/timeseries',
         params: { symbol, interval, limit },
+      }),
+    }),
+
+    // GET /api/market/binance/exchange-info
+    getBinanceExchangeInfo: builder.query<BinanceExchangeInfo, void>({
+      query: () => ({
+        url: 'binance/exchange-info',
       }),
     }),
 
@@ -124,8 +140,6 @@ export const marketApi = createApi({
       }),
     }),
 
-    // ---- SEARCH ENDPOINTS (сырой ответ провайдера, без нормализации) ----
-
     // GET /api/market/binance/search-symbols?q=...
     searchBinanceSymbols: builder.query<BinanceSymbolRaw[], SearchQuery>({
       query: (q) => ({
@@ -141,21 +155,14 @@ export const marketApi = createApi({
         params: { q, 'iss.meta': 'off', 'iss.only': 'securities' },
       }),
     }),
-
-    // GET /api/market/mock/search-symbols?q=...
-    // пока что можно не использовать, т.к. MOCK будет читать из статического массива
-    searchMockSymbols: builder.query<unknown, SearchQuery>({
-      query: (q) => ({
-        url: 'mock/search-symbols',
-        params: { q },
-      }),
-    }),
   }),
 });
 
 export const {
   useGetBinanceTimeseriesQuery,
   useLazyGetBinanceTimeseriesQuery,
+  useGetBinanceExchangeInfoQuery,
+  useLazyGetBinanceExchangeInfoQuery,
   useGetMoexTimeseriesQuery,
   useLazyGetMoexTimeseriesQuery,
   useGetMockTimeseriesQuery,
@@ -164,6 +171,4 @@ export const {
   useLazySearchBinanceSymbolsQuery,
   useSearchMoexSymbolsQuery,
   useLazySearchMoexSymbolsQuery,
-  useSearchMockSymbolsQuery,
-  useLazySearchMockSymbolsQuery,
 } = marketApi;

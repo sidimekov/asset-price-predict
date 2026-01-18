@@ -4,6 +4,8 @@ export type Env = {
   nodeEnv: NodeEnv;
   port: number;
   corsOrigins: string[];
+  jwtSecret: string;
+  jwtExpiresIn: string;
 };
 
 function parseNodeEnv(v: string | undefined): NodeEnv {
@@ -38,10 +40,23 @@ function parseCorsOrigins(v: string | undefined, nodeEnv: NodeEnv): string[] {
     .filter(Boolean);
 }
 
+function parseJwtSecret(v: string | undefined): string {
+  if (!v?.trim()) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return v;
+}
+
+function parseJwtExpiresIn(v: string | undefined): string {
+  return v?.trim() || '7d';
+}
+
 export function readEnv(processEnv: NodeJS.ProcessEnv = process.env): Env {
   const nodeEnv = parseNodeEnv(processEnv.NODE_ENV);
   const port = parsePort(processEnv.PORT);
   const corsOrigins = parseCorsOrigins(processEnv.CORS_ORIGINS, nodeEnv);
+  const jwtSecret = parseJwtSecret(processEnv.JWT_SECRET);
+  const jwtExpiresIn = parseJwtExpiresIn(processEnv.JWT_EXPIRES_IN);
 
-  return { nodeEnv, port, corsOrigins };
+  return { nodeEnv, port, corsOrigins, jwtSecret, jwtExpiresIn };
 }

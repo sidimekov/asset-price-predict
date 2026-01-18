@@ -1,4 +1,3 @@
-// apps/web/src/features/market-adapter/providers/BinanceProvider.ts
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
 import type { BinanceKlineRaw } from '@/shared/api/marketApi';
@@ -66,19 +65,56 @@ export async function fetchBinanceTimeseries(
   try {
     const data = await queryResult.unwrap();
     return data;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+    console.error('Binance timeseries fetch failed:', err);
+    throw new Error(`Binance timeseries fetch failed: ${err.message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
     }
-    // Отписка от запроса RTK Query
     queryResult.unsubscribe();
   }
 }
 
-/**
- * Поиск символов на Binance по строке запроса.
- * Возвращает сырой ответ провайдера (без нормализации).
- */
+export async function fetchBinanceExchangeInfo(
+  dispatch: AppDispatch,
+  opts: ProviderCallOpts = {},
+): Promise<{ symbols: any[] } | undefined> {
+  const { signal } = opts;
+  throwIfAborted(signal);
+
+  const queryResult = dispatch(
+    marketApi.endpoints.getBinanceExchangeInfo.initiate(),
+  );
+
+  const onAbort = () => {
+    queryResult.abort();
+  };
+
+  if (signal) {
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+
+  try {
+    const data = await queryResult.unwrap();
+    return data;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+    console.warn('Failed to fetch Binance exchange info:', err);
+    return { symbols: [] };
+  } finally {
+    if (signal) {
+      signal.removeEventListener('abort', onAbort);
+    }
+    queryResult.unsubscribe();
+  }
+}
+
 export async function searchBinanceSymbols(
   dispatch: AppDispatch,
   query: string,
@@ -88,7 +124,10 @@ export async function searchBinanceSymbols(
   throwIfAborted(signal);
 
   const q = query.trim();
-  if (!q) return [];
+
+  if (!q) {
+    return [];
+  }
 
   const queryResult = dispatch(
     marketApi.endpoints.searchBinanceSymbols.initiate(q),
@@ -104,6 +143,12 @@ export async function searchBinanceSymbols(
 
   try {
     return await queryResult.unwrap();
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+    console.warn('Binance symbols search failed:', err);
+    return [];
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);

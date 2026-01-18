@@ -1,13 +1,18 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
 
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { mkdirSync } from 'node:fs';
 
 import { readEnv } from './config/env.js';
+import { MAX_AVATAR_SIZE, uploadRoot } from './config/uploads.js';
 import { buildLoggerOptions } from './infra/logger.js';
 import { registerErrorHandler } from './infra/errorHandler.js';
 import { registerRouter } from './http/router.js';
+import { checkDbConnection } from './db/index.js';
 
 export function buildApp() {
   const env = readEnv();
@@ -28,6 +33,16 @@ export function buildApp() {
     credentials: true,
   });
 
+  app.register(multipart, {
+    limits: { fileSize: MAX_AVATAR_SIZE },
+  });
+  mkdirSync(uploadRoot, { recursive: true });
+  app.register(fastifyStatic, {
+    root: uploadRoot,
+    prefix: '/files/',
+    decorateReply: false,
+  });
+
   registerErrorHandler(app);
 
   // Роутер
@@ -38,6 +53,8 @@ export function buildApp() {
 
 async function main() {
   const { app, env } = buildApp();
+
+  await checkDbConnection(app.log);
 
   try {
     await app.listen({ port: env.port, host: '0.0.0.0' });

@@ -1,5 +1,3 @@
-// apps/web/src/features/market-adapter/MarketAdapter.ts
-
 import { z } from 'zod';
 import type { AppDispatch } from '@/shared/store';
 import {
@@ -13,14 +11,12 @@ import {
   makeTimeseriesCacheKey,
   type Bar,
 } from './cache/ClientTimeseriesCache';
-
 import { fetchBinanceTimeseries } from './providers/BinanceProvider';
 import {
   fetchMockTimeseries,
   generateMockBarsRaw,
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
-
 import type {
   BinanceKlineRaw,
   MoexCandlesResponse,
@@ -29,23 +25,18 @@ import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
 import type { ProviderRequestBase } from './providers/types';
+import {
+  searchBinanceSymbols,
+  fetchBinanceExchangeInfo,
+} from './providers/BinanceProvider';
+import { searchMoexSymbols } from './providers/MoexProvider';
+import { searchMockSymbols, MOCK_SYMBOLS } from './providers/MockProvider';
 
-// ============================================================================
-// TIMESERIES
-// ============================================================================
+// TYPES
 
-const providerSchema = zProvider.or(z.literal('MOCK'));
-const timeframeSchema = zTimeframe;
-const limitSchema = z.number().int().positive().max(2000);
-
-export const marketAdapterRequestSchema = z.object({
-  symbol: zSymbol,
-  provider: providerSchema.optional(),
-  timeframe: timeframeSchema.optional(),
-  limit: limitSchema.optional(),
-});
-
-export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
+export type SearchAssetsRequest =
+  | { mode: 'search'; query: string; provider: MarketDataProvider | 'MOCK' }
+  | { mode: 'listAll'; provider: MarketDataProvider | 'MOCK'; limit?: number };
 
 export type MarketAdapterProvider = MarketDataProvider | 'MOCK';
 
@@ -65,6 +56,21 @@ export interface MarketAdapterError {
   code: 'INVALID_PARAMS' | 'UNSUPPORTED_PROVIDER' | 'PROVIDER_ERROR';
   message: string;
 }
+
+// TIMESERIES
+
+const providerSchema = zProvider.or(z.literal('MOCK'));
+const timeframeSchema = zTimeframe;
+const limitSchema = z.number().int().positive().max(2000);
+
+export const marketAdapterRequestSchema = z.object({
+  symbol: zSymbol,
+  provider: providerSchema.optional(),
+  timeframe: timeframeSchema.optional(),
+  limit: limitSchema.optional(),
+});
+
+export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
 
 // Нормализация баров
 function normalizeBinanceKlines(klines: BinanceKlineRaw[]): Bar[] {
@@ -144,7 +150,6 @@ function normalizeBarsFinal(bars: Bar[]): Bar[] {
     })
     .filter((b) => Number.isFinite(b[0]));
 
-  // Bars должны быть строго возрастающими по времени
   msBars.sort((a, b) => a[0] - b[0]);
 
   const deduped: Bar[] = [];
@@ -154,7 +159,6 @@ function normalizeBarsFinal(bars: Bar[]): Bar[] {
     deduped.push(b);
     lastTs = b[0];
   }
-
   return deduped;
 }
 
@@ -189,7 +193,6 @@ async function resolveProviderData(
           source: 'NETWORK',
         };
       }
-
       case 'MOEX': {
         const moexRaw = await fetchMoexTimeseries(dispatch, params, opts);
         const moexBars = isMoexCandlesResponse(moexRaw)
@@ -203,7 +206,6 @@ async function resolveProviderData(
           source: 'NETWORK',
         };
       }
-
       case 'MOCK': {
         const mockRaw = await fetchMockTimeseries(dispatch, params, opts);
         return {
@@ -213,17 +215,6 @@ async function resolveProviderData(
           source: 'LOCAL',
         };
       }
-
-      case 'CUSTOM': {
-        const customRaw = generateMockBarsRaw(params);
-        return {
-          ok: true,
-          raw: customRaw,
-          normalized: normalizeBarsFinal(normalizeRawBars(customRaw)),
-          source: 'LOCAL',
-        };
-      }
-
       default:
         return {
           ok: false,
@@ -234,7 +225,10 @@ async function resolveProviderData(
         };
     }
   } catch (err: any) {
-    // Никаких throw наружу
+    // Обработка AbortError отдельно
+    if (err.name === 'AbortError') {
+      throw err; // Пробрасываем AbortError выше
+    }
     return {
       ok: false,
       error: {
@@ -278,6 +272,7 @@ export async function getMarketTimeseries(
   if (!resolved.ok) return resolved.error;
 
   clientTimeseriesCache.set(cacheKey, resolved.normalized);
+
   return {
     bars: resolved.normalized,
     symbol,
@@ -287,82 +282,108 @@ export async function getMarketTimeseries(
   };
 }
 
-// ============================================================================
-// ASSET CATALOG SEARCH — РАБОЧАЯ ВЕРСИЯ
-// ============================================================================
-
-// Моковые данные
-const BINANCE_MOCK = [
-  { symbol: 'BTCUSDT', baseAsset: 'BTC', quoteAsset: 'USDT' },
-  { symbol: 'ETHUSDT', baseAsset: 'ETH', quoteAsset: 'USDT' },
-  { symbol: 'BNBUSDT', baseAsset: 'BNB', quoteAsset: 'USDT' },
-  { symbol: 'SOLUSDT', baseAsset: 'SOL', quoteAsset: 'USDT' },
-  { symbol: 'XRPUSDT', baseAsset: 'XRP', quoteAsset: 'USDT' },
-  { symbol: 'ADAUSDT', baseAsset: 'ADA', quoteAsset: 'USDT' },
-];
-
-const MOEX_MOCK = [
-  { SECID: 'SBER', SHORTNAME: 'Сбербанк', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'GAZP', SHORTNAME: 'Газпром', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'YNDX', SHORTNAME: 'Яндекс', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'LKOH', SHORTNAME: 'Лукойл', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'ROSN', SHORTNAME: 'Роснефть', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'VTBR', SHORTNAME: 'ВТБ', CURRENCYID: 'RUB', TYPE: 'stock' },
-];
+// ASSET CATALOG SEARCH
 
 const searchCache = new Map<string, { items: CatalogItem[]; ts: number }>();
 const SEARCH_TTL_MS = 30_000;
 
 function makeSearchCacheKey(
-  provider: MarketDataProvider,
-  query: string,
+  provider: MarketDataProvider | 'MOCK',
+  mode: SearchAssetsRequest['mode'],
+  queryOrLimit: string,
 ): string {
-  return `${provider}:${query.trim().toLowerCase()}`;
+  return `${provider}:${mode}:${queryOrLimit}`;
 }
 
-async function fetchSearchRaw(
-  _dispatch: AppDispatch,
-  provider: MarketDataProvider,
-  query: string,
+async function fetchProviderCatalog(
+  dispatch: AppDispatch,
+  provider: MarketDataProvider | 'MOCK',
+  mode: SearchAssetsRequest['mode'],
+  query?: string,
+  limit?: number,
+  opts: AdapterCallOpts = {},
 ): Promise<unknown[]> {
-  const q = query.trim().toLowerCase();
+  let raw: unknown[] = [];
 
-  if (provider === 'BINANCE') {
-    const filtered = BINANCE_MOCK.filter(
-      (i) =>
-        i.symbol.toLowerCase().includes(q) ||
-        i.baseAsset.toLowerCase().includes(q),
-    );
-    return !q ? BINANCE_MOCK : filtered;
+  try {
+    switch (provider) {
+      case 'BINANCE':
+        if (mode === 'listAll') {
+          const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
+          raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
+        } else {
+          raw = (await searchBinanceSymbols(
+            dispatch,
+            query ?? '',
+            opts,
+          )) as unknown[];
+        }
+        break;
+
+      case 'MOEX':
+        const q = mode === 'listAll' ? '' : (query ?? '');
+        raw = (await searchMoexSymbols(dispatch, q, opts)) as unknown[];
+        if (mode === 'listAll' && limit) {
+          raw = raw.slice(0, limit);
+        }
+        break;
+
+      case 'MOCK':
+        let symbols = MOCK_SYMBOLS;
+        if (mode === 'search' && query) {
+          symbols = await searchMockSymbols(query, opts);
+        } else if (mode === 'listAll') {
+          symbols = MOCK_SYMBOLS;
+        }
+        raw = symbols.slice(0, limit ?? Infinity);
+        break;
+
+      default:
+        return [];
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err; // Пробрасываем Abорт выше
+    }
+    console.warn(`Failed to fetch catalog for ${provider}:`, err);
+    return [];
   }
 
-  if (provider === 'MOEX') {
-    const filtered = MOEX_MOCK.filter(
-      (i) =>
-        i.SECID.toLowerCase().includes(q) ||
-        (i.SHORTNAME && i.SHORTNAME.toLowerCase().includes(q)),
-    );
-    return !q ? MOEX_MOCK : filtered;
-  }
-
-  return [];
+  return raw;
 }
 
 export async function searchAssets(
   dispatch: AppDispatch,
-  { query, provider }: { query: string; provider: MarketDataProvider },
+  request: SearchAssetsRequest,
+  opts: AdapterCallOpts = {},
 ): Promise<CatalogItem[]> {
-  const q = query.trim();
+  const { provider, mode } = request;
+  const query = mode === 'search' ? request.query.trim() : undefined;
+  const limit = mode === 'listAll' ? request.limit : undefined;
 
-  const cacheKey = makeSearchCacheKey(provider, q);
+  const cacheKey = makeSearchCacheKey(
+    provider,
+    mode,
+    query ?? `limit_${limit ?? 'inf'}`,
+  );
+
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_TTL_MS) {
     return cached.items;
   }
 
-  const raw = await fetchSearchRaw(dispatch, provider, q);
+  const raw = await fetchProviderCatalog(
+    dispatch,
+    provider,
+    mode,
+    query,
+    limit,
+    opts,
+  );
+
   const items = normalizeCatalogResponse(raw as any[], provider);
 
   searchCache.set(cacheKey, { items, ts: Date.now() });
+
   return items;
 }

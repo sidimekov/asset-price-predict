@@ -16,6 +16,7 @@ yarn-error.log*
 .tmp/
 
 # Env & secrets
+apps/web/.env
 .env
 .env.*
 !.env.example
@@ -42,6 +43,7 @@ apps/api/dist/
 apps/api/build/
 apps/api/.tsbuildinfo
 apps/api/.turbo/
+apps/api/uploads/
 
 # Shared
 packages/**/dist/
@@ -65,6 +67,7 @@ tsconfig.tsbuildinfo
 **/*.tsbuildinfo
 
 # Images / data caches
+/data
 /data/cache/
 **/.cache/
 
