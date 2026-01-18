@@ -14,7 +14,7 @@ const backendBaseUrl =
 
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
-const createBaseQuery = (
+export const createBaseQuery = (
   baseUrl: string,
 ): BaseQueryFn<
   string | FetchArgs,
