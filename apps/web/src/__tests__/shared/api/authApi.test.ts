@@ -51,7 +51,13 @@ describe('authApi token handling', () => {
               ? input.toString()
               : input.url;
 
-          super(new URL(requestUrl, baseUrl).toString(), init);
+          if (init) {
+            const { signal: _signal, ...rest } = init;
+            super(new URL(requestUrl, baseUrl).toString(), rest);
+            return;
+          }
+
+          super(new URL(requestUrl, baseUrl).toString());
         }
       },
     );

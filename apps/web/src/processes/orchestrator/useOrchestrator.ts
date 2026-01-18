@@ -10,24 +10,10 @@ import { ForecastManager } from './ForecastManager';
 import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
-import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+import type { MarketTimeframe } from '@/config/market';
+import { mapProviderToMarket } from './provider';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
-
-function mapProviderToMarket(
-  provider: string,
-): MarketDataProvider | 'MOCK' | null {
-  switch (provider.toLowerCase()) {
-    case 'binance':
-      return 'BINANCE';
-    case 'moex':
-      return 'MOEX';
-    case 'mock':
-      return 'MOCK';
-    default:
-      return null;
-  }
-}
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();

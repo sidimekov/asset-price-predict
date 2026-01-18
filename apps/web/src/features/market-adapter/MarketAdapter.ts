@@ -17,7 +17,11 @@ import {
   generateMockBarsRaw,
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
-import type { BinanceKline } from '@/shared/api/marketApi';
+import type {
+  BinanceKlineRaw,
+  MoexCandlesResponse,
+  MoexSecuritiesResponse,
+} from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
@@ -69,7 +73,8 @@ export const marketAdapterRequestSchema = z.object({
 
 export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
 
-function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
+// Нормализация баров
+function normalizeBinanceKlines(klines: BinanceKlineRaw[]): Bar[] {
   return klines.map((k) => [
     k[0],
     Number(k[1]),
@@ -95,6 +100,68 @@ function normalizeRawBars(raw: unknown): Bar[] {
   });
 }
 
+function isMoexCandlesResponse(raw: unknown): raw is MoexCandlesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'candles' in raw;
+}
+
+function isMoexSecuritiesResponse(raw: unknown): raw is MoexSecuritiesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'securities' in raw;
+}
+
+function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
+  const { columns, data } = raw.candles;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  const idx = (name: string) => columns.indexOf(name);
+  const tsIdx = idx('begin') !== -1 ? idx('begin') : idx('end');
+  const oIdx = idx('open');
+  const hIdx = idx('high');
+  const lIdx = idx('low');
+  const cIdx = idx('close');
+  const vIdx = idx('volume') !== -1 ? idx('volume') : idx('value');
+
+  return data
+    .map((row) => {
+      const tsRaw = row[tsIdx];
+      const ts =
+        typeof tsRaw === 'string' ? Date.parse(tsRaw) : Number(tsRaw ?? NaN);
+      const o = Number(row[oIdx]);
+      const h = Number(row[hIdx]);
+      const l = Number(row[lIdx]);
+      const c = Number(row[cIdx]);
+      const v =
+        vIdx === -1 || row[vIdx] == null ? undefined : Number(row[vIdx]);
+
+      return [ts, o, h, l, c, v] as Bar;
+    })
+    .filter((b) => Number.isFinite(b[0]));
+}
+
+function normalizeMoexSecuritiesResponse(
+  raw: MoexSecuritiesResponse,
+): Record<string, unknown>[] {
+  const { columns, data } = raw.securities;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  return data.map((row) => {
+    const record: Record<string, unknown> = {};
+    columns.forEach((column, index) => {
+      record[column] = row[index];
+    });
+    return record;
+  });
+}
+
+function logMoexStats(bars: Bar[]): void {
+  if (process.env.NODE_ENV !== 'development' || bars.length === 0) return;
+  const avgClose =
+    bars.reduce((sum, b) => sum + (Number(b[4]) || 0), 0) / bars.length;
+  console.info('[MOEX] candles:', bars.length, 'avgClose:', avgClose);
+}
+
+// Приводим timestamp к ms, сортируем и чистим ряд
 function normalizeBarsFinal(bars: Bar[]): Bar[] {
   const msBars = bars
     .map((b) => {
@@ -149,10 +216,14 @@ async function resolveProviderData(
       }
       case 'MOEX': {
         const moexRaw = await fetchMoexTimeseries(dispatch, params, opts);
+        const moexBars = isMoexCandlesResponse(moexRaw)
+          ? normalizeMoexCandlesResponse(moexRaw)
+          : normalizeRawBars(moexRaw);
+        logMoexStats(moexBars);
         return {
           ok: true,
           raw: moexRaw,
-          normalized: normalizeBarsFinal(normalizeRawBars(moexRaw)),
+          normalized: normalizeBarsFinal(moexBars),
           source: 'NETWORK',
         };
       }
@@ -255,6 +326,15 @@ async function fetchProviderCatalog(
 ): Promise<unknown[]> {
   let raw: unknown[] = [];
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:start', {
+      provider,
+      mode,
+      query,
+      limit,
+    });
+  }
+
   try {
     switch (provider) {
       case 'BINANCE':
@@ -272,7 +352,23 @@ async function fetchProviderCatalog(
 
       case 'MOEX':
         const q = mode === 'listAll' ? '' : (query ?? '');
-        raw = (await searchMoexSymbols(dispatch, q, opts)) as unknown[];
+        {
+          const response = await searchMoexSymbols(dispatch, q, opts);
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[catalog] moex:rawResponse', response);
+          }
+          raw = isMoexSecuritiesResponse(response)
+            ? normalizeMoexSecuritiesResponse(response)
+            : Array.isArray(response)
+              ? response
+              : [];
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[catalog] moex:normalized', {
+            count: raw.length,
+            sample: raw.slice(0, 3),
+          });
+        }
         if (mode === 'listAll' && limit) {
           raw = raw.slice(0, limit);
         }
@@ -299,6 +395,13 @@ async function fetchProviderCatalog(
     return [];
   }
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:done', {
+      provider,
+      mode,
+      count: raw.length,
+    });
+  }
   return raw;
 }
 
@@ -311,6 +414,15 @@ export async function searchAssets(
   const query = mode === 'search' ? request.query.trim() : undefined;
   const limit = mode === 'listAll' ? request.limit : undefined;
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:start', {
+      provider,
+      mode,
+      query,
+      limit,
+    });
+  }
+
   const cacheKey = makeSearchCacheKey(
     provider,
     mode,
@@ -319,6 +431,13 @@ export async function searchAssets(
 
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_TTL_MS) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[catalog] searchAssets:cacheHit', {
+        provider,
+        mode,
+        count: cached.items.length,
+      });
+    }
     return cached.items;
   }
 
@@ -332,6 +451,15 @@ export async function searchAssets(
   );
 
   const items = normalizeCatalogResponse(raw as any[], provider);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:normalized', {
+      provider,
+      mode,
+      count: items.length,
+      sample: items.slice(0, 3),
+    });
+  }
 
   searchCache.set(cacheKey, { items, ts: Date.now() });
 
