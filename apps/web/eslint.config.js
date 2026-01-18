@@ -55,6 +55,8 @@ export default [
         HTMLInputElement: 'readonly',
         HTMLSelectElement: 'readonly',
         Storage: 'readonly',
+        performance: 'readonly',
+        Window: 'readonly',
       },
     },
     rules: {

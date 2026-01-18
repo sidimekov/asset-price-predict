@@ -35,6 +35,7 @@ export default defineConfig({
         'src/features/market-adapter/providers/types.ts',
         'src/app/forecast/**',
         'src/entities/history/model.ts',
+        'src/shared/analytics/yandex-metrika.d.ts',
       ],
       thresholds: {
         lines: 80,
