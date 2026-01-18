@@ -9,17 +9,20 @@ describe('XAxis', () => {
   });
 
   it('renders labels from timestamps', () => {
-    render(
-      <XAxis
-        timestamps={[0, 3_600_000, 7_200_000, 10_800_000]}
-        tickCount={4}
-      />,
+    const formatter = new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const timestamps = [0, 3_600_000, 7_200_000, 10_800_000];
+    const expectedLabels = timestamps.map((ts) =>
+      formatter.format(new Date(ts)),
     );
 
-    expect(screen.getByText('00:00')).toBeInTheDocument();
-    expect(screen.getByText('01:00')).toBeInTheDocument();
-    expect(screen.getByText('02:00')).toBeInTheDocument();
-    expect(screen.getByText('03:00')).toBeInTheDocument();
+    render(<XAxis timestamps={timestamps} tickCount={4} />);
+
+    expectedLabels.forEach((label) => {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    });
   });
 
   it('renders explicit labels when provided', () => {

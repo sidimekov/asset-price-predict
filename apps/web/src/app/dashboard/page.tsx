@@ -324,7 +324,10 @@ export default function Dashboard() {
                   <div className="relative h-96 w-full">
                     {chartState === 'ready' && historySeries ? (
                       viewMode === 'candles' ? (
-                        <CandlesChart className="h-96 w-full" bars={bars ?? []} />
+                        <CandlesChart
+                          className="h-96 w-full"
+                          bars={bars ?? []}
+                        />
                       ) : (
                         <LineChart
                           className="h-96 w-full"
