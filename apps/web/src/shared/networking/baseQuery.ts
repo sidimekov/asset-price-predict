@@ -14,6 +14,9 @@ const backendBaseUrl =
 
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
+const getUrl = (args: string | FetchArgs) =>
+  typeof args === 'string' ? args : args.url;
+
 export const createBaseQuery = (
   baseUrl: string,
 ): BaseQueryFn<
@@ -22,11 +25,11 @@ export const createBaseQuery = (
   FetchBaseQueryError,
   {},
   FetchBaseQueryMeta
-> =>
-  fetchBaseQuery({
+> => {
+  const queryOptions = {
     baseUrl,
     timeout: 10_000,
-    prepareHeaders: (headers) => {
+    prepareHeaders: (headers: Headers) => {
       const token =
         typeof localStorage === 'undefined'
           ? null
@@ -42,25 +45,18 @@ export const createBaseQuery = (
 
       return headers;
     },
-  });
+  };
 
-const relativeBaseQuery = createBaseQuery(backendBaseUrl);
-const absoluteBaseQuery = createBaseQuery('');
+  const relativeBaseQuery = fetchBaseQuery(queryOptions);
+  const absoluteBaseQuery = fetchBaseQuery({ ...queryOptions, baseUrl: '' });
 
-const rawBaseQuery: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  FetchBaseQueryError,
-  {},
-  FetchBaseQueryMeta
-> = (args, api, extraOptions) => {
-  const url = typeof args === 'string' ? args : args.url;
-  return (ABSOLUTE_URL_RE.test(url) ? absoluteBaseQuery : relativeBaseQuery)(
-    args,
-    api,
-    extraOptions,
-  );
+  return (args, api, extraOptions) =>
+    (ABSOLUTE_URL_RE.test(getUrl(args))
+      ? absoluteBaseQuery
+      : relativeBaseQuery)(args, api, extraOptions);
 };
+
+const rawBaseQuery = createBaseQuery(backendBaseUrl);
 
 const getRequestInfo = (args: string | FetchArgs) => {
   if (typeof args === 'string') {
