@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+type HeadersInstance = InstanceType<typeof globalThis.Headers>;
+
 const { rawBaseQueryFn, relativeQueryFn, absoluteQueryFn, captured } =
   vi.hoisted(() => ({
     rawBaseQueryFn: vi.fn(),
     relativeQueryFn: vi.fn(),
     absoluteQueryFn: vi.fn(),
     captured: {
-      prepareHeaders: undefined as ((headers: Headers) => Headers) | undefined,
+      prepareHeaders: undefined as
+        | ((headers: HeadersInstance) => HeadersInstance)
+        | undefined,
     },
   }));
 
@@ -56,7 +60,7 @@ describe('createBaseQuery', () => {
       getItem: vi.fn(() => 'token-123'),
     };
 
-    const headers = new Headers();
+    const headers = new globalThis.Headers();
     const prepared = captured.prepareHeaders?.(headers);
 
     expect(prepared?.get('authorization')).toBe('Bearer token-123');
@@ -69,7 +73,7 @@ describe('createBaseQuery', () => {
     const originalLocalStorage = (globalThis as any).localStorage;
     delete (globalThis as any).localStorage;
 
-    const headers = new Headers({ 'content-type': 'text/plain' });
+    const headers = new globalThis.Headers({ 'content-type': 'text/plain' });
     const prepared = captured.prepareHeaders?.(headers);
 
     expect(prepared?.get('authorization')).toBeNull();
