@@ -591,6 +591,29 @@ describe('ForecastManager (new orchestrator)', () => {
     expect(Array.isArray(tailArg)).toBe(true);
     expect(tailArg.length).toBe(128);
   });
+
+  it('builds tail using horizon*2 when it exceeds 128', () => {
+    const bars: Bar[] = Array.from({ length: 300 }, (_, i) => {
+      const ts = 1_000_000 + i * 60_000;
+      return [ts, 1, 2, 0.5, 1.5 + i, 100] as any;
+    });
+
+    const tail = (ForecastManager as any).buildTailForWorker(bars, 80);
+
+    expect(tail.length).toBe(160);
+    expect(tail[0][0]).toBe(bars[bars.length - 160][0]);
+  });
+
+  it('buildTailForWorker returns empty array when bars are empty', () => {
+    const tail = (ForecastManager as any).buildTailForWorker([], 24);
+    expect(tail).toEqual([]);
+  });
+
+  it('timeframeToMs returns 0 for unknown timeframe', () => {
+    const ms = (ForecastManager as any).timeframeToMs('unknown');
+    expect(ms).toBe(0);
+  });
+
   it('handles empty bars -> inferForecast throws -> forecastFailed and status error', async () => {
     const ctx: OrchestratorInput = {
       symbol: 'EMPTY' as any,
