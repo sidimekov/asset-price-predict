@@ -20,6 +20,7 @@ import { fetchMoexTimeseries } from './providers/MoexProvider';
 import type {
   BinanceKlineRaw,
   MoexCandlesResponse,
+  MoexSecuritiesResponse,
 } from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
@@ -104,6 +105,13 @@ function isMoexCandlesResponse(raw: unknown): raw is MoexCandlesResponse {
   return 'candles' in raw;
 }
 
+function isMoexSecuritiesResponse(
+  raw: unknown,
+): raw is MoexSecuritiesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'securities' in raw;
+}
+
 function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
   const { columns, data } = raw.candles;
   if (!Array.isArray(columns) || !Array.isArray(data)) return [];
@@ -131,6 +139,21 @@ function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
       return [ts, o, h, l, c, v] as Bar;
     })
     .filter((b) => Number.isFinite(b[0]));
+}
+
+function normalizeMoexSecuritiesResponse(
+  raw: MoexSecuritiesResponse,
+): Record<string, unknown>[] {
+  const { columns, data } = raw.securities;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  return data.map((row) => {
+    const record: Record<string, unknown> = {};
+    columns.forEach((column, index) => {
+      record[column] = row[index];
+    });
+    return record;
+  });
 }
 
 function logMoexStats(bars: Bar[]): void {
@@ -305,6 +328,15 @@ async function fetchProviderCatalog(
 ): Promise<unknown[]> {
   let raw: unknown[] = [];
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:start', {
+      provider,
+      mode,
+      query,
+      limit,
+    });
+  }
+
   try {
     switch (provider) {
       case 'BINANCE':
@@ -322,7 +354,23 @@ async function fetchProviderCatalog(
 
       case 'MOEX':
         const q = mode === 'listAll' ? '' : (query ?? '');
-        raw = (await searchMoexSymbols(dispatch, q, opts)) as unknown[];
+        {
+          const response = await searchMoexSymbols(dispatch, q, opts);
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[catalog] moex:rawResponse', response);
+          }
+          raw = isMoexSecuritiesResponse(response)
+            ? normalizeMoexSecuritiesResponse(response)
+            : Array.isArray(response)
+              ? response
+              : [];
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[catalog] moex:normalized', {
+            count: raw.length,
+            sample: raw.slice(0, 3),
+          });
+        }
         if (mode === 'listAll' && limit) {
           raw = raw.slice(0, limit);
         }
@@ -349,6 +397,13 @@ async function fetchProviderCatalog(
     return [];
   }
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:done', {
+      provider,
+      mode,
+      count: raw.length,
+    });
+  }
   return raw;
 }
 
@@ -361,6 +416,15 @@ export async function searchAssets(
   const query = mode === 'search' ? request.query.trim() : undefined;
   const limit = mode === 'listAll' ? request.limit : undefined;
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:start', {
+      provider,
+      mode,
+      query,
+      limit,
+    });
+  }
+
   const cacheKey = makeSearchCacheKey(
     provider,
     mode,
@@ -369,6 +433,13 @@ export async function searchAssets(
 
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_TTL_MS) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[catalog] searchAssets:cacheHit', {
+        provider,
+        mode,
+        count: cached.items.length,
+      });
+    }
     return cached.items;
   }
 
@@ -382,6 +453,15 @@ export async function searchAssets(
   );
 
   const items = normalizeCatalogResponse(raw as any[], provider);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:normalized', {
+      provider,
+      mode,
+      count: items.length,
+      sample: items.slice(0, 3),
+    });
+  }
 
   searchCache.set(cacheKey, { items, ts: Date.now() });
 
