@@ -125,8 +125,18 @@ function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
   return data
     .map((row) => {
       const tsRaw = row[tsIdx];
-      const ts =
-        typeof tsRaw === 'string' ? Date.parse(tsRaw) : Number(tsRaw ?? NaN);
+      let ts: number;
+      if (typeof tsRaw === 'string') {
+        const trimmed = tsRaw.trim();
+        const normalized = trimmed.includes('T')
+          ? trimmed
+          : trimmed.replace(' ', 'T');
+        const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
+        const parseTarget = hasTz ? normalized : `${normalized}Z`;
+        ts = Date.parse(parseTarget);
+      } else {
+        ts = Number(tsRaw ?? NaN);
+      }
       const o = Number(row[oIdx]);
       const h = Number(row[hIdx]);
       const l = Number(row[lIdx]);

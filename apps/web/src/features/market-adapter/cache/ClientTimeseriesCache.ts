@@ -27,18 +27,24 @@ export class ClientTimeseriesCache<T> {
       return null;
     }
 
-    console.info(`[MarketAdapter][Cache] HIT for key=${key}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[MarketAdapter][Cache] HIT for key=${key}`);
+    }
     return entry.data;
   }
 
   set(key: string, data: T) {
     this.store.set(key, { data, cachedAt: Date.now() });
-    console.info(`[MarketAdapter][Cache] SET key=${key}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[MarketAdapter][Cache] SET key=${key}`);
+    }
   }
 
   clear() {
     this.store.clear();
-    console.info('[MarketAdapter][Cache] CLEAR ALL');
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[MarketAdapter][Cache] CLEAR ALL');
+    }
   }
 }
 
