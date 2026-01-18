@@ -10,6 +10,9 @@ import { ForecastManager } from './ForecastManager';
 import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
+const DEFAULT_WINDOW =
+  process.env.NODE_ENV !== 'production' ? 200 : DEFAULT_LIMIT;
+
 import {
   DEFAULT_LIMIT,
   DEFAULT_TIMEFRAME,
@@ -21,7 +24,7 @@ const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
 const DEFAULT_FORECAST_PARAMS = {
   tf: DEFAULT_TIMEFRAME,
-  window: DEFAULT_LIMIT,
+  window: DEFAULT_WINDOW,
   horizon: 24,
   model: null,
 };

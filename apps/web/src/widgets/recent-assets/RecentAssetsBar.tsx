@@ -2,7 +2,13 @@
 import React from 'react';
 import Pill from '../../shared/ui/Pill';
 
-type Asset = { symbol: string; price: string };
+type Asset = {
+  symbol: string;
+  provider: 'binance' | 'moex' | 'mock';
+  lastPrice?: number;
+  changePct?: number;
+  currency?: 'RUB' | 'USDT' | 'USD';
+};
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 
 interface RecentAssetsBarProps {
@@ -12,6 +18,57 @@ interface RecentAssetsBarProps {
   onSelect: (symbol: string) => void;
   onRemove: (symbol: string) => void;
   onAdd: () => void;
+}
+
+type PriceFormatRule = { min: number; max: number };
+
+const PRICE_RULES: Record<Asset['provider'], PriceFormatRule> = {
+  moex: { min: 1, max: 2 },
+  binance: { min: 2, max: 4 },
+  mock: { min: 1, max: 2 },
+};
+
+function formatWithMinMax(value: number, min: number, max: number): string {
+  const fixed = value.toFixed(max);
+  if (!fixed.includes('.')) return fixed;
+  const [intPart, rawDec] = fixed.split('.');
+  let dec = rawDec;
+  while (dec.length > min && dec.endsWith('0')) {
+    dec = dec.slice(0, -1);
+  }
+  return `${intPart}.${dec}`;
+}
+
+function formatPrice(value: number, provider: Asset['provider']): string {
+  const rule = PRICE_RULES[provider];
+  return formatWithMinMax(value, rule.min, rule.max);
+}
+
+function formatChangePct(changePct: number): string {
+  const sign = changePct >= 0 ? '+' : '-';
+  const value = Math.abs(changePct).toFixed(1);
+  return `${sign}${value}%`;
+}
+
+function formatCurrencyLabel(currency?: Asset['currency']): string {
+  if (!currency) return '';
+  if (currency === 'RUB') return ' ₽';
+  return ` ${currency}`;
+}
+
+function formatBottomText(asset: Asset): string {
+  if (asset.lastPrice == null || !Number.isFinite(asset.lastPrice)) {
+    return '—';
+  }
+
+  const priceText = formatPrice(asset.lastPrice, asset.provider);
+  const currencyText = formatCurrencyLabel(asset.currency);
+
+  if (asset.changePct == null || !Number.isFinite(asset.changePct)) {
+    return `${priceText}${currencyText}`;
+  }
+
+  return `${priceText}${currencyText} · ${formatChangePct(asset.changePct)}`;
 }
 
 export default function RecentAssetsBar({
@@ -34,7 +91,9 @@ export default function RecentAssetsBar({
     const assetPills = assets.map((asset) => (
       <Pill
         key={asset.symbol}
-        label={`${asset.symbol} ${asset.price}`}
+        symbol={asset.symbol}
+        providerLabel={asset.provider.toUpperCase()}
+        bottomText={formatBottomText(asset)}
         selected={asset.symbol === selected}
         onClick={() => onSelect(asset.symbol)}
         onRemove={() => onRemove(asset.symbol)}
