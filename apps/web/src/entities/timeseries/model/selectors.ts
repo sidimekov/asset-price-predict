@@ -68,8 +68,9 @@ export const selectPriceChangeByAsset = (
   provider: MarketDataProvider,
   symbol: string,
   timeframe: MarketTimeframe,
+  limit: number,
 ): PriceChangeSnapshot => {
-  const key = buildTimeseriesKey(provider, symbol, timeframe);
+  const key = buildTimeseriesKey(provider, symbol, timeframe, limit);
   const bars = selectBarsByKey(state, key);
   if (!bars?.length) return {};
 

@@ -10,7 +10,11 @@ import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import { predictRequested } from '@/entities/forecast/model/forecastSlice';
-import { DEFAULT_TIMEFRAME, type MarketDataProvider } from '@/config/market';
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_TIMEFRAME,
+  type MarketDataProvider,
+} from '@/config/market';
 import {
   addRecent,
   setSelected,
@@ -20,6 +24,7 @@ import {
 } from '@/features/asset-catalog/model/catalogSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
 import { selectPriceChangeByAsset } from '@/entities/timeseries/model/selectors';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
@@ -56,6 +61,16 @@ export default function Dashboard() {
 
   const recentAssets = useAppSelector(selectRecent);
   const selectedAsset = useAppSelector(selectSelectedAsset);
+  const forecastParams = useAppSelector(selectForecastParams);
+
+  const rawWindow = forecastParams?.window;
+  const windowNum = typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
+  const timeseriesWindow =
+    Number.isFinite(windowNum) && windowNum && windowNum > 0
+      ? windowNum
+      : process.env.NODE_ENV !== 'production'
+        ? 200
+        : DEFAULT_LIMIT;
   const recentAssetsWithStats = useAppSelector((state) =>
     recentAssets.map((asset) => {
       const provider = mapProviderToMarket(asset.provider);
@@ -64,6 +79,7 @@ export default function Dashboard() {
         provider,
         asset.symbol,
         DEFAULT_TIMEFRAME,
+        timeseriesWindow,
       );
       return {
         symbol: asset.symbol,
