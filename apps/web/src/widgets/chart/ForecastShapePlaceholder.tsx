@@ -1,32 +1,28 @@
 'use client';
 
 import React from 'react';
-import forecastDetail from '@/mocks/forecast-detail.json';
+import type { ForecastSeries } from '@/entities/forecast/types';
 
 type ForecastShapePlaceholderProps = {
   className?: string;
+  p50?: ForecastSeries;
+  p10?: ForecastSeries;
+  p90?: ForecastSeries;
 };
 
-type ForecastPoint = {
-  time: string;
-  value: number;
-  low: number;
-  high: number;
-};
-
-type ForecastSeries = {
-  symbol: string;
-  horizon: string;
-  timeframe: string;
-  points: ForecastPoint[];
-};
+function toValues(series?: ForecastSeries): number[] {
+  return series?.map((point) => point[1]) ?? [];
+}
 
 export default function ForecastShapePlaceholder({
   className,
+  p50,
+  p10,
+  p90,
 }: ForecastShapePlaceholderProps) {
-  const series = (forecastDetail as ForecastSeries[])[0];
+  const series = p50 ?? [];
 
-  if (!series || !series.points || series.points.length < 2) {
+  if (series.length < 2) {
     return (
       <div className={className}>
         <div className="h-96 w-full flex items-center justify-center">
@@ -36,54 +32,58 @@ export default function ForecastShapePlaceholder({
     );
   }
 
-  const points = series.points;
+  const values = [...toValues(p50), ...toValues(p10), ...toValues(p90)].filter(
+    (v) => Number.isFinite(v),
+  );
 
-  const minLow = Math.min(...points.map((p) => p.low));
-  const maxHigh = Math.max(...points.map((p) => p.high));
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
 
-  // без внутренних отступов — используем всю область
-  const paddingX = 0;
-  const paddingY = 0;
   const width = 100;
   const height = 100;
-  const usableWidth = width - paddingX * 2;
-  const usableHeight = height - paddingY * 2;
 
   const valueToY = (v: number) => {
-    const t = maxHigh === minLow ? 0.5 : (v - minLow) / (maxHigh - minLow);
-    return height - paddingY - t * usableHeight;
+    const t = maxVal === minVal ? 0.5 : (v - minVal) / (maxVal - minVal);
+    return height - t * height;
   };
 
-  const n = points.length;
-  const stepX = usableWidth / (n - 1);
+  const n = series.length;
+  const stepX = width / (n - 1);
 
-  const valueLine = points
-    .map((p, i) => {
-      const x = paddingX + i * stepX;
-      const y = valueToY(p.value);
+  const valueLine = series
+    .map((point, i) => {
+      const x = i * stepX;
+      const y = valueToY(point[1]);
       return `${x},${y}`;
     })
     .join(' ');
 
-  const upper = points
-    .map((p, i) => {
-      const x = paddingX + i * stepX;
-      const y = valueToY(p.high);
-      return `${x},${y}`;
-    })
-    .join(' ');
+  const hasBand =
+    p10 && p90 && p10.length === series.length && p90.length === series.length;
 
-  const lower = [...points]
-    .reverse()
-    .map((p, idx) => {
-      const i = n - 1 - idx;
-      const x = paddingX + i * stepX;
-      const y = valueToY(p.low);
-      return `${x},${y}`;
-    })
-    .join(' ');
+  const upper = hasBand
+    ? p90!
+        .map((point, i) => {
+          const x = i * stepX;
+          const y = valueToY(point[1]);
+          return `${x},${y}`;
+        })
+        .join(' ')
+    : '';
 
-  const polygonPoints = `${upper} ${lower}`;
+  const lower = hasBand
+    ? [...p10!]
+        .reverse()
+        .map((point, idx) => {
+          const i = n - 1 - idx;
+          const x = i * stepX;
+          const y = valueToY(point[1]);
+          return `${x},${y}`;
+        })
+        .join(' ')
+    : '';
+
+  const polygonPoints = hasBand ? `${upper} ${lower}` : '';
 
   return (
     <div className={className}>
@@ -99,11 +99,13 @@ export default function ForecastShapePlaceholder({
           </radialGradient>
         </defs>
 
-        <polygon
-          points={polygonPoints}
-          fill="url(#forecast-fill)"
-          opacity={0.95}
-        />
+        {hasBand && (
+          <polygon
+            points={polygonPoints}
+            fill="url(#forecast-fill)"
+            opacity={0.95}
+          />
+        )}
 
         <polyline
           points={valueLine}

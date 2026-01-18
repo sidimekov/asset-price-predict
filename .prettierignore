@@ -8,3 +8,4 @@ package-lock.json
 yarn.lock
 .github
 apps/web/html
+apps/web/public/onnxruntime

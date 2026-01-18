@@ -245,6 +245,48 @@ describe('ForecastManager (new orchestrator)', () => {
     expect(orchestratorState.status).toBe('idle');
   });
 
+  it('continues when history save fails: forecast is stored, no forecastFailed', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'HISTSAVE' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    const bars: Bar[] = [
+      [1_000_000, 1, 2, 0.5, 1.5, 100],
+      [2_000_000, 1.5, 2.5, 1, 2, 120],
+    ];
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: { [tsKey]: { bars, fetchedAt: new Date().toISOString() } },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    inferForecastMock.mockResolvedValue({
+      p50: [10, 20],
+      p10: [9, 19],
+      p90: [11, 21],
+      diag: { runtime_ms: 10, backend: 'mock', model_ver: 'v1' },
+    });
+
+    historySaveMock.mockRejectedValueOnce(new Error('history down'));
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    expect(forecastReceived).toHaveBeenCalledTimes(1);
+    expect(forecastFailed).not.toHaveBeenCalled();
+    expect(orchestratorState.status).toBe('idle');
+  });
+
   it('handles MarketAdapter error (code in response): dispatches timeseriesFailed + forecastFailed and does NOT throw', async () => {
     const ctx: OrchestratorInput = {
       symbol: 'ERR' as any,
@@ -549,6 +591,29 @@ describe('ForecastManager (new orchestrator)', () => {
     expect(Array.isArray(tailArg)).toBe(true);
     expect(tailArg.length).toBe(128);
   });
+
+  it('builds tail using horizon*2 when it exceeds 128', () => {
+    const bars: Bar[] = Array.from({ length: 300 }, (_, i) => {
+      const ts = 1_000_000 + i * 60_000;
+      return [ts, 1, 2, 0.5, 1.5 + i, 100] as any;
+    });
+
+    const tail = (ForecastManager as any).buildTailForWorker(bars, 80);
+
+    expect(tail.length).toBe(160);
+    expect(tail[0][0]).toBe(bars[bars.length - 160][0]);
+  });
+
+  it('buildTailForWorker returns empty array when bars are empty', () => {
+    const tail = (ForecastManager as any).buildTailForWorker([], 24);
+    expect(tail).toEqual([]);
+  });
+
+  it('timeframeToMs returns 0 for unknown timeframe', () => {
+    const ms = (ForecastManager as any).timeframeToMs('unknown');
+    expect(ms).toBe(0);
+  });
+
   it('handles empty bars -> inferForecast throws -> forecastFailed and status error', async () => {
     const ctx: OrchestratorInput = {
       symbol: 'EMPTY' as any,

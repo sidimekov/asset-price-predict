@@ -21,6 +21,7 @@ export type InferDoneMessage = {
     diag: {
       runtime_ms: number;
       backend: 'wasm' | 'webgpu';
+      features_backend?: 'cpu' | 'webgpu';
       model_ver: string;
     };
   };

@@ -4,6 +4,7 @@ import { zForecastDetailRes } from '@assetpredict/shared';
 import { HistoryController } from '../../modules/history/HistoryController.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { parseOr500 } from '../validation.js';
+import { sendError } from '../errors.js';
 
 export async function historyRoutes(app: FastifyInstance) {
   const controller = new HistoryController();
@@ -11,7 +12,7 @@ export async function historyRoutes(app: FastifyInstance) {
   app.get('/forecasts', { preHandler: requireAuth }, async (req, reply) => {
     const user = req.user;
     if (!user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      return sendError(reply, 401, 'UNAUTHORIZED', 'Unauthorized');
     }
 
     const q = (req.query ?? {}) as Record<string, unknown>;
@@ -30,7 +31,7 @@ export async function historyRoutes(app: FastifyInstance) {
   app.get('/forecasts/:id', { preHandler: requireAuth }, async (req, reply) => {
     const user = req.user;
     if (!user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      return sendError(reply, 401, 'UNAUTHORIZED', 'Unauthorized');
     }
 
     const params = (req.params ?? {}) as { id?: string };
@@ -40,7 +41,7 @@ export async function historyRoutes(app: FastifyInstance) {
     );
 
     if (!dto) {
-      return reply.status(404).send({ error: 'Forecast not found' });
+      return sendError(reply, 404, 'FORECAST_NOT_FOUND', 'Forecast not found');
     }
 
     // Валидация ответа перед отправкой :contentReference[oaicite:4]{index=4}
@@ -50,7 +51,12 @@ export async function historyRoutes(app: FastifyInstance) {
         { err: parsed.error },
         'Invalid ForecastDetailRes produced by API',
       );
-      return reply.status(500).send({ error: 'Internal server error' });
+      return sendError(
+        reply,
+        500,
+        'INTERNAL_SERVER_ERROR',
+        'Internal server error',
+      );
     }
 
     return parsed.data;
