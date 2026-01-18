@@ -16,9 +16,9 @@ const DEFAULT_WINDOW =
 import {
   DEFAULT_LIMIT,
   DEFAULT_TIMEFRAME,
-  type MarketDataProvider,
   type MarketTimeframe,
 } from '@/config/market';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
@@ -28,22 +28,6 @@ const DEFAULT_FORECAST_PARAMS = {
   horizon: 24,
   model: null,
 };
-
-function mapProviderToMarket(
-  provider: string,
-): MarketDataProvider | 'MOCK' | null {
-  switch (provider.toLowerCase()) {
-    case 'binance':
-      return 'BINANCE';
-    case 'moex':
-      return 'MOEX';
-    case 'mock':
-    case 'custom':
-      return 'MOCK';
-    default:
-      return null;
-  }
-}
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
