@@ -9,10 +9,12 @@ import LineChart from '@/widgets/chart/LineChart';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
-import FactorsTable from '@/features/factors/FactorsTable';
-import type { FactorRow } from '@/features/factors/FactorsTable';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
-import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
+import {
+  selectSelectedAsset,
+  setSelected,
+  type Provider,
+} from '@/features/asset-catalog/model/catalogSlice';
 import {
   selectTimeseriesByKey,
   selectTimeseriesLoadingByKey,
@@ -21,7 +23,6 @@ import {
 import {
   selectForecastByKey,
   selectForecastLoading,
-  selectForecastError,
   selectForecastParams,
 } from '@/entities/forecast/model/selectors';
 import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
@@ -53,8 +54,12 @@ export default function ForecastPage() {
 
   const selectedAsset = useAppSelector(selectSelectedAsset);
   const storedParams = useAppSelector(selectForecastParams);
-  const providerNorm = selectedAsset
-    ? mapProviderToMarket(selectedAsset.provider)
+  const providerQuery = searchParams.get('provider');
+  const tfQuery = searchParams.get('tf');
+  const windowQuery = searchParams.get('window');
+  const providerValue = providerQuery || selectedAsset?.provider || null;
+  const providerNorm = providerValue
+    ? mapProviderToMarket(providerValue)
     : null;
   const [viewMode, setViewMode] = React.useState<ChartViewMode>(() => {
     if (typeof window === 'undefined') return 'line';
@@ -77,8 +82,23 @@ export default function ForecastPage() {
     }
   }, [dispatch, storedParams, defaultParams]);
 
-  const effectiveParams = storedParams ?? defaultParams;
-  const selectedSymbol = selectedAsset?.symbol ?? null;
+  const resolvedParams = React.useMemo(() => {
+    const base = storedParams ?? defaultParams;
+    const fallbackWindow = base.window ?? defaultParams.window;
+    const parsedWindow = windowQuery ? Number(windowQuery) : Number.NaN;
+    const safeWindow = Number.isFinite(parsedWindow)
+      ? parsedWindow
+      : fallbackWindow;
+
+    return {
+      ...base,
+      tf: tfQuery || base.tf,
+      window: safeWindow,
+    };
+  }, [storedParams, defaultParams, tfQuery, windowQuery]);
+
+  const effectiveParams = resolvedParams;
+  const selectedSymbol = selectedAsset?.symbol ?? String(id);
   const tickerQuery = searchParams.get('ticker');
   const displaySymbol = tickerQuery || selectedSymbol || String(id);
   const selectedPrice = '—';
@@ -118,27 +138,10 @@ export default function ForecastPage() {
   const forecastLoading = useAppSelector((state) =>
     fcKey ? selectForecastLoading(state, fcKey) : false,
   );
-  const forecastError = useAppSelector((state) =>
-    fcKey ? selectForecastError(state, fcKey) : null,
-  );
 
   const handleBackToAssets = () => {
     router.push('/dashboard');
   };
-
-  const factors: FactorRow[] =
-    forecastEntry?.explain?.map((f) => ({
-      name: f.name,
-      impact: f.impact !== undefined ? String(f.impact) : undefined,
-      shap: f.shap !== undefined ? String(f.shap) : undefined,
-      conf: f.conf !== undefined ? `${(f.conf * 100).toFixed(0)}%` : undefined,
-    })) ?? [];
-
-  const factorsState: State = forecastLoading
-    ? 'loading'
-    : forecastError || !forecastEntry?.explain?.length
-      ? 'empty'
-      : 'ready';
 
   const seriesRows = forecastEntry
     ? forecastEntry.p50.map((point, index) => {
@@ -150,29 +153,71 @@ export default function ForecastPage() {
       })
     : [];
 
-  const chartState: State = !selectedAsset
-    ? 'empty'
-    : barsLoading
-      ? 'loading'
-      : barsError
-        ? 'empty'
-        : bars && bars.length
-          ? 'ready'
-          : 'empty';
+  const chartState: State =
+    !providerNorm || !selectedSymbol
+      ? 'empty'
+      : barsLoading
+        ? 'loading'
+        : barsError
+          ? 'empty'
+          : bars && bars.length
+            ? 'ready'
+            : 'empty';
 
   const historySeries = bars?.map(
     (bar, index) => [index, bar[4]] as [number, number],
   );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
+  const forecastTimestamps = forecastEntry?.p50?.map((point) => point[0]) ?? [];
+  const forecastValues = [
+    ...(forecastEntry?.p50?.map((point) => point[1]) ?? []),
+    ...(forecastEntry?.p10?.map((point) => point[1]) ?? []),
+    ...(forecastEntry?.p90?.map((point) => point[1]) ?? []),
+  ].filter((value) => Number.isFinite(value));
+
+  const combinedValues = [...historyValues, ...forecastValues].filter((value) =>
+    Number.isFinite(value),
+  );
+  const sharedRange =
+    combinedValues.length > 0
+      ? {
+          min: Math.min(...combinedValues),
+          max: Math.max(...combinedValues),
+        }
+      : undefined;
+
+  const combinedTimestamps = [
+    ...historyTimestamps,
+    ...forecastTimestamps,
+  ].filter((timestamp) => Number.isFinite(timestamp));
+  const xAxisTimestamps =
+    combinedTimestamps.length > 0 ? combinedTimestamps : undefined;
+
+  const historyCount = historyTimestamps.length;
+  const forecastCount = forecastTimestamps.length;
+  const historyWeight = historyCount > 0 ? historyCount : 1;
+  const forecastWeight = forecastCount > 0 ? forecastCount : 1;
+  const chartGridColumns = `${historyWeight}fr ${forecastWeight}fr`;
+
+  React.useEffect(() => {
+    if (!selectedAsset && providerValue && selectedSymbol) {
+      dispatch(
+        setSelected({
+          symbol: selectedSymbol,
+          provider: providerValue as Provider,
+        }),
+      );
+    }
+  }, [dispatch, providerValue, selectedAsset, selectedSymbol]);
 
   React.useEffect(() => {
     if (hasUserSelectedView) return;
-    const mode = SMALL_TIMEFRAMES.has(String(effectiveParams.tf))
+    const mode = SMALL_TIMEFRAMES.has(String(resolvedParams.tf))
       ? 'candles'
       : 'line';
     setViewMode(mode);
-  }, [effectiveParams.tf, hasUserSelectedView]);
+  }, [resolvedParams.tf, hasUserSelectedView]);
 
   const handleViewModeChange = (mode: ChartViewMode) => {
     setHasUserSelectedView(true);
@@ -186,7 +231,7 @@ export default function ForecastPage() {
 
   return (
     <div className="min-h-screen bg-primary">
-      {!selectedAsset && !tickerQuery ? (
+      {!selectedAsset && !providerValue && !tickerQuery ? (
         <div className="flex flex-col items-center justify-center min-h-screen text-ink-muted">
           <p className="mb-6">Select an asset to view forecast details.</p>
           <button
@@ -225,12 +270,15 @@ export default function ForecastPage() {
               <div className="flex items-start">
                 <YAxis
                   className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
-                  values={historyValues}
+                  values={combinedValues}
                 />
 
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex">
-                    <div className="relative h-96 flex-1">
+                  <div
+                    className="grid min-w-0"
+                    style={{ gridTemplateColumns: chartGridColumns }}
+                  >
+                    <div className="relative h-96 min-w-0">
                       <div className="absolute right-3 top-3 z-10">
                         <SegmentedControl<ChartViewMode>
                           value={viewMode}
@@ -260,12 +308,13 @@ export default function ForecastPage() {
                       )}
                     </div>
 
-                    <div className="relative h-96 w-[330px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
+                    <div className="relative h-96 min-w-[220px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel">
                       <ForecastShapePlaceholder
                         className="h-96 w-full"
                         p50={forecastEntry?.p50}
                         p10={forecastEntry?.p10}
                         p90={forecastEntry?.p90}
+                        yRange={sharedRange}
                       />
                     </div>
                   </div>
@@ -274,10 +323,9 @@ export default function ForecastPage() {
                     <div className="flex-1">
                       <XAxis
                         className="text-[#8480C9] w-full"
-                        timestamps={historyTimestamps}
+                        timestamps={xAxisTimestamps}
                       />
                     </div>
-                    <div className="w-[330px]" />
                   </div>
                 </div>
               </div>
@@ -303,15 +351,6 @@ export default function ForecastPage() {
           </div>
 
           <div className="hidden lg:block col-span-1" />
-
-          {/* Factors table */}
-          <div className="col-span-12 lg:col-span-7">
-            <div className="overflow-x-auto">
-              <div className="min-w-[600px] lg:min-w-0">
-                <FactorsTable state={factorsState} items={factors} />
-              </div>
-            </div>
-          </div>
 
           <div className="col-span-12 lg:col-span-8">
             <div className="bg-surface-dark rounded-3xl p-6">
