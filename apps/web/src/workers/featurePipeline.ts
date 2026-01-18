@@ -1,7 +1,13 @@
 import { forecastMinimalConfig } from '@/config/ml';
 import type { TailPoint } from './types';
+import { buildFeaturesGpu, isWebGpuSupported } from './featurePipelineGpu';
 
 const MODEL = forecastMinimalConfig;
+const FEATURE_BACKEND_PREF = (
+  process.env.NEXT_PUBLIC_FEATURES_BACKEND || 'auto'
+).toLowerCase();
+
+export type FeatureBackend = 'auto' | 'cpu' | 'webgpu';
 
 function mean(values: number[]): number {
   if (!values.length) return 0;
@@ -90,4 +96,38 @@ export function buildFeatures(tail: TailPoint[]): Float32Array {
   ];
 
   return normalizeZscore(feats);
+}
+
+function normalizeBackend(value: string): FeatureBackend {
+  if (value === 'cpu') return 'cpu';
+  if (value === 'webgpu') return 'webgpu';
+  return 'auto';
+}
+
+export async function buildFeaturesWithBackend(
+  tail: TailPoint[],
+  backend: FeatureBackend = normalizeBackend(FEATURE_BACKEND_PREF),
+): Promise<{ features: Float32Array; backend: 'cpu' | 'webgpu' }> {
+  if (backend === 'cpu') {
+    return { features: buildFeatures(tail), backend: 'cpu' };
+  }
+
+  const canUseWebGpu = isWebGpuSupported();
+  const normalization = MODEL.normalization;
+  const canNormalize = normalization?.type === 'zscore';
+
+  if (
+    (backend === 'webgpu' || backend === 'auto') &&
+    canUseWebGpu &&
+    canNormalize
+  ) {
+    try {
+      const features = await buildFeaturesGpu(tail);
+      return { features, backend: 'webgpu' };
+    } catch (_err) {
+      // fallback to CPU below
+    }
+  }
+
+  return { features: buildFeatures(tail), backend: 'cpu' };
 }

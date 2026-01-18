@@ -4,7 +4,10 @@
 import * as ort from 'onnxruntime-web';
 import { forecastMinimalConfig } from '@/config/ml';
 
-import { buildFeatures } from './featurePipeline';
+import {
+  buildFeaturesWithBackend,
+  type FeatureBackend,
+} from './featurePipeline';
 import { postprocessDelta } from './postprocess';
 import type {
   InferRequestMessage,
@@ -17,6 +20,9 @@ const MODEL = forecastMinimalConfig;
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const BACKEND_PREF = (
   process.env.NEXT_PUBLIC_ORT_BACKEND || 'auto'
+).toLowerCase();
+const FEATURES_BACKEND_PREF = (
+  process.env.NEXT_PUBLIC_FEATURES_BACKEND || 'auto'
 ).toLowerCase();
 
 // простой доверительный коридор вокруг p50 (пока нет настоящих p10/p90)
@@ -143,7 +149,11 @@ ctx.addEventListener(
         return;
       }
       // 1) features
-      const features = buildFeatures(tail);
+      const { features, backend: featuresBackend } =
+        await buildFeaturesWithBackend(
+          tail,
+          FEATURES_BACKEND_PREF as FeatureBackend,
+        );
 
       // 2) session
       const { session, backend } = await getSession();
@@ -186,6 +196,7 @@ ctx.addEventListener(
           diag: {
             runtime_ms: t1 - t0,
             backend,
+            features_backend: featuresBackend,
             model_ver: MODEL.modelVer,
           },
         },
