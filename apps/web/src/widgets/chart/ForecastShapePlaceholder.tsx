@@ -32,11 +32,9 @@ export default function ForecastShapePlaceholder({
     );
   }
 
-  const values = [
-    ...toValues(p50),
-    ...toValues(p10),
-    ...toValues(p90),
-  ].filter((v) => Number.isFinite(v));
+  const values = [...toValues(p50), ...toValues(p10), ...toValues(p90)].filter(
+    (v) => Number.isFinite(v),
+  );
 
   const minVal = Math.min(...values);
   const maxVal = Math.max(...values);

@@ -21,7 +21,10 @@ import {
   selectForecastParams,
 } from '@/entities/forecast/model/selectors';
 import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
-import { makeForecastKey, makeTimeseriesKey } from '@/processes/orchestrator/keys';
+import {
+  makeForecastKey,
+  makeTimeseriesKey,
+} from '@/processes/orchestrator/keys';
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 import type { MarketTimeframe } from '@/config/market';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
@@ -119,7 +122,9 @@ export default function ForecastPage() {
           ? 'ready'
           : 'empty';
 
-  const historySeries = bars?.map((bar, index) => [index, bar[4]] as [number, number]);
+  const historySeries = bars?.map(
+    (bar, index) => [index, bar[4]] as [number, number],
+  );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
 
@@ -138,129 +143,136 @@ export default function ForecastPage() {
           </button>
         </div>
       ) : (
-      <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
-        {/* Selected asset panel */}
-        <div className="col-span-12">
-          <div className="gradient-border">
-            <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
-              <div className="text-sm text-ink-tertiary">Selected asset:</div>
+        <div className="grid grid-cols-12 gap-6 px-8 pt-8 pb-32">
+          {/* Selected asset panel */}
+          <div className="col-span-12">
+            <div className="gradient-border">
+              <div className="flex items-center justify-between rounded-3xl bg-surface-dark px-6 py-4 h-[50px]">
+                <div className="text-sm text-ink-tertiary">Selected asset:</div>
 
-              <div className="flex items-baseline gap-3">
-                <span className="text-xl font-semibold text-white">
-                  {displaySymbol}
-                </span>
-                <span className="text-lg font-medium text-[#8480C9]">
-                  {selectedPrice}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <br />
-          <br />
-        </div>
-
-        {/* Chart + forecast shape */}
-        <div className="col-span-12 lg:col-span-8">
-          <div className="bg-surface-dark rounded-3xl p-6">
-            <div className="flex items-start">
-              <YAxis
-                className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
-                values={historyValues}
-              />
-
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex">
-                  <div className="relative h-96 flex-1">
-                    {chartState === 'ready' && historySeries ? (
-                      <LineChart className="h-96 w-full" series={historySeries} />
-                    ) : barsError ? (
-                      <div className="h-96 w-full flex items-center justify-center text-ink-muted">
-                        Failed to load history
-                      </div>
-                    ) : (
-                      <CandlesChartPlaceholder state={chartState} />
-                    )}
-                  </div>
-
-                  <div className="relative h-96 w-[330px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
-                    <ForecastShapePlaceholder
-                      className="h-96 w-full"
-                      p50={forecastEntry?.p50}
-                      p10={forecastEntry?.p10}
-                      p90={forecastEntry?.p90}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex">
-                  <div className="flex-1">
-                    <XAxis
-                      className="text-[#8480C9] w-full"
-                      timestamps={historyTimestamps}
-                    />
-                  </div>
-                  <div className="w-[330px]" />
+                <div className="flex items-baseline gap-3">
+                  <span className="text-xl font-semibold text-white">
+                    {displaySymbol}
+                  </span>
+                  <span className="text-lg font-medium text-[#8480C9]">
+                    {selectedPrice}
+                  </span>
                 </div>
               </div>
             </div>
+
+            <br />
+            <br />
           </div>
 
-          <div className="h-8" />
-        </div>
+          {/* Chart + forecast shape */}
+          <div className="col-span-12 lg:col-span-8">
+            <div className="bg-surface-dark rounded-3xl p-6">
+              <div className="flex items-start">
+                <YAxis
+                  className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
+                  values={historyValues}
+                />
 
-        <div className="hidden lg:block col-span-4" />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex">
+                    <div className="relative h-96 flex-1">
+                      {chartState === 'ready' && historySeries ? (
+                        <LineChart
+                          className="h-96 w-full"
+                          series={historySeries}
+                        />
+                      ) : barsError ? (
+                        <div className="h-96 w-full flex items-center justify-center text-ink-muted">
+                          Failed to load history
+                        </div>
+                      ) : (
+                        <CandlesChartPlaceholder state={chartState} />
+                      )}
+                    </div>
 
-        {/* Params */}
-        <div className="col-span-12 lg:col-span-4">
-          <ParamsPanel
-            state="success"
-            onPredict={handleBackToAssets}
-            buttonLabel="Back to asset selection"
-            selectedTimeframe={effectiveParams.tf}
-            selectedWindow={effectiveParams.window}
-            selectedHorizon={effectiveParams.horizon}
-            selectedModel={effectiveParams.model ?? null}
-            readOnly
-          />
-        </div>
+                    <div className="relative h-96 w-[330px] border-l border-dashed border-[#8480C9] bg-[#1a1738] forecast-shape-panel flex-none">
+                      <ForecastShapePlaceholder
+                        className="h-96 w-full"
+                        p50={forecastEntry?.p50}
+                        p10={forecastEntry?.p10}
+                        p90={forecastEntry?.p90}
+                      />
+                    </div>
+                  </div>
 
-        <div className="hidden lg:block col-span-1" />
+                  <div className="flex">
+                    <div className="flex-1">
+                      <XAxis
+                        className="text-[#8480C9] w-full"
+                        timestamps={historyTimestamps}
+                      />
+                    </div>
+                    <div className="w-[330px]" />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        <div className="col-span-12 lg:col-span-8">
-          <div className="bg-surface-dark rounded-3xl p-6">
-            <div className="text-sm text-ink-tertiary">Forecast series</div>
-            {forecastLoading ? (
-              <div className="mt-4 text-ink-tertiary">Loading forecast...</div>
-            ) : forecastEntry ? (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-sm text-white">
-                  <thead>
-                    <tr className="text-ink-tertiary">
-                      <th className="text-left">Timestamp</th>
-                      <th className="text-left">P50</th>
-                      <th className="text-left">P10</th>
-                      <th className="text-left">P90</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {seriesRows.slice(0, 12).map((row, idx) => (
-                      <tr key={`${row.ts}-${idx}`}>
-                        <td>{row.ts}</td>
-                        <td>{row.p50}</td>
-                        <td>{row.p10 ?? '—'}</td>
-                        <td>{row.p90 ?? '—'}</td>
+            <div className="h-8" />
+          </div>
+
+          <div className="hidden lg:block col-span-4" />
+
+          {/* Params */}
+          <div className="col-span-12 lg:col-span-4">
+            <ParamsPanel
+              state="success"
+              onPredict={handleBackToAssets}
+              buttonLabel="Back to asset selection"
+              selectedTimeframe={effectiveParams.tf}
+              selectedWindow={effectiveParams.window}
+              selectedHorizon={effectiveParams.horizon}
+              selectedModel={effectiveParams.model ?? null}
+              readOnly
+            />
+          </div>
+
+          <div className="hidden lg:block col-span-1" />
+
+          <div className="col-span-12 lg:col-span-8">
+            <div className="bg-surface-dark rounded-3xl p-6">
+              <div className="text-sm text-ink-tertiary">Forecast series</div>
+              {forecastLoading ? (
+                <div className="mt-4 text-ink-tertiary">
+                  Loading forecast...
+                </div>
+              ) : forecastEntry ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm text-white">
+                    <thead>
+                      <tr className="text-ink-tertiary">
+                        <th className="text-left">Timestamp</th>
+                        <th className="text-left">P50</th>
+                        <th className="text-left">P10</th>
+                        <th className="text-left">P90</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="mt-4 text-ink-tertiary">Forecast not found.</div>
-            )}
+                    </thead>
+                    <tbody>
+                      {seriesRows.slice(0, 12).map((row, idx) => (
+                        <tr key={`${row.ts}-${idx}`}>
+                          <td>{row.ts}</td>
+                          <td>{row.p50}</td>
+                          <td>{row.p10 ?? '—'}</td>
+                          <td>{row.p90 ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="mt-4 text-ink-tertiary">
+                  Forecast not found.
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       <div className="h-10" />

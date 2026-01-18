@@ -138,7 +138,9 @@ export default function Dashboard() {
           ? 'ready'
           : 'empty';
 
-  const historySeries = bars?.map((bar, index) => [index, bar[4]] as [number, number]);
+  const historySeries = bars?.map(
+    (bar, index) => [index, bar[4]] as [number, number],
+  );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
 
@@ -174,7 +176,10 @@ export default function Dashboard() {
                 <div className="flex">
                   <div className="relative h-96 w-full">
                     {chartState === 'ready' && historySeries ? (
-                      <LineChart className="h-96 w-full" series={historySeries} />
+                      <LineChart
+                        className="h-96 w-full"
+                        series={historySeries}
+                      />
                     ) : barsError ? (
                       <div className="h-96 w-full flex items-center justify-center text-ink-muted">
                         Failed to load history

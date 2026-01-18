@@ -102,7 +102,9 @@ describe('ParamsPanel', () => {
 
   it('renders loading skeletons', () => {
     const { container } = render(<ParamsPanel state="loading" />);
-    expect(container.querySelectorAll('.param-panel-item').length).toBeGreaterThan(0);
+    expect(
+      container.querySelectorAll('.param-panel-item').length,
+    ).toBeGreaterThan(0);
   });
 
   it('renders error state', () => {
@@ -124,7 +126,9 @@ describe('ParamsPanel', () => {
     const button = screen.getByRole('button', { name: /predict/i });
     expect(button).toBeDisabled();
     expect(
-      screen.getByText('Select timeframe, window, and horizon to run a forecast.'),
+      screen.getByText(
+        'Select timeframe, window, and horizon to run a forecast.',
+      ),
     ).toBeInTheDocument();
   });
 
