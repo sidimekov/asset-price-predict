@@ -4,8 +4,20 @@ import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
 
 describe('RecentAssetsBar', () => {
   const mockAssets = [
-    { symbol: 'BTCUSDT', price: '50000' },
-    { symbol: 'ETHUSDT', price: '3000' },
+    {
+      symbol: 'BTCUSDT',
+      provider: 'binance',
+      lastPrice: 50000,
+      changePct: 1.234,
+      currency: 'USDT',
+    },
+    {
+      symbol: 'ROSN',
+      provider: 'moex',
+      lastPrice: 512.4,
+      changePct: -0.5,
+      currency: 'RUB',
+    },
   ];
 
   const mockProps = {
@@ -24,8 +36,12 @@ describe('RecentAssetsBar', () => {
 
   it('renders assets in ready state', () => {
     render(<RecentAssetsBar {...mockProps} />);
-    expect(screen.getByText('BTCUSDT 50000')).toBeInTheDocument();
-    expect(screen.getByText('ETHUSDT 3000')).toBeInTheDocument();
+    expect(screen.getByText('BTCUSDT')).toBeInTheDocument();
+    expect(screen.getByText('BINANCE')).toBeInTheDocument();
+    expect(screen.getByText('50000.00 USDT · +1.2%')).toBeInTheDocument();
+    expect(screen.getByText('ROSN')).toBeInTheDocument();
+    expect(screen.getByText('MOEX')).toBeInTheDocument();
+    expect(screen.getByText('512.4 ₽ · -0.5%')).toBeInTheDocument();
     expect(screen.getByText('+ Add Asset')).toBeInTheDocument();
   });
 

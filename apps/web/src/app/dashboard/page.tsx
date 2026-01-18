@@ -11,6 +11,11 @@ import YAxis from '@/widgets/chart/coordinates/YAxis';
 import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
 import {
+  DEFAULT_LIMIT,
+  DEFAULT_TIMEFRAME,
+  type MarketDataProvider,
+} from '@/config/market';
+import {
   addRecent,
   setSelected,
   removeRecent,
@@ -30,10 +35,37 @@ import {
 } from '@/entities/forecast/model/forecastSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
-import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 import type { MarketTimeframe } from '@/config/market';
+import { selectPriceChangeByAsset } from '@/entities/timeseries/model/selectors';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
+type ParamsState = 'idle' | 'loading' | 'error' | 'success';
+
+const mapProviderToMarket = (
+  provider: 'binance' | 'moex' | 'mock',
+): MarketDataProvider => {
+  switch (provider) {
+    case 'binance':
+      return 'BINANCE';
+    case 'moex':
+      return 'MOEX';
+    case 'mock':
+      return 'MOCK';
+    default:
+      return 'MOCK';
+  }
+};
+
+const resolveCurrency = (
+  provider: 'binance' | 'moex' | 'mock',
+  symbol: string,
+): 'RUB' | 'USDT' | 'USD' | undefined => {
+  if (provider === 'moex') return 'RUB';
+  if (provider === 'binance' && symbol.toUpperCase().endsWith('USDT')) {
+    return 'USDT';
+  }
+  return undefined;
+};
 
 export default function Dashboard() {
   const router = useRouter();
@@ -41,10 +73,56 @@ export default function Dashboard() {
 
   const recentAssets = useAppSelector(selectRecent);
   const selectedAsset = useAppSelector(selectSelectedAsset);
-  const params = useAppSelector(selectForecastParams);
+  const forecastParams = useAppSelector(selectForecastParams);
+
+  const rawWindow = forecastParams?.window;
+  const windowNum =
+    typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
+  const timeseriesWindow =
+    Number.isFinite(windowNum) && windowNum && windowNum > 0
+      ? windowNum
+      : process.env.NODE_ENV !== 'production'
+        ? 200
+        : DEFAULT_LIMIT;
+  const recentAssetsWithStats = useAppSelector((state) =>
+    recentAssets.map((asset) => {
+      const provider = mapProviderToMarket(asset.provider);
+      const stats = selectPriceChangeByAsset(
+        state,
+        provider,
+        asset.symbol,
+        DEFAULT_TIMEFRAME,
+        timeseriesWindow,
+      );
+      return {
+        symbol: asset.symbol,
+        provider: asset.provider,
+        lastPrice: stats.lastPrice,
+        changePct: stats.changePct,
+        currency: resolveCurrency(asset.provider, asset.symbol),
+      };
+    }),
+  );
 
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
+  const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
+
+  const [selectedModel, setSelectedModel] = React.useState('');
+  const [selectedDate, setSelectedDate] = React.useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}-${String(today.getDate()).padStart(2, '0')}`;
+  });
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setParamsState('success');
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const selectedSymbol = selectedAsset?.symbol ?? null;
   const providerNorm = selectedAsset
@@ -57,12 +135,12 @@ export default function Dashboard() {
   );
 
   React.useEffect(() => {
-    if (!params) {
+    if (!forecastParams) {
       dispatch(setForecastParams(defaultParams));
     }
-  }, [dispatch, params, defaultParams]);
+  }, [dispatch, forecastParams, defaultParams]);
 
-  const effectiveParams = params ?? defaultParams;
+  const effectiveParams = forecastParams ?? defaultParams;
 
   const tsKey =
     providerNorm && selectedSymbol
@@ -165,11 +243,7 @@ export default function Dashboard() {
         <div className="col-span-12">
           <RecentAssetsBar
             state={derivedAssetState}
-            assets={recentAssets.map((a) => ({
-              symbol: a.symbol,
-              price: '—', // Цена остается "—" как в оригинале
-              provider: a.provider,
-            }))}
+            assets={recentAssetsWithStats}
             selected={selectedSymbol}
             onSelect={handleRecentSelect}
             onRemove={handleRemoveAsset}

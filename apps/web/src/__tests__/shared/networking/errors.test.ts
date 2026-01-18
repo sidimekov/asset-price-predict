@@ -15,6 +15,32 @@ describe('normalizeHttpError', () => {
     });
   });
 
+  it('uses fallback message with backend code-only payloads', () => {
+    const result = normalizeHttpError({
+      status: 418,
+      data: { code: 'teapot' },
+    });
+
+    expect(result).toEqual({
+      status: 418,
+      message: 'Request failed',
+      code: 'teapot',
+    });
+  });
+
+  it('uses backend error field when provided', () => {
+    const result = normalizeHttpError({
+      status: 500,
+      data: { error: 'Server down' },
+    });
+
+    expect(result).toEqual({
+      status: 500,
+      message: 'Server down',
+      code: undefined,
+    });
+  });
+
   it('prefers string responses for messages when no backend payload exists', () => {
     const result = normalizeHttpError({
       status: 502,
@@ -119,6 +145,18 @@ describe('normalizeHttpError', () => {
     expect(result).toEqual({
       status: 0,
       message: 'Unknown failure',
+      code: 'unknown_error',
+    });
+  });
+
+  it('handles unknown status variants with defaults', () => {
+    const result = normalizeHttpError({
+      status: 'UNKNOWN' as any,
+    });
+
+    expect(result).toEqual({
+      status: 0,
+      message: 'Request failed',
       code: 'unknown_error',
     });
   });
