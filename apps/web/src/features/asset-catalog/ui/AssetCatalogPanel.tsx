@@ -343,9 +343,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
 
   const handleAddClick = () => {
     if (!selectedForAdd) return;
-    dispatch(setSelected(selectedForAdd));
-    dispatch(addRecent(selectedForAdd));
-    onSelect?.(selectedForAdd);
+    if (onSelect) {
+      onSelect(selectedForAdd);
+    } else {
+      dispatch(setSelected(selectedForAdd));
+      dispatch(addRecent(selectedForAdd));
+    }
     onClose();
   };
 
@@ -353,9 +356,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     symbol: string;
     provider: 'binance' | 'moex' | 'mock';
   }) => {
-    dispatch(setSelected(recentItem));
-    dispatch(addRecent(recentItem));
-    onSelect?.(recentItem);
+    if (onSelect) {
+      onSelect(recentItem);
+    } else {
+      dispatch(setSelected(recentItem));
+      dispatch(addRecent(recentItem));
+    }
     onClose();
   };
 
