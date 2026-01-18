@@ -14,6 +14,8 @@ const backendBaseUrl =
 
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
+type HeadersInstance = InstanceType<typeof globalThis.Headers>;
+
 const getUrl = (args: string | FetchArgs) =>
   typeof args === 'string' ? args : args.url;
 
@@ -29,7 +31,7 @@ export const createBaseQuery = (
   const queryOptions = {
     baseUrl,
     timeout: 10_000,
-    prepareHeaders: (headers: Headers) => {
+    prepareHeaders: (headers: HeadersInstance) => {
       const token =
         typeof localStorage === 'undefined'
           ? null
@@ -89,7 +91,6 @@ export const baseQuery: BaseQueryFn<
         ? result.error.status
         : result.meta?.response?.status;
 
-    // eslint-disable-next-line no-console
     console.debug('[Networking]', method, url, status ?? 'no-status');
   }
 
