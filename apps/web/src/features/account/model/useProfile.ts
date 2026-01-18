@@ -1,26 +1,19 @@
+// apps/web/src/features/account/model/useProfile.ts
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Profile } from './types';
-import { accountService } from './accountService';
+import { useProfileContext } from '../ProfileContext';
+import { Profile } from '@/features/account/model/types';
 
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    accountService
-      .getProfile()
-      .then(setProfile)
-      .catch(() => setError('Failed to load profile'))
-      .finally(() => setLoading(false));
-  }, []);
-
+  const context = useProfileContext();
   return {
-    profile,
-    setProfile,
-    loading,
-    error,
+    profile: context.profile,
+    // Изменяем setProfile чтобы он принимал Partial<Profile> и возвращал Promise<void>
+    setProfile: async (patch: Partial<Profile>) => {
+      await context.updateProfile(patch);
+      // Не возвращаем значение, чтобы соответствовать интерфейсу из AccountPage
+    },
+    loading: context.loading,
+    error: context.error,
   };
 }

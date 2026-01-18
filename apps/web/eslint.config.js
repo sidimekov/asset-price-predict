@@ -59,6 +59,8 @@ export default [
         Storage: 'readonly',
         FileReader: 'readonly',
         Image: 'readonly',
+        File: 'readonly',
+        Event: 'readonly',
       },
     },
     rules: {

@@ -1,3 +1,4 @@
+// apps/web/src/app/account/page.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -7,31 +8,14 @@ import { ProfileHeader } from '@/features/account/ProfileHeader';
 import { ActionsList } from '@/features/account/ActionsList';
 import { EditAccountModal } from '@/features/account/EditAccountModal';
 
-import { useProfile } from '@/features/account/model/useProfile';
+import { useProfileContext } from '@/features/account/ProfileContext'; // <-- меняем импорт
 import { accountService } from '@/features/account/model/accountService';
 import type { EditAccountMode } from '@/features/account/model/editAccountModes';
 import { mapActionToMode } from '@/features/account/model/mapActionToMode';
-import { Profile } from '@/features/account/model/types';
 
-interface Props {
-  profile?: Profile | null;
-  setProfile?: (p: Profile) => void;
-}
-
-const AccountPage: React.FC<Props> = ({
-  profile: rootProfile,
-  setProfile: setRootProfile,
-}) => {
+const AccountPage: React.FC = () => {
   const router = useRouter();
-
-  // Используем профиль из пропсов, если есть, иначе хук
-  const {
-    profile: localProfile,
-    setProfile: setLocalProfile,
-    loading,
-  } = useProfile();
-  const profile = rootProfile ?? localProfile;
-  const setProfile = setRootProfile ?? setLocalProfile;
+  const { profile, loading, updateProfile } = useProfileContext(); // <-- используем контекст
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<EditAccountMode>('profile');
@@ -85,8 +69,9 @@ const AccountPage: React.FC<Props> = ({
       if (mode === 'password') {
         await accountService.changePassword(payload);
       } else {
-        const updated = await accountService.updateAccount(payload);
-        setProfile(updated); // <-- обновляем профиль через пропс или локально
+        // Используем функцию updateProfile из контекста
+        await updateProfile(payload);
+        // После успешного обновления контекст обновит профиль везде
       }
 
       setIsModalOpen(false);

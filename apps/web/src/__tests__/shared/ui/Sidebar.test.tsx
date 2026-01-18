@@ -1,3 +1,4 @@
+// apps/web/src/shared/ui/Sidebar.test.tsx
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Sidebar } from '@/shared/ui/Sidebar';
@@ -7,13 +8,9 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
-// Мокаем профиль
-vi.mock('@/mocks/profile.json', () => ({
-  default: {
-    username: 'John Doe',
-    login: 'john@example.com',
-    avatarUrl: '/avatar.jpg',
-  },
+// Мокаем контекст профиля
+vi.mock('@/features/account/ProfileContext', () => ({
+  useProfileContext: vi.fn(),
 }));
 
 // Мокаем next/image
@@ -31,17 +28,32 @@ vi.mock('next/image', () => ({
 }));
 
 import { usePathname } from 'next/navigation';
+import { useProfileContext } from '@/features/account/ProfileContext';
 
 describe('Sidebar', () => {
   const mockUsePathname = vi.mocked(usePathname);
+  const mockUseProfileContext = vi.mocked(useProfileContext);
+
+  const mockProfile = {
+    username: 'John Doe',
+    login: 'john@example.com',
+    avatarUrl: '/avatar.jpg',
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Устанавливаем дефолтное значение
+    // Устанавливаем дефолтные значения
     mockUsePathname.mockReturnValue('/dashboard');
+    mockUseProfileContext.mockReturnValue({
+      profile: mockProfile,
+      loading: false,
+      error: null,
+      updateProfile: vi.fn(),
+      refreshProfile: vi.fn(),
+    });
   });
 
-  it('renders logo, profile and navigation', () => {
+  it('renders logo, profile and navigation when profile is loaded', () => {
     render(<Sidebar />);
 
     // Логотип
@@ -60,6 +72,40 @@ describe('Sidebar', () => {
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('History')).toBeInTheDocument();
     expect(screen.getByText('Account Settings')).toBeInTheDocument();
+  });
+
+  it('uses default avatar when avatarUrl is not provided', () => {
+    mockUseProfileContext.mockReturnValue({
+      profile: {
+        username: 'John Doe',
+        login: 'john@example.com',
+        avatarUrl: '', // Пустой URL
+      },
+      loading: false,
+      error: null,
+      updateProfile: vi.fn(),
+      refreshProfile: vi.fn(),
+    });
+
+    render(<Sidebar />);
+
+    const profileImage = screen.getByTestId('profile-image');
+    expect(profileImage).toHaveAttribute('src', '/images/profile-avatar.png');
+  });
+
+  it('shows skeleton when profile is null', () => {
+    mockUseProfileContext.mockReturnValue({
+      profile: null,
+      loading: false,
+      error: null,
+      updateProfile: vi.fn(),
+      refreshProfile: vi.fn(),
+    });
+
+    render(<Sidebar />);
+
+    // Должен показывать скелетон при null профиле, даже если не загружается
+    expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
   });
 
   it('marks Dashboard as active on dashboard page', () => {
@@ -256,4 +302,60 @@ describe('Sidebar', () => {
       expect(sidebar).toHaveAttribute('role', 'complementary');
     });
   });
+
+  describe('error handling', () => {
+    it('shows skeleton when there is an error but profile is null', () => {
+      mockUseProfileContext.mockReturnValue({
+        profile: null,
+        loading: false,
+        error: 'Failed to load profile',
+        updateProfile: vi.fn(),
+        refreshProfile: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      // Должен показывать скелетон при ошибке и null профиле
+      expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
+    });
+
+    it('still shows profile when there is error but profile exists', () => {
+      mockUseProfileContext.mockReturnValue({
+        profile: mockProfile,
+        loading: false,
+        error: 'Some error occurred',
+        updateProfile: vi.fn(),
+        refreshProfile: vi.fn(),
+      });
+
+      render(<Sidebar />);
+
+      // Должен показывать профиль, даже если была ошибка (но профиль загружен)
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('john@example.com')).toBeInTheDocument();
+    });
+  });
+
+  describe('profile link behavior', () => {
+    it('links to account page from profile section', () => {
+      render(<Sidebar />);
+
+      const profileLink = screen.getByText('John Doe').closest('a');
+      expect(profileLink).toHaveAttribute('href', '/account');
+
+      const profileImage = screen.getByTestId('profile-image');
+      expect(profileImage.closest('a')).toHaveAttribute('href', '/account');
+    });
+
+    it('has correct accessibility attributes on profile link', () => {
+      render(<Sidebar />);
+
+      const profileLink = screen.getByLabelText('Перейти в профиль');
+      expect(profileLink).toBeInTheDocument();
+      expect(profileLink.tagName).toBe('A');
+      expect(profileLink).toHaveAttribute('href', '/account');
+    });
+  });
 });
+
+// Примечание: также нужно создать тесты для ProfileContext
