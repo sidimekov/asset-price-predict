@@ -14,6 +14,7 @@ vi.mock('@/processes/orchestrator/ForecastManager', () => ({
 
 import { ForecastManager } from '@/processes/orchestrator/ForecastManager';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { DEFAULT_LIMIT, DEFAULT_TIMEFRAME } from '@/config/market';
 
 const catalogReducer = (
   state = { selected: undefined as any },
@@ -112,7 +113,7 @@ describe('useOrchestrator', () => {
     const [ctxArg, depsArg] = ensureMock.mock.calls[0];
     expect(ctxArg).toMatchObject({
       symbol: 'SBER',
-      provider: 'MOCK', // dev override
+      provider: 'BINANCE',
       tf: '1h',
       window: 200,
     });
@@ -157,7 +158,7 @@ describe('useOrchestrator', () => {
     expect(ensureMock).toHaveBeenCalledTimes(1);
   });
 
-  it('uses default params when params are missing in dev', () => {
+  it('uses default params when params are missing', () => {
     const store = createTestStore();
 
     store.dispatch({
@@ -176,8 +177,8 @@ describe('useOrchestrator', () => {
     const ensureMock = (ForecastManager as any).ensureTimeseriesOnly as Mock;
     expect(ensureMock).toHaveBeenCalledTimes(1);
     expect(ensureMock.mock.calls[0][0]).toMatchObject({
-      tf: '1h',
-      window: 200,
+      tf: DEFAULT_TIMEFRAME,
+      window: DEFAULT_LIMIT,
     });
   });
 
@@ -261,7 +262,7 @@ describe('useOrchestrator', () => {
     const [ctxArg, depsArg] = runForecastMock.mock.calls[0];
     expect(ctxArg).toMatchObject({
       symbol: 'BTC',
-      provider: 'MOCK',
+      provider: 'BINANCE',
       tf: '1h',
       window: 120,
       horizon: 12,

@@ -6,6 +6,8 @@ import {
   forecastReceived,
   forecastFailed,
   setForecastParams,
+  forecastCancelled,
+  forecastPredictRequested,
   clearForecast,
   clearAllForecasts,
 } from '@/entities/forecast/model/forecastSlice';
@@ -101,5 +103,42 @@ describe('forecastSlice', () => {
     const state = forecastReducer(initialState, setForecastParams(params));
 
     expect(state.params).toEqual(params);
+  });
+
+  it('forecastPredictRequested увеличивает requestId и сохраняет запрос', () => {
+    const state = forecastReducer(
+      initialState,
+      forecastPredictRequested({
+        symbol: 'SBER',
+        provider: 'binance',
+        tf: '1h',
+        window: 200,
+        horizon: 24,
+        model: null,
+      }),
+    );
+
+    expect(state.predict.requestId).toBe(1);
+    expect(state.predict.request).toEqual({
+      symbol: 'SBER',
+      provider: 'binance',
+      tf: '1h',
+      window: 200,
+      horizon: 24,
+      model: null,
+    });
+  });
+
+  it('forecastCancelled снимает loading без изменения ошибки', () => {
+    const requested = forecastReducer(initialState, forecastRequested('k'));
+    const failed = forecastReducer(
+      requested,
+      forecastFailed({ key: 'k', error: 'boom' }),
+    );
+
+    const state = forecastReducer(failed, forecastCancelled('k'));
+
+    expect(state.loadingByKey['k']).toBe(false);
+    expect(state.errorByKey['k']).toBe('boom');
   });
 });

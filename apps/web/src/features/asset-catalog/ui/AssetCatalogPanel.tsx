@@ -321,18 +321,34 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     });
   };
 
+  const normalizeProvider = (
+    value: string,
+  ): 'binance' | 'moex' | 'mock' | null => {
+    const lower = value.toLowerCase();
+    if (lower === 'custom') return 'mock';
+    if (lower === 'binance' || lower === 'moex' || lower === 'mock') {
+      return lower;
+    }
+    return null;
+  };
+
   const handleItemClick = (item: CatalogItem) => {
+    const provider = normalizeProvider(item.provider);
+    if (!provider) return;
     setSelectedForAdd({
       symbol: item.symbol,
-      provider: item.provider.toLowerCase() as 'binance' | 'moex' | 'mock',
+      provider,
     });
   };
 
   const handleAddClick = () => {
     if (!selectedForAdd) return;
-    dispatch(setSelected(selectedForAdd));
-    dispatch(addRecent(selectedForAdd));
-    onSelect?.(selectedForAdd);
+    if (onSelect) {
+      onSelect(selectedForAdd);
+    } else {
+      dispatch(setSelected(selectedForAdd));
+      dispatch(addRecent(selectedForAdd));
+    }
     onClose();
   };
 
@@ -340,9 +356,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     symbol: string;
     provider: 'binance' | 'moex' | 'mock';
   }) => {
-    dispatch(setSelected(recentItem));
-    dispatch(addRecent(recentItem));
-    onSelect?.(recentItem);
+    if (onSelect) {
+      onSelect(recentItem);
+    } else {
+      dispatch(setSelected(recentItem));
+      dispatch(addRecent(recentItem));
+    }
     onClose();
   };
 
@@ -637,10 +656,8 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             )}
 
             {displayItems.map((item) => {
-              const lowerProvider = item.provider.toLowerCase() as
-                | 'binance'
-                | 'moex'
-                | 'mock';
+              const lowerProvider = normalizeProvider(item.provider);
+              if (!lowerProvider) return null;
               const category = detectAssetCategory(item);
               const isSelected =
                 selectedForAdd?.symbol === item.symbol &&
