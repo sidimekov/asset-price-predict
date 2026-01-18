@@ -29,14 +29,13 @@ export const EditAccountModal: React.FC<Props> = ({
   const [form, setForm] = useState<any>({});
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // Инициализация формы при открытии модалки
   useEffect(() => {
     if (!open) return;
-
     setLocalError(null);
 
+    // Подготовка формы для каждого режима
     switch (mode) {
-      case 'profile':
+      case 'profile': // Account Settings
         setForm({
           username: profile.username ?? '',
           login: profile.login ?? '',
@@ -66,7 +65,6 @@ export const EditAccountModal: React.FC<Props> = ({
 
   const validate = (): boolean => {
     setLocalError(null);
-    const trim = (v: string) => v.trim();
 
     if (mode === 'password') {
       if (form.newPassword.length < 8) {
@@ -80,18 +78,14 @@ export const EditAccountModal: React.FC<Props> = ({
       return true;
     }
 
-    if (form.username !== undefined) {
-      if (trim(form.username).length < 3) {
-        setLocalError('Username must be at least 3 characters');
-        return false;
-      }
+    if (form.username !== undefined && form.username.trim().length < 3) {
+      setLocalError('Username must be at least 3 characters');
+      return false;
     }
 
-    if (form.login !== undefined) {
-      if (trim(form.login).length < 3) {
-        setLocalError('Email must be at least 3 characters');
-        return false;
-      }
+    if (form.login !== undefined && form.login.trim().length < 3) {
+      setLocalError('Email must be at least 3 characters');
+      return false;
     }
 
     return true;
@@ -99,11 +93,49 @@ export const EditAccountModal: React.FC<Props> = ({
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave(form);
+    onSave(form); // profileService обновит состояние, Sidebar перерисуется
+  };
+
+  // ===== Avatar загрузка и ресайз =====
+  const resizeImage = async (dataUrl: string, size: number) => {
+    return new Promise<string>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        resolve(canvas.toDataURL('image/webp', 0.8));
+      };
+      img.src = dataUrl;
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setLocalError('File is too large (max 5 MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      let result = ev.target?.result as string;
+      result = await resizeImage(result, 256);
+      setForm({ ...form, avatarUrl: result });
+    };
+    reader.readAsDataURL(file);
   };
 
   const titleMap: Record<EditAccountMode, string> = {
-    profile: 'Account settings',
+    profile: 'Account Settings', // вернули
     avatar: 'Edit photo',
     username: 'Change username',
     login: 'Change email',
@@ -111,7 +143,7 @@ export const EditAccountModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal max-w-md mx-auto p-6 bg-primary rounded-xl"
         onClick={(e) => e.stopPropagation()}
@@ -127,43 +159,87 @@ export const EditAccountModal: React.FC<Props> = ({
             <p className="text-red-600">{localError || error}</p>
           )}
 
-          {/* Не password поля */}
-          {mode !== 'password' && (
-            <>
-              {'avatarUrl' in form && (
-                <Input
-                  ariaDescribedby="avatarUrl"
-                  placeholder="Avatar URL"
-                  value={form.avatarUrl ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, avatarUrl: e.target.value })
-                  }
+          {mode === 'profile' && (
+            <div className="space-y-2">
+              <div className="relative w-32 h-32">
+                <img
+                  src={form.avatarUrl || '/images/profile-avatar.png'}
+                  alt="Avatar preview"
+                  className="w-32 h-32 rounded-full object-cover border"
                 />
-              )}
 
-              {'username' in form && (
-                <Input
-                  ariaDescribedby="username"
-                  placeholder="Username"
-                  value={form.username ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, username: e.target.value })
-                  }
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-              )}
 
-              {'login' in form && (
-                <Input
-                  ariaDescribedby="login"
-                  placeholder="Email"
-                  value={form.login ?? ''}
-                  onChange={(e) => setForm({ ...form, login: e.target.value })}
-                />
-              )}
-            </>
+                {/* Кастомный текст поверх */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white font-semibold rounded-full pointer-events-none">
+                  Click to upload
+                </div>
+              </div>
+
+              <br />
+
+              <Input
+                ariaDescribedby="username"
+                placeholder="Username"
+                value={form.username ?? ''}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+              />
+
+              <Input
+                ariaDescribedby="login"
+                placeholder="Email"
+                value={form.login ?? ''}
+                onChange={(e) => setForm({ ...form, login: e.target.value })}
+              />
+            </div>
           )}
 
-          {/* Password */}
+          {mode === 'avatar' && (
+            <div className="relative w-32 h-32">
+              <img
+                src={form.avatarUrl || '/images/profile-avatar.png'}
+                alt="Avatar preview"
+                className="w-32 h-32 rounded-full object-cover border"
+              />
+
+              {/* Скрытый input */}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+
+              {/* Кастомный текст поверх */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white font-semibold rounded-full pointer-events-none">
+                Click to upload
+              </div>
+            </div>
+          )}
+
+          {mode === 'username' && (
+            <Input
+              ariaDescribedby="username"
+              placeholder="Username"
+              value={form.username ?? ''}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+          )}
+
+          {mode === 'login' && (
+            <Input
+              ariaDescribedby="login"
+              placeholder="Email"
+              value={form.login ?? ''}
+              onChange={(e) => setForm({ ...form, login: e.target.value })}
+            />
+          )}
+
           {mode === 'password' && (
             <>
               <PasswordInput

@@ -57,6 +57,8 @@ export default [
         KeyboardEvent: 'readonly',
         HTMLButtonElement: 'readonly',
         Storage: 'readonly',
+        FileReader: 'readonly',
+        Image: 'readonly',
       },
     },
     rules: {

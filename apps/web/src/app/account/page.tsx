@@ -11,11 +11,27 @@ import { useProfile } from '@/features/account/model/useProfile';
 import { accountService } from '@/features/account/model/accountService';
 import type { EditAccountMode } from '@/features/account/model/editAccountModes';
 import { mapActionToMode } from '@/features/account/model/mapActionToMode';
+import { Profile } from '@/features/account/model/types';
 
-const AccountPage: React.FC = () => {
+interface Props {
+  profile?: Profile | null;
+  setProfile?: (p: Profile) => void;
+}
+
+const AccountPage: React.FC<Props> = ({
+  profile: rootProfile,
+  setProfile: setRootProfile,
+}) => {
   const router = useRouter();
 
-  const { profile, setProfile, loading } = useProfile();
+  // Используем профиль из пропсов, если есть, иначе хук
+  const {
+    profile: localProfile,
+    setProfile: setLocalProfile,
+    loading,
+  } = useProfile();
+  const profile = rootProfile ?? localProfile;
+  const setProfile = setRootProfile ?? setLocalProfile;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<EditAccountMode>('profile');
@@ -41,7 +57,7 @@ const AccountPage: React.FC = () => {
 
   const closeModal = () => {
     if (saving) return;
-    setIsModalOpen(false); // После Cancel показываем ActionsList
+    setIsModalOpen(false);
   };
 
   const handleProfileClick = () => {
@@ -70,10 +86,10 @@ const AccountPage: React.FC = () => {
         await accountService.changePassword(payload);
       } else {
         const updated = await accountService.updateAccount(payload);
-        setProfile(updated);
+        setProfile(updated); // <-- обновляем профиль через пропс или локально
       }
 
-      setIsModalOpen(false); // После Save показываем ActionsList
+      setIsModalOpen(false);
     } catch (e: any) {
       setError(e?.message ?? 'Something went wrong');
     } finally {
@@ -90,7 +106,6 @@ const AccountPage: React.FC = () => {
           onClick={handleProfileClick}
         />
 
-        {/* Скрываем список кнопок, если открыта модалка */}
         {!isModalOpen && (
           <ActionsList loading={loading} onClick={handleActionClick} />
         )}

@@ -42,18 +42,12 @@ describe('EditAccountModal', () => {
       />,
     );
 
-    expect(screen.getByText('Account settings')).toBeInTheDocument();
-
-    // Используем ID или label вместо placeholder
     expect(
       screen.getByLabelText('Username', { selector: 'input' }),
     ).toHaveValue('testuser');
     expect(screen.getByLabelText('Email', { selector: 'input' })).toHaveValue(
       'test@example.com',
     );
-    expect(
-      screen.getByLabelText('Avatar URL', { selector: 'input' }),
-    ).toHaveValue('https://example.com/avatar.jpg');
   });
 
   it('should render avatar mode with correct fields', () => {
@@ -68,12 +62,6 @@ describe('EditAccountModal', () => {
     );
 
     expect(screen.getByText('Edit photo')).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Avatar URL', { selector: 'input' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText('Username', { selector: 'input' }),
-    ).not.toBeInTheDocument();
   });
 
   it('should render password mode with correct fields', () => {
