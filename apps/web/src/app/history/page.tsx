@@ -199,10 +199,10 @@ export default function HistoryPage() {
                 Number(event.target.value) || paginationOptions[0],
               )
             }
-            className="bg-surface-dark/70 rounded px-2 py-1 text-sm text-white"
+            className="bg-surface-dark/70 rounded px-2 py-1 text-sm text-ink border border-white/20 focus-visible:outline-2 focus-visible:outline-accent"
           >
             {paginationOptions.map((value) => (
-              <option key={value} value={value}>
+              <option key={value} value={value} className="text-ink">
                 {value}
               </option>
             ))}

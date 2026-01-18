@@ -51,5 +51,9 @@ describe('SignInForm', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'pass123',
+    });
   });
 });

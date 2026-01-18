@@ -5,9 +5,10 @@ import { Input } from '@/shared/ui/Input';
 import PasswordInput from '@/shared/ui/PasswordInput';
 import { Button } from '@/shared/ui/Button';
 import Skeleton from '@/shared/ui/Skeleton';
+import type { AuthFormValues } from '@/features/auth/types';
 
 interface SignUpFormProps {
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (values: AuthFormValues) => void;
   isLoading: boolean;
 }
 
@@ -45,7 +46,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onSubmit, isLoading }) => {
       hasError = true;
     }
 
-    if (!hasError) onSubmit(e);
+    if (!hasError) onSubmit({ email, password });
   };
 
   return (

@@ -4,7 +4,7 @@ import './globals.css';
 import { Sidebar } from '@/shared/ui/Sidebar';
 import { Container } from '@/shared/ui/Container';
 import { YandexMetrika } from '@/shared/ui/YandexMetrika';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import { StoreProvider } from '@/app/providers/StoreProvider';
@@ -13,8 +13,22 @@ const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const mockAuth = true;
-    setIsAuthenticated(mockAuth);
+    const checkAuth = () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      const token = window.localStorage.getItem('auth.token');
+      setIsAuthenticated(Boolean(token));
+    };
+
+    checkAuth();
+    window.addEventListener('storage', checkAuth);
+    window.addEventListener('auth-token-change', checkAuth);
+
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+      window.removeEventListener('auth-token-change', checkAuth);
+    };
   }, []);
 
   return { isAuthenticated };
@@ -26,13 +40,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const publicPaths = ['/auth', '/'];
   const isPublicPage = publicPaths.includes(pathname);
 
-  const showAppLayout = isAuthenticated && !isPublicPage;
+  useEffect(() => {
+    if (isAuthenticated === false && !isPublicPage) {
+      router.push('/auth');
+    }
+  }, [isAuthenticated, isPublicPage, router]);
+
+  const showAppLayout = Boolean(isAuthenticated) && !isPublicPage;
 
   if (isAuthenticated === null) {
     return (

@@ -8,15 +8,23 @@ import { backendApi } from '@/shared/api/backendApi';
 
 type LogoutRes = { ok: boolean };
 
+const emitAuthChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('auth-token-change'));
+  }
+};
+
 const setAuthToken = (token: string) => {
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('auth.token', token);
+    emitAuthChange();
   }
 };
 
 const clearAuthToken = () => {
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('auth.token');
+    emitAuthChange();
   }
 };
 

@@ -1,18 +1,27 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import AuthBrand from '@/features/auth/AuthBrand';
 import AuthTabs from '@/features/auth/AuthTabs';
 import { GradientCard } from '@/shared/ui/GradientCard';
 import SignUpForm from '@/features/auth/SignUpForm';
 import SignInForm from '@/features/auth/SignInForm';
+import type { AuthFormValues } from '@/features/auth/types';
+import {
+  useLoginMutation,
+  useRegisterMutation,
+} from '@/shared/api/auth.api';
 
 const AuthPageContent = () => {
   const searchParams = useSearchParams();
   const urlMode = searchParams.get('mode');
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
-  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const router = useRouter();
+
+  const [login, { isLoading: loginLoading }] = useLoginMutation();
+  const [register, { isLoading: registerLoading }] = useRegisterMutation();
 
   useEffect(() => {
     if (urlMode === 'signin' || urlMode === 'signup') {
@@ -20,21 +29,48 @@ const AuthPageContent = () => {
     }
   }, [urlMode]);
 
+  useEffect(() => {
+    setStatusMessage(null);
+  }, [mode]);
+
   const toggleMode = (e: React.MouseEvent<any>) => {
     e.preventDefault();
     setMode((prev) => (prev === 'signup' ? 'signin' : 'signup'));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      alert(
-        mode === 'signup' ? 'Зарегистрировано (мок)' : 'Вход выполнен (мок)',
-      );
-    }, 800);
+  const handleSuccess = () => {
+    setStatusMessage(null);
+    router.push('/dashboard');
   };
+
+  const handleLogin = async (values: AuthFormValues) => {
+    try {
+      await login(values).unwrap();
+      handleSuccess();
+    } catch (err: any) {
+      setStatusMessage(
+        err?.data?.message ||
+          err?.message ||
+          'Не удалось войти. Попробуйте ещё раз.',
+      );
+    }
+  };
+
+  const handleRegister = async (values: AuthFormValues) => {
+    try {
+      await register(values).unwrap();
+      handleSuccess();
+    } catch (err: any) {
+      setStatusMessage(
+        err?.data?.message ||
+          err?.message ||
+          'Не удалось зарегистрироваться. Попробуйте ещё раз.',
+      );
+    }
+  };
+
+  const isSubmitting = mode === 'signin' ? loginLoading : registerLoading;
+  const errorMessage = statusMessage;
 
   return (
     <div className="bg-primary min-h-screen flex flex-col">
@@ -63,10 +99,15 @@ const AuthPageContent = () => {
               {mode === 'signup' ? 'Sign up for AssetPredict' : 'Welcome back'}
             </h2>
             <AuthTabs mode={mode} setMode={setMode} />
+            {errorMessage ? (
+              <div className="text-red-400 text-sm mb-3" role="alert">
+                {errorMessage}
+              </div>
+            ) : null}
             {mode === 'signup' ? (
-              <SignUpForm onSubmit={handleSubmit} isLoading={isLoading} />
+              <SignUpForm onSubmit={handleRegister} isLoading={isSubmitting} />
             ) : (
-              <SignInForm onSubmit={handleSubmit} isLoading={isLoading} />
+              <SignInForm onSubmit={handleLogin} isLoading={isSubmitting} />
             )}
           </GradientCard>
         </div>
