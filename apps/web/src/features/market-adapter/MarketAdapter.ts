@@ -501,7 +501,7 @@ export async function searchAssets(
   const query = resolvedMode === 'search' ? rawQuery : undefined;
   const limit =
     request.mode === 'listAll'
-      ? request.limit ?? DEFAULT_LIST_ALL_LIMIT
+      ? (request.limit ?? DEFAULT_LIST_ALL_LIMIT)
       : undefined;
 
   if (process.env.NODE_ENV === 'development') {

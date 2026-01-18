@@ -197,13 +197,13 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const recent = useAppSelector(selectRecent);
 
   const abortRef = useRef<AbortController | null>(null);
-  const [listAllLimits, setListAllLimits] = useState<Record<ProviderKey, number>>(
-    {
-      binance: LIST_ALL_PAGE_SIZE,
-      moex: LIST_ALL_PAGE_SIZE,
-      mock: LIST_ALL_PAGE_SIZE,
-    },
-  );
+  const [listAllLimits, setListAllLimits] = useState<
+    Record<ProviderKey, number>
+  >({
+    binance: LIST_ALL_PAGE_SIZE,
+    moex: LIST_ALL_PAGE_SIZE,
+    mock: LIST_ALL_PAGE_SIZE,
+  });
 
   const filterPopoverRef = useRef<HTMLDivElement>(null);
   const [selectedForAdd, setSelectedForAdd] = useState<{
