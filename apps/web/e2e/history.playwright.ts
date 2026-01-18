@@ -23,6 +23,9 @@ test.describe('History Page', () => {
     await page.addInitScript((items) => {
       window.localStorage.setItem('localForecasts', JSON.stringify(items));
     }, seedHistory);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
     await page.goto(buildUrl('/history'));
 
     // Дождались самой таблицы
@@ -50,6 +53,9 @@ test.describe('History Page', () => {
     await page.addInitScript((items) => {
       window.localStorage.setItem('localForecasts', JSON.stringify(items));
     }, seedHistory);
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
     await page.goto(buildUrl('/history'));
     const input = page.getByPlaceholder('Search');
     await input.fill('btc');

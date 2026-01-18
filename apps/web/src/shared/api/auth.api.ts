@@ -1,3 +1,5 @@
+/* global Event */
+
 import type {
   LoginReq,
   LoginRes,
@@ -9,9 +11,9 @@ import { backendApi } from '@/shared/api/backendApi';
 type LogoutRes = { ok: boolean };
 
 const emitAuthChange = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('auth-token-change'));
-  }
+  if (typeof window === 'undefined') return;
+  if (typeof Event === 'undefined') return;
+  window.dispatchEvent(new Event('auth-token-change'));
 };
 
 const setAuthToken = (token: string) => {

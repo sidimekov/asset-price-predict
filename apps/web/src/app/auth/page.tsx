@@ -8,10 +8,7 @@ import { GradientCard } from '@/shared/ui/GradientCard';
 import SignUpForm from '@/features/auth/SignUpForm';
 import SignInForm from '@/features/auth/SignInForm';
 import type { AuthFormValues } from '@/features/auth/types';
-import {
-  useLoginMutation,
-  useRegisterMutation,
-} from '@/shared/api/auth.api';
+import { useLoginMutation, useRegisterMutation } from '@/shared/api/auth.api';
 
 const AuthPageContent = () => {
   const searchParams = useSearchParams();

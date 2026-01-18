@@ -3,6 +3,9 @@ import { buildUrl } from './utils/basePath';
 
 test.describe('Account Page', () => {
   test('should load and show profile information', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
     await page.goto(buildUrl('/account'));
     await expect(page.getByText('Username:')).toBeVisible();
   });
@@ -10,6 +13,9 @@ test.describe('Account Page', () => {
   test('should display action buttons for account management', async ({
     page,
   }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
     await page.goto(buildUrl('/account'));
     await expect(
       page.getByRole('button', { name: 'Edit photo' }),
@@ -23,6 +29,9 @@ test.describe('Account Page', () => {
   test('should show not implemented alerts when clicking buttons', async ({
     page,
   }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
     await page.goto(buildUrl('/account'));
 
     await expect(

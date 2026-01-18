@@ -12,6 +12,7 @@ describe('entities/forecast index barrel', () => {
     expect(Forecast.forecastRequested).toBe(Slice.forecastRequested);
     expect(Forecast.forecastReceived).toBe(Slice.forecastReceived);
     expect(Forecast.forecastFailed).toBe(Slice.forecastFailed);
+    expect(Forecast.setForecastParams).toBe(Slice.setForecastParams);
     expect(Forecast.clearForecast).toBe(Slice.clearForecast);
     expect(Forecast.clearAllForecasts).toBe(Slice.clearAllForecasts);
     expect(Forecast.forecastReducer).toBe(Slice.forecastReducer);

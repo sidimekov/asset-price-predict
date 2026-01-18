@@ -107,12 +107,15 @@ export class ForecastManager {
     const { symbol, provider, tf, window, horizon, model } = ctx;
     const { dispatch, getState, signal } = deps;
 
+    const normalizedModel =
+      model === 'client' || model === '' ? null : (model ?? null);
+
     const tsKey = buildTimeseriesKey(provider as any, symbol, tf, window);
     const fcKey = makeForecastKey({
       symbol,
       tf,
       horizon,
-      model: model || undefined,
+      model: normalizedModel || undefined,
     });
 
     orchestratorState.status = 'running';
@@ -124,7 +127,7 @@ export class ForecastManager {
         tf,
         window,
         horizon,
-        model,
+        model: normalizedModel,
         tsKey,
         fcKey,
       });
@@ -156,14 +159,9 @@ export class ForecastManager {
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
       // 3) infer (with abort)
-      const inferResult = await inferForecast(
-        tail,
-        horizon,
-        model ?? undefined,
-        {
-          signal,
-        } as any,
-      );
+      const inferResult = await inferForecast(tail, horizon, normalizedModel, {
+        signal,
+      } as any);
 
       if (signal?.aborted) {
         dispatch(forecastCancelled(fcKey));

@@ -1,7 +1,7 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { backendApi } from '@/shared/api/backendApi';
-import { authApi } from '@/shared/api/auth.api';
+import { healthApi } from '@/shared/api/health.api';
 
 const createTestStore = () =>
   configureStore({
@@ -33,13 +33,12 @@ const getRequestUrl = (input: RequestInput | URL) => {
   return input.url;
 };
 
-describe('authApi token handling', () => {
+describe('healthApi', () => {
   const fetchMock = vi.fn();
   const NativeRequest = globalThis.Request;
   const baseUrl = 'http://localhost';
 
   beforeEach(() => {
-    localStorage.clear();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal(
@@ -62,49 +61,20 @@ describe('authApi token handling', () => {
     vi.unstubAllGlobals();
   });
 
-  it('stores auth token after login', async () => {
-    fetchMock.mockImplementation((input) => {
-      const url = getRequestUrl(input);
-      if (url.includes('/auth/login')) {
-        return Promise.resolve(
-          resolveJson({
-            token: 'login-token',
-            user: { id: '1', email: 'user@test.com', username: 'user' },
-          }),
-        );
-      }
-      throw new Error(`Unexpected request: ${url}`);
-    });
+  it('requests health status', async () => {
+    fetchMock.mockResolvedValue(
+      resolveJson({ status: 'ok', version: '1', db: true }),
+    );
 
     const store = createTestStore();
     const result = store.dispatch(
-      authApi.endpoints.login.initiate({
-        email: 'user@test.com',
-        password: 'secret',
-      }) as any,
+      healthApi.endpoints.getHealth.initiate() as any,
     );
 
     await result.unwrap();
 
-    expect(localStorage.getItem('auth.token')).toBe('login-token');
-  });
-
-  it('clears auth token after logout', async () => {
-    localStorage.setItem('auth.token', 'existing-token');
-
-    fetchMock.mockImplementation((input) => {
-      const url = getRequestUrl(input);
-      if (url.includes('/auth/logout')) {
-        return Promise.resolve(resolveJson({ ok: true }));
-      }
-      throw new Error(`Unexpected request: ${url}`);
-    });
-
-    const store = createTestStore();
-    const result = store.dispatch(authApi.endpoints.logout.initiate() as any);
-
-    await result.unwrap();
-
-    expect(localStorage.getItem('auth.token')).toBeNull();
+    const [input] = fetchMock.mock.calls[0];
+    const url = getRequestUrl(input);
+    expect(url).toContain('/api/health');
   });
 });
