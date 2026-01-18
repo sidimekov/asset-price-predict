@@ -59,8 +59,8 @@ export interface MarketAdapterError {
 }
 
 const MARKET_MOCK_MODE =
-  process.env.NEXT_PUBLIC_MARKET_MOCK === '1' ||
-  (process.env.CI === 'true' && process.env.NODE_ENV !== 'test');
+  process.env.NODE_ENV !== 'test' &&
+  process.env.NEXT_PUBLIC_MARKET_MOCK === '1';
 
 // TIMESERIES
 
@@ -406,69 +406,69 @@ async function fetchProviderCatalog(
           : MOCK_SYMBOLS;
       raw = symbols.slice(0, limit ?? Infinity);
     } else {
-    switch (provider) {
-      case 'BINANCE':
-        if (mode === 'listAll') {
-          const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
-          raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
+      switch (provider) {
+        case 'BINANCE':
+          if (mode === 'listAll') {
+            const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
+            raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[catalog] binance:exchangeInfo', {
+                count: raw.length,
+                sample: raw.slice(0, 3),
+              });
+            }
+          } else {
+            raw = (await searchBinanceSymbols(
+              dispatch,
+              query ?? '',
+              opts,
+            )) as unknown[];
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[catalog] binance:searchRaw', {
+                count: raw.length,
+                sample: raw.slice(0, 3),
+              });
+            }
+          }
+          break;
+
+        case 'MOEX':
+          const q = mode === 'listAll' ? '' : (query ?? '');
+          {
+            const response = await searchMoexSymbols(dispatch, q, opts);
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[catalog] moex:rawResponse', response);
+            }
+            raw = isMoexSecuritiesResponse(response)
+              ? normalizeMoexSecuritiesResponse(response)
+              : Array.isArray(response)
+                ? response
+                : [];
+          }
           if (process.env.NODE_ENV === 'development') {
-            console.debug('[catalog] binance:exchangeInfo', {
+            console.debug('[catalog] moex:normalized', {
               count: raw.length,
               sample: raw.slice(0, 3),
             });
           }
-        } else {
-          raw = (await searchBinanceSymbols(
-            dispatch,
-            query ?? '',
-            opts,
-          )) as unknown[];
-          if (process.env.NODE_ENV === 'development') {
-            console.debug('[catalog] binance:searchRaw', {
-              count: raw.length,
-              sample: raw.slice(0, 3),
-            });
+          if (mode === 'listAll' && limit) {
+            raw = raw.slice(0, limit);
           }
-        }
-        break;
+          break;
 
-      case 'MOEX':
-        const q = mode === 'listAll' ? '' : (query ?? '');
-        {
-          const response = await searchMoexSymbols(dispatch, q, opts);
-          if (process.env.NODE_ENV === 'development') {
-            console.debug('[catalog] moex:rawResponse', response);
+        case 'MOCK':
+          let symbols = MOCK_SYMBOLS;
+          if (mode === 'search' && query) {
+            symbols = await searchMockSymbols(query, opts);
+          } else if (mode === 'listAll') {
+            symbols = MOCK_SYMBOLS;
           }
-          raw = isMoexSecuritiesResponse(response)
-            ? normalizeMoexSecuritiesResponse(response)
-            : Array.isArray(response)
-              ? response
-              : [];
-        }
-        if (process.env.NODE_ENV === 'development') {
-          console.debug('[catalog] moex:normalized', {
-            count: raw.length,
-            sample: raw.slice(0, 3),
-          });
-        }
-        if (mode === 'listAll' && limit) {
-          raw = raw.slice(0, limit);
-        }
-        break;
+          raw = symbols.slice(0, limit ?? Infinity);
+          break;
 
-      case 'MOCK':
-        let symbols = MOCK_SYMBOLS;
-        if (mode === 'search' && query) {
-          symbols = await searchMockSymbols(query, opts);
-        } else if (mode === 'listAll') {
-          symbols = MOCK_SYMBOLS;
-        }
-        raw = symbols.slice(0, limit ?? Infinity);
-        break;
-
-      default:
-        return [];
-    }
+        default:
+          return [];
+      }
     }
   } catch (err: any) {
     if (err.name === 'AbortError') {
@@ -496,11 +496,9 @@ export async function searchAssets(
   const { provider } = request;
   const mode = request.mode;
   const rawQuery = mode === 'search' ? request.query.trim() : undefined;
-  const resolvedMode =
-    mode === 'search' && !rawQuery ? 'listAll' : mode;
+  const resolvedMode = mode === 'search' && !rawQuery ? 'listAll' : mode;
   const query = resolvedMode === 'search' ? rawQuery : undefined;
-  const limit =
-    resolvedMode === 'listAll' ? request.limit : undefined;
+  const limit = resolvedMode === 'listAll' ? request.limit : undefined;
 
   if (process.env.NODE_ENV === 'development') {
     console.debug('[catalog] searchAssets:start', {
@@ -552,4 +550,8 @@ export async function searchAssets(
   searchCache.set(cacheKey, { items, ts: Date.now() });
 
   return items;
+}
+
+export function __clearSearchCacheForTests(): void {
+  searchCache.clear();
 }
