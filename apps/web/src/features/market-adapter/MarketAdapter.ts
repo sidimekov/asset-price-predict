@@ -277,9 +277,24 @@ export async function getMarketTimeseries(
     limit = DEFAULT_LIMIT,
   } = result.data;
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[timeseries] getMarketTimeseries:start', {
+      symbol,
+      provider,
+      timeframe,
+      limit,
+    });
+  }
+
   const cacheKey = makeTimeseriesCacheKey(provider, symbol, timeframe, limit);
   const cached = clientTimeseriesCache.get(cacheKey);
   if (cached) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[timeseries] getMarketTimeseries:cacheHit', {
+        key: cacheKey,
+        count: cached.length,
+      });
+    }
     return { bars: cached, symbol, provider, timeframe, source: 'CACHE' };
   }
 
@@ -291,6 +306,18 @@ export async function getMarketTimeseries(
   );
 
   if (!resolved.ok) return resolved.error;
+
+  if (process.env.NODE_ENV === 'development') {
+    const rawPreview = Array.isArray(resolved.raw)
+      ? resolved.raw.slice(0, 3)
+      : resolved.raw;
+    console.debug('[timeseries] getMarketTimeseries:resolved', {
+      provider,
+      source: resolved.source,
+      rawPreview,
+      count: resolved.normalized.length,
+    });
+  }
 
   clientTimeseriesCache.set(cacheKey, resolved.normalized);
 
@@ -341,12 +368,24 @@ async function fetchProviderCatalog(
         if (mode === 'listAll') {
           const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
           raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[catalog] binance:exchangeInfo', {
+              count: raw.length,
+              sample: raw.slice(0, 3),
+            });
+          }
         } else {
           raw = (await searchBinanceSymbols(
             dispatch,
             query ?? '',
             opts,
           )) as unknown[];
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[catalog] binance:searchRaw', {
+              count: raw.length,
+              sample: raw.slice(0, 3),
+            });
+          }
         }
         break;
 
@@ -410,14 +449,19 @@ export async function searchAssets(
   request: SearchAssetsRequest,
   opts: AdapterCallOpts = {},
 ): Promise<CatalogItem[]> {
-  const { provider, mode } = request;
-  const query = mode === 'search' ? request.query.trim() : undefined;
-  const limit = mode === 'listAll' ? request.limit : undefined;
+  const { provider } = request;
+  const mode = request.mode;
+  const rawQuery = mode === 'search' ? request.query.trim() : undefined;
+  const resolvedMode =
+    mode === 'search' && !rawQuery ? 'listAll' : mode;
+  const query = resolvedMode === 'search' ? rawQuery : undefined;
+  const limit =
+    resolvedMode === 'listAll' ? request.limit : undefined;
 
   if (process.env.NODE_ENV === 'development') {
     console.debug('[catalog] searchAssets:start', {
       provider,
-      mode,
+      mode: resolvedMode,
       query,
       limit,
     });
@@ -425,7 +469,7 @@ export async function searchAssets(
 
   const cacheKey = makeSearchCacheKey(
     provider,
-    mode,
+    resolvedMode,
     query ?? `limit_${limit ?? 'inf'}`,
   );
 
@@ -444,7 +488,7 @@ export async function searchAssets(
   const raw = await fetchProviderCatalog(
     dispatch,
     provider,
-    mode,
+    resolvedMode,
     query,
     limit,
     opts,
@@ -455,7 +499,7 @@ export async function searchAssets(
   if (process.env.NODE_ENV === 'development') {
     console.debug('[catalog] searchAssets:normalized', {
       provider,
-      mode,
+      mode: resolvedMode,
       count: items.length,
       sample: items.slice(0, 3),
     });

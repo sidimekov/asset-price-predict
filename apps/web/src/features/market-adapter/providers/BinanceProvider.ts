@@ -15,6 +15,16 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
+function getErrorMessage(err: any, fallback: string): string {
+  return (
+    err?.message ||
+    err?.data?.message ||
+    err?.data?.error ||
+    err?.error ||
+    fallback
+  );
+}
+
 function mapTimeframeToBinanceInterval(
   timeframe: ProviderRequestBase['timeframe'],
 ): string {
@@ -70,7 +80,8 @@ export async function fetchBinanceTimeseries(
       throw err;
     }
     console.error('Binance timeseries fetch failed:', err);
-    throw new Error(`Binance timeseries fetch failed: ${err.message}`);
+    const message = getErrorMessage(err, 'Request failed');
+    throw new Error(`Binance timeseries fetch failed: ${message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);

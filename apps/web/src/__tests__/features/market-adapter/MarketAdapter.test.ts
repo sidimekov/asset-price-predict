@@ -548,7 +548,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     );
   });
 
-  it('возвращает все активы при пустом запросе для Binance', async () => {
+  it('использует listAll при пустом запросе для Binance (fallback)', async () => {
     vi.mocked(normalizeCatalogResponse).mockReturnValue([
       {
         symbol: 'BTCUSDT',
@@ -568,10 +568,9 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
       },
     ] as any);
 
-    mockSearchBinanceSymbols.mockResolvedValue([
-      { symbol: 'BTCUSDT' },
-      { symbol: 'ETHUSDT' },
-    ]);
+    mockFetchBinanceExchangeInfo.mockResolvedValue({
+      symbols: [{ symbol: 'BTCUSDT' }, { symbol: 'ETHUSDT' }],
+    });
 
     const result = await searchAssets(dispatch, {
       mode: 'search',
@@ -581,14 +580,10 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
 
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
-    expect(mockSearchBinanceSymbols).toHaveBeenCalledWith(
-      dispatch,
-      '',
-      expect.any(Object),
-    );
+    expect(mockFetchBinanceExchangeInfo).toHaveBeenCalled();
   });
 
-  it('возвращает все активы при пустом запросе для MOEX', async () => {
+  it('использует listAll при пустом запросе для MOEX (fallback)', async () => {
     vi.mocked(normalizeCatalogResponse).mockReturnValue([
       {
         symbol: 'SBER',
@@ -683,6 +678,45 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBe(3);
     expect(mockFetchBinanceExchangeInfo).toHaveBeenCalled();
+  });
+
+  it('возвращает все активы MOEX в режиме listAll', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'SBER',
+        name: 'Сбербанк',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+      {
+        symbol: 'GAZP',
+        name: 'Газпром',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+    ] as any);
+
+    mockSearchMoexSymbols.mockResolvedValue([
+      { SECID: 'SBER' },
+      { SECID: 'GAZP' },
+    ]);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'MOEX',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    expect(mockSearchMoexSymbols).toHaveBeenCalledWith(
+      dispatch,
+      '',
+      expect.any(Object),
+    );
   });
 
   it('ограничивает количество активов в режиме listAll с limit', async () => {

@@ -14,6 +14,16 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
+function getErrorMessage(err: any, fallback: string): string {
+  return (
+    err?.message ||
+    err?.data?.message ||
+    err?.data?.error ||
+    err?.error ||
+    fallback
+  );
+}
+
 export async function fetchMoexTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
@@ -50,7 +60,8 @@ export async function fetchMoexTimeseries(
       throw err;
     }
     console.error('MOEX timeseries fetch failed:', err);
-    throw new Error(`MOEX timeseries fetch failed: ${err.message}`);
+    const message = getErrorMessage(err, 'Request failed');
+    throw new Error(`MOEX timeseries fetch failed: ${message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
