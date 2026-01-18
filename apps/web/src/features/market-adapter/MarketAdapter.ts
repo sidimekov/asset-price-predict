@@ -105,9 +105,7 @@ function isMoexCandlesResponse(raw: unknown): raw is MoexCandlesResponse {
   return 'candles' in raw;
 }
 
-function isMoexSecuritiesResponse(
-  raw: unknown,
-): raw is MoexSecuritiesResponse {
+function isMoexSecuritiesResponse(raw: unknown): raw is MoexSecuritiesResponse {
   if (!raw || typeof raw !== 'object') return false;
   return 'securities' in raw;
 }

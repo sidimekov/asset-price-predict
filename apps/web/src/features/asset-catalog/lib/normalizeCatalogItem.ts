@@ -22,24 +22,13 @@ export const normalizeCatalogItem = (
   }
 
   if (provider === 'MOEX') {
-    const symbol = (
-      raw.SECID ||
-      raw.secid ||
-      raw.symbol ||
-      raw.SYMBOL ||
-      ''
-    )
+    const symbol = (raw.SECID || raw.secid || raw.symbol || raw.SYMBOL || '')
       .toString()
       .trim();
     if (!symbol) return null;
     return {
       symbol,
-      name:
-        raw.SHORTNAME ||
-        raw.shortname ||
-        raw.NAME ||
-        raw.name ||
-        symbol,
+      name: raw.SHORTNAME || raw.shortname || raw.NAME || raw.name || symbol,
       exchange: 'MOEX',
       assetClass: 'equity',
       currency: raw.CURRENCYID || raw.currencyid || 'RUB',
