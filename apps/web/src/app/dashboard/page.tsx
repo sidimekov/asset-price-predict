@@ -16,6 +16,7 @@ import {
   removeRecent,
   selectRecent,
   selectSelectedAsset,
+  type Provider,
 } from '@/features/asset-catalog/model/catalogSlice';
 import {
   selectTimeseriesByKey,
@@ -91,7 +92,7 @@ export default function Dashboard() {
     provider,
   }: {
     symbol: string;
-    provider: 'binance' | 'moex';
+    provider: Provider;
   }) => {
     dispatch(addRecent({ symbol, provider }));
     dispatch(setSelected({ symbol, provider }));
