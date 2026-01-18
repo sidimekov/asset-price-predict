@@ -313,9 +313,7 @@
     },
     {
       "model": "catboost",
-      "targets": [
-        "target_1"
-      ],
+      "targets": ["target_1"],
       "metrics": {
         "mae_delta": 12.864799499511719,
         "rmse_delta": 34.67462158203125,

@@ -81,12 +81,12 @@ Feature window по умолчанию: `64` (как в ML Worker).
 
 Тестовые метрики считаются скриптом `scripts/modeling/evaluate_forecast_models_v1.py`.
 
-| Market | Model | MAE (delta) | MAPE (price) |
-| --- | --- | --- | --- |
-| Binance | LGBM | 418.3649 | 0.0162 |
-| Binance | CatBoost | 90.6853 | 0.0042 |
-| MOEX | LGBM | 51.1975 | 0.0395 |
-| MOEX | CatBoost | 12.8648 | 0.0096 |
+| Market  | Model    | MAE (delta) | MAPE (price) |
+| ------- | -------- | ----------- | ------------ |
+| Binance | LGBM     | 418.3649    | 0.0162       |
+| Binance | CatBoost | 90.6853     | 0.0042       |
+| MOEX    | LGBM     | 51.1975     | 0.0395       |
+| MOEX    | CatBoost | 12.8648     | 0.0096       |
 
 ## Сплиты
 
