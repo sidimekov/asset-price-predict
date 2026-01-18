@@ -64,7 +64,8 @@ export default function Dashboard() {
   const forecastParams = useAppSelector(selectForecastParams);
 
   const rawWindow = forecastParams?.window;
-  const windowNum = typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
+  const windowNum =
+    typeof rawWindow === 'string' ? Number(rawWindow) : rawWindow;
   const timeseriesWindow =
     Number.isFinite(windowNum) && windowNum && windowNum > 0
       ? windowNum
