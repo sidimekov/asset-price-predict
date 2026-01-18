@@ -21,4 +21,10 @@ describe('YAxis', () => {
     expect(screen.getByText('20')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
   });
+
+  it('renders repeated labels when min equals max', () => {
+    render(<YAxis values={[42, 42]} tickCount={3} />);
+    const labels = screen.getAllByText('42');
+    expect(labels).toHaveLength(3);
+  });
 });
