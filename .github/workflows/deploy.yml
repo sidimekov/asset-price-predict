@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main", "devops/deploy" ]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 permissions:
@@ -55,6 +55,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_WEB }}:latest
             ${{ env.IMAGE_WEB }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_YM_ID=${{ secrets.NEXT_PUBLIC_YM_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

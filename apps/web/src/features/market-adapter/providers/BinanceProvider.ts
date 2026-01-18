@@ -1,6 +1,6 @@
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
-import type { BinanceKline } from '@/shared/api/marketApi';
+import type { BinanceKlineRaw } from '@/shared/api/marketApi';
 import type { ProviderCallOpts, ProviderRequestBase } from './types';
 
 function createAbortError(): Error {
@@ -38,7 +38,7 @@ export async function fetchBinanceTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
   opts: ProviderCallOpts = {},
-): Promise<BinanceKline[]> {
+): Promise<BinanceKlineRaw[]> {
   const { symbol, timeframe, limit } = params;
   const { signal } = opts;
 
