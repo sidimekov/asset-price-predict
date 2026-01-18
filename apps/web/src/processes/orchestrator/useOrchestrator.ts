@@ -19,6 +19,13 @@ import {
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
+const DEFAULT_FORECAST_PARAMS = {
+  tf: DEFAULT_TIMEFRAME,
+  window: DEFAULT_LIMIT,
+  horizon: 24,
+  model: null,
+};
+
 function mapProviderToMarket(
   provider: string,
 ): MarketDataProvider | 'MOCK' | null {
@@ -42,12 +49,7 @@ export function useOrchestrator() {
   const selected = useAppSelector(selectSelectedAsset);
   const paramsFromStore = useAppSelector(selectForecastParams);
 
-  const params = paramsFromStore ?? {
-    tf: DEFAULT_TIMEFRAME,
-    window: DEFAULT_LIMIT,
-    horizon: 24,
-    model: null,
-  };
+  const params = paramsFromStore ?? DEFAULT_FORECAST_PARAMS;
 
   const predictRequestId = useAppSelector(
     (s: RootState) => (s as any).forecast?.predict?.requestId ?? 0,
