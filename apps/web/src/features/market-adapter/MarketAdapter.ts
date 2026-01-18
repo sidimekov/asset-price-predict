@@ -21,7 +21,10 @@ import {
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
 
-import type { BinanceKlineRaw } from '@/shared/api/marketApi';
+import type {
+  BinanceKlineRaw,
+  MoexCandlesResponse,
+} from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
@@ -90,6 +93,47 @@ function normalizeRawBars(raw: unknown): Bar[] {
   });
 }
 
+function isMoexCandlesResponse(raw: unknown): raw is MoexCandlesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'candles' in raw;
+}
+
+function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
+  const { columns, data } = raw.candles;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  const idx = (name: string) => columns.indexOf(name);
+  const tsIdx = idx('begin') !== -1 ? idx('begin') : idx('end');
+  const oIdx = idx('open');
+  const hIdx = idx('high');
+  const lIdx = idx('low');
+  const cIdx = idx('close');
+  const vIdx = idx('volume') !== -1 ? idx('volume') : idx('value');
+
+  return data
+    .map((row) => {
+      const tsRaw = row[tsIdx];
+      const ts =
+        typeof tsRaw === 'string' ? Date.parse(tsRaw) : Number(tsRaw ?? NaN);
+      const o = Number(row[oIdx]);
+      const h = Number(row[hIdx]);
+      const l = Number(row[lIdx]);
+      const c = Number(row[cIdx]);
+      const v =
+        vIdx === -1 || row[vIdx] == null ? undefined : Number(row[vIdx]);
+
+      return [ts, o, h, l, c, v] as Bar;
+    })
+    .filter((b) => Number.isFinite(b[0]));
+}
+
+function logMoexStats(bars: Bar[]): void {
+  if (process.env.NODE_ENV !== 'development' || bars.length === 0) return;
+  const avgClose =
+    bars.reduce((sum, b) => sum + (Number(b[4]) || 0), 0) / bars.length;
+  console.info('[MOEX] candles:', bars.length, 'avgClose:', avgClose);
+}
+
 // Приводим timestamp к ms, сортируем и чистим ряд
 function normalizeBarsFinal(bars: Bar[]): Bar[] {
   const msBars = bars
@@ -148,10 +192,14 @@ async function resolveProviderData(
 
       case 'MOEX': {
         const moexRaw = await fetchMoexTimeseries(dispatch, params, opts);
+        const moexBars = isMoexCandlesResponse(moexRaw)
+          ? normalizeMoexCandlesResponse(moexRaw)
+          : normalizeRawBars(moexRaw);
+        logMoexStats(moexBars);
         return {
           ok: true,
           raw: moexRaw,
-          normalized: normalizeBarsFinal(normalizeRawBars(moexRaw)),
+          normalized: normalizeBarsFinal(moexBars),
           source: 'NETWORK',
         };
       }
