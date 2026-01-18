@@ -369,6 +369,7 @@ export async function getMarketTimeseries(
 
 const searchCache = new Map<string, { items: CatalogItem[]; ts: number }>();
 const SEARCH_TTL_MS = 30_000;
+const DEFAULT_LIST_ALL_LIMIT = 100;
 
 function makeSearchCacheKey(
   provider: MarketDataProvider | 'MOCK',
@@ -498,7 +499,10 @@ export async function searchAssets(
   const rawQuery = mode === 'search' ? request.query.trim() : undefined;
   const resolvedMode = mode === 'search' && !rawQuery ? 'listAll' : mode;
   const query = resolvedMode === 'search' ? rawQuery : undefined;
-  const limit = request.mode === 'listAll' ? request.limit : undefined;
+  const limit =
+    request.mode === 'listAll'
+      ? request.limit ?? DEFAULT_LIST_ALL_LIMIT
+      : undefined;
 
   if (process.env.NODE_ENV === 'development') {
     console.debug('[catalog] searchAssets:start', {
