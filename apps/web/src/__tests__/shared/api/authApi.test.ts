@@ -36,7 +36,13 @@ const getRequestUrl = (input: RequestInput | URL) => {
 describe('authApi token handling', () => {
   const fetchMock = vi.fn();
   const NativeRequest = globalThis.Request;
-  const baseUrl = 'http://localhost';
+  const backendBaseUrl =
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, '') || '/api';
+  const absoluteBaseUrl = backendBaseUrl.startsWith('http')
+    ? backendBaseUrl
+    : 'http://localhost';
+  const loginPathCandidates = ['/auth/login', '/api/auth/login'];
+  const logoutPathCandidates = ['/auth/logout', '/api/auth/logout'];
 
   beforeEach(() => {
     localStorage.clear();
@@ -51,8 +57,8 @@ describe('authApi token handling', () => {
               ? input.toString()
               : input.url;
 
-          const safeInit = init ? { ...init, signal: undefined } : init;
-          super(new URL(requestUrl, baseUrl).toString(), safeInit);
+          const { signal, ...rest } = init ?? {};
+          super(new URL(requestUrl, absoluteBaseUrl).toString(), rest);
         }
       },
     );
@@ -65,7 +71,7 @@ describe('authApi token handling', () => {
   it('stores auth token after login', async () => {
     fetchMock.mockImplementation((input) => {
       const url = getRequestUrl(input);
-      if (url.includes('/auth/login')) {
+      if (loginPathCandidates.some((path) => url.endsWith(path))) {
         return Promise.resolve(
           resolveJson({
             token: 'login-token',
@@ -94,7 +100,7 @@ describe('authApi token handling', () => {
 
     fetchMock.mockImplementation((input) => {
       const url = getRequestUrl(input);
-      if (url.includes('/auth/logout')) {
+      if (logoutPathCandidates.some((path) => url.endsWith(path))) {
         return Promise.resolve(resolveJson({ ok: true }));
       }
       throw new Error(`Unexpected request: ${url}`);
