@@ -84,7 +84,6 @@ export const baseQuery: BaseQueryFn<
             ? result.error.status
             : result.meta?.response?.status;
 
-    // eslint-disable-next-line no-console
     console.debug('[Networking]', method, url, status ?? 'no-status');
   }
 

@@ -30,6 +30,7 @@ const sampleEntry: ForecastEntry = {
 };
 
 const stateWithOne: ForecastState = {
+  params: undefined,
   byKey: { key1: sampleEntry },
   loadingByKey: { key1: true },
   errorByKey: { key1: 'oops' },
