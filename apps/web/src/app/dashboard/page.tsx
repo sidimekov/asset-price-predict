@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
 import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
+import CandlesChart from '@/widgets/chart/CandlesChart';
 import LineChart from '@/widgets/chart/LineChart';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import XAxis from '@/widgets/chart/coordinates/XAxis';
@@ -37,9 +38,17 @@ import { selectForecastParams } from '@/entities/forecast/model/selectors';
 import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
 import type { MarketTimeframe } from '@/config/market';
 import { selectPriceChangeByAsset } from '@/entities/timeseries/model/selectors';
+import SegmentedControl from '@/shared/ui/SegmentedControl';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ParamsState = 'idle' | 'loading' | 'error' | 'success';
+type ChartViewMode = 'line' | 'candles';
+
+const SMALL_TIMEFRAMES = new Set(['1m', '5m', '15m']);
+const VIEW_MODE_STORAGE_KEY = 'chart:viewMode';
+
+const isChartViewMode = (value: string | null): value is ChartViewMode =>
+  value === 'line' || value === 'candles';
 
 const mapProviderToMarket = (
   provider: 'binance' | 'moex' | 'mock',
@@ -107,6 +116,15 @@ export default function Dashboard() {
   const [isCatalogOpen, setIsCatalogOpen] = React.useState(false);
   const [modalQuery, setModalQuery] = React.useState('');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
+  const [viewMode, setViewMode] = React.useState<ChartViewMode>(() => {
+    if (typeof window === 'undefined') return 'line';
+    const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+    return isChartViewMode(stored) ? stored : 'line';
+  });
+  const [hasUserSelectedView, setHasUserSelectedView] = React.useState(() => {
+    if (typeof window === 'undefined') return false;
+    return isChartViewMode(window.localStorage.getItem(VIEW_MODE_STORAGE_KEY));
+  });
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -158,6 +176,14 @@ export default function Dashboard() {
     : recentAssets.length === 0
       ? 'empty'
       : 'ready';
+
+  React.useEffect(() => {
+    if (hasUserSelectedView) return;
+    const mode = SMALL_TIMEFRAMES.has(String(effectiveParams.tf))
+      ? 'candles'
+      : 'line';
+    setViewMode(mode);
+  }, [effectiveParams.tf, hasUserSelectedView]);
 
   const handleAssetSelect = ({
     symbol,
@@ -223,6 +249,14 @@ export default function Dashboard() {
     }
   };
 
+  const handleViewModeChange = (mode: ChartViewMode) => {
+    setHasUserSelectedView(true);
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    }
+  };
+
   useOrchestrator();
 
   const chartState: State = !selectedAsset
@@ -258,7 +292,18 @@ export default function Dashboard() {
 
         {/* Chart */}
         <div className="col-span-12 lg:col-span-8">
-          <div className="bg-surface-dark rounded-3xl p-6">
+          <div className="bg-surface-dark rounded-3xl p-6 relative">
+            <div className="absolute right-6 top-6 z-10">
+              <SegmentedControl<ChartViewMode>
+                value={viewMode}
+                options={[
+                  { value: 'line', label: 'Line' },
+                  { value: 'candles', label: 'Candles' },
+                ]}
+                onChange={handleViewModeChange}
+                size="sm"
+              />
+            </div>
             <div className="flex items-start">
               <YAxis
                 className="h-96 w-auto shrink-0 pr-2 text-[#8480C9]"
@@ -269,10 +314,14 @@ export default function Dashboard() {
                 <div className="flex">
                   <div className="relative h-96 w-full">
                     {chartState === 'ready' && historySeries ? (
-                      <LineChart
-                        className="h-96 w-full"
-                        series={historySeries}
-                      />
+                      viewMode === 'candles' ? (
+                        <CandlesChart className="h-96 w-full" bars={bars ?? []} />
+                      ) : (
+                        <LineChart
+                          className="h-96 w-full"
+                          series={historySeries}
+                        />
+                      )
                     ) : barsError ? (
                       <div className="h-96 w-full flex items-center justify-center text-ink-muted">
                         Failed to load history
