@@ -18,7 +18,10 @@ import {
   selectRecent,
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
-import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import {
+  forecastPredictRequested,
+  setForecastParams,
+} from '@/entities/forecast/model/forecastSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 import {
   selectTimeseriesByKey,
@@ -189,6 +192,16 @@ export default function Dashboard() {
     if (!selectedSymbol || !selectedAsset) return;
     dispatch(setSelected(selectedAsset));
     dispatch(setForecastParams(effectiveParams));
+    dispatch(
+      forecastPredictRequested({
+        symbol: selectedAsset.symbol,
+        provider: selectedAsset.provider,
+        tf: effectiveParams.tf,
+        window: effectiveParams.window,
+        horizon: effectiveParams.horizon,
+        model: effectiveParams.model ?? null,
+      }),
+    );
     const query = new URLSearchParams({
       provider: selectedAsset.provider,
       tf: String(effectiveParams.tf),
@@ -229,7 +242,7 @@ export default function Dashboard() {
           : 'empty';
 
   const historySeries = bars?.map(
-    (bar, index) => [index, bar[4]] as [number, number],
+    (bar) => [bar[0], bar[4]] as [number, number],
   );
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
@@ -275,7 +288,7 @@ export default function Dashboard() {
                       viewMode === 'candles' ? (
                         <CandlesChart
                           bars={bars ?? []}
-                          className="chart-container h-full w-full rounded-3xl"
+                          className="h-96 w-full"
                         />
                       ) : (
                         <LineChart
@@ -291,18 +304,14 @@ export default function Dashboard() {
                       <CandlesChartPlaceholder state={chartState} />
                     )}
                   </div>
-                  <div className="w-[330px] flex-none" />
                 </div>
 
-                <div className="flex">
-                  <div className="flex-1">
-                    <XAxis
-                      className="text-[#8480C9] w-full"
-                      timestamps={historyTimestamps}
-                    />
-                  </div>
-                  <div className="w-[330px]" />
-                </div>
+                <XAxis
+                  className="text-[#8480C9]"
+                  timestamps={
+                    historyTimestamps.length > 0 ? historyTimestamps : undefined
+                  }
+                />
               </div>
             </div>
           </div>
