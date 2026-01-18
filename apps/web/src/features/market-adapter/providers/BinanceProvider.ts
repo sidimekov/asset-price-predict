@@ -162,7 +162,27 @@ export async function searchBinanceSymbols(
   }
 
   try {
-    return await queryResult.unwrap();
+    const response = await queryResult.unwrap();
+    if (Array.isArray(response)) {
+      return response;
+    }
+    if (response && typeof response === 'object' && 'symbols' in response) {
+      const qLower = q.toLowerCase();
+      const symbols = Array.isArray((response as any).symbols)
+        ? ((response as any).symbols as any[])
+        : [];
+      return symbols.filter((item) => {
+        const symbol = String(item?.symbol ?? '').toLowerCase();
+        const baseAsset = String(item?.baseAsset ?? '').toLowerCase();
+        const quoteAsset = String(item?.quoteAsset ?? '').toLowerCase();
+        return (
+          symbol.includes(qLower) ||
+          baseAsset.includes(qLower) ||
+          quoteAsset.includes(qLower)
+        );
+      });
+    }
+    return [];
   } catch (err: any) {
     if (err.name === 'AbortError') {
       throw err;
