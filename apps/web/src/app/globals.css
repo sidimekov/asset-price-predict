@@ -1038,7 +1038,7 @@ body {
   padding: 0.25rem;
   border-radius: 999px;
   background: #2b2854;
-  border: 1px solid rgba(132, 128, 201, 0.35);
+  border: 1px solid rgb(132 128 201 / 35%);
 }
 
 .segmented-control .segmented-option {
@@ -1049,12 +1049,14 @@ body {
   padding: 0.2rem 0.75rem;
   font-size: 0.75rem;
   line-height: 1.2;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .segmented-control .segmented-option-active {
   background: #3c3780;
-  color: #ffffff;
+  color: #fff;
 }
 
 .segmented-md .segmented-option {
