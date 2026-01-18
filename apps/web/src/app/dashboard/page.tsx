@@ -196,7 +196,7 @@ export default function Dashboard() {
         model: effectiveParams.model ?? null,
       }),
     );
-    const searchParams = new URLSearchParams({
+    const searchParams = new globalThis.URLSearchParams({
       provider: selectedAsset.provider,
     });
 

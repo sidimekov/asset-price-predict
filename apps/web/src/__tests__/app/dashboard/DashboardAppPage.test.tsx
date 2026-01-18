@@ -132,7 +132,7 @@ describe('Dashboard page', () => {
     fireEvent.click(screen.getByText('predict'));
 
     expect(pushMock).toHaveBeenCalledWith(
-      '/forecast/BTC?provider=binance&tf=8h&window=150',
+      '/forecast/BTC?provider=binance&tf=1h&window=200',
     );
   });
 
