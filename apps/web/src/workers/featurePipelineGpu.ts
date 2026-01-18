@@ -1,4 +1,6 @@
+/* global GPUAdapter, GPUBindGroup, GPUBindGroupLayout, GPUBuffer, GPUBufferUsage, GPUCommandEncoder, GPUComputePassEncoder, GPUComputePipeline, GPUDevice, GPUMapMode, GPUQueue, GPUShaderModule */
 /// <reference lib="webworker" />
+
 import { forecastMinimalConfig } from '@/config/ml';
 import { TailPoint } from '@/workers/types';
 
