@@ -27,6 +27,9 @@ function getErrorMessage(err: any, fallback: string): string {
     err?.data?.error ||
     err?.error ||
     fallback;
+  if (status === 429) {
+    return `Rate limit exceeded (status ${status})`;
+  }
   return status ? `${base} (status ${status})` : base;
 }
 
