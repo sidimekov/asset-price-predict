@@ -64,6 +64,7 @@ describe('ForecastPage', () => {
         return { symbol: 'BTC', provider: 'binance' };
       if (selector === selectForecastParams)
         return { tf: '1h', window: 200, horizon: 24, model: null };
+      if (typeof selector === 'function') return null;
       return undefined;
     });
 
@@ -80,6 +81,7 @@ describe('ForecastPage', () => {
         return { symbol: 'BTC', provider: 'binance' };
       if (selector === selectForecastParams)
         return { tf: '1h', window: 200, horizon: 24, model: null };
+      if (typeof selector === 'function') return null;
       return undefined;
     });
 
@@ -104,6 +106,7 @@ describe('ForecastPage', () => {
         return { symbol: 'BTC', provider: 'binance' };
       if (selector === selectForecastParams)
         return { tf: '1h', window: 200, horizon: 24, model: null };
+      if (typeof selector === 'function') return null;
       return undefined;
     });
 
@@ -123,6 +126,7 @@ describe('ForecastPage', () => {
       if (selector === selectSelectedAsset)
         return { symbol: 'BTC', provider: 'binance' };
       if (selector === selectForecastParams) return undefined;
+      if (typeof selector === 'function') return null;
       return undefined;
     });
 
