@@ -9,7 +9,11 @@ import XAxis from '@/widgets/chart/coordinates/XAxis';
 import YAxis from '@/widgets/chart/coordinates/YAxis';
 import ParamsPanel from '@/features/params/ParamsPanel';
 import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
-import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
+import {
+  selectSelectedAsset,
+  setSelected,
+  type Provider,
+} from '@/features/asset-catalog/model/catalogSlice';
 import {
   selectTimeseriesByKey,
   selectTimeseriesLoadingByKey,
@@ -41,9 +45,11 @@ export default function ForecastPage() {
 
   const selectedAsset = useAppSelector(selectSelectedAsset);
   const storedParams = useAppSelector(selectForecastParams);
-  const providerNorm = selectedAsset
-    ? mapProviderToMarket(selectedAsset.provider)
-    : null;
+  const providerQuery = searchParams.get('provider');
+  const tfQuery = searchParams.get('tf');
+  const windowQuery = searchParams.get('window');
+  const providerValue = providerQuery || selectedAsset?.provider || null;
+  const providerNorm = providerValue ? mapProviderToMarket(providerValue) : null;
 
   const defaultParams = React.useMemo(
     () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
@@ -56,8 +62,22 @@ export default function ForecastPage() {
     }
   }, [dispatch, storedParams, defaultParams]);
 
-  const effectiveParams = storedParams ?? defaultParams;
-  const selectedSymbol = selectedAsset?.symbol ?? null;
+  const resolvedParams = React.useMemo(() => {
+    const base = storedParams ?? defaultParams;
+    const parsedWindow = windowQuery ? Number(windowQuery) : undefined;
+    const safeWindow = Number.isFinite(parsedWindow)
+      ? parsedWindow
+      : base.window;
+
+    return {
+      ...base,
+      tf: tfQuery || base.tf,
+      window: safeWindow,
+    };
+  }, [storedParams, defaultParams, tfQuery, windowQuery]);
+
+  const effectiveParams = resolvedParams;
+  const selectedSymbol = selectedAsset?.symbol ?? String(id);
   const tickerQuery = searchParams.get('ticker');
   const displaySymbol = tickerQuery || selectedSymbol || String(id);
   const selectedPrice = '—';
@@ -112,7 +132,7 @@ export default function ForecastPage() {
       })
     : [];
 
-  const chartState: State = !selectedAsset
+  const chartState: State = !providerNorm || !selectedSymbol
     ? 'empty'
     : barsLoading
       ? 'loading'
@@ -128,11 +148,22 @@ export default function ForecastPage() {
   const historyValues = bars?.map((bar) => bar[4]) ?? [];
   const historyTimestamps = bars?.map((bar) => bar[0]) ?? [];
 
+  React.useEffect(() => {
+    if (!selectedAsset && providerValue && selectedSymbol) {
+      dispatch(
+        setSelected({
+          symbol: selectedSymbol,
+          provider: providerValue as Provider,
+        }),
+      );
+    }
+  }, [dispatch, providerValue, selectedAsset, selectedSymbol]);
+
   useOrchestrator();
 
   return (
     <div className="min-h-screen bg-primary">
-      {!selectedAsset && !tickerQuery ? (
+      {!selectedAsset && !providerValue && !tickerQuery ? (
         <div className="flex flex-col items-center justify-center min-h-screen text-ink-muted">
           <p className="mb-6">Select an asset to view forecast details.</p>
           <button
@@ -205,7 +236,11 @@ export default function ForecastPage() {
                     <div className="flex-1">
                       <XAxis
                         className="text-[#8480C9] w-full"
-                        timestamps={historyTimestamps}
+                        timestamps={
+                          historyTimestamps.length > 0
+                            ? historyTimestamps
+                            : undefined
+                        }
                       />
                     </div>
                     <div className="w-[330px]" />

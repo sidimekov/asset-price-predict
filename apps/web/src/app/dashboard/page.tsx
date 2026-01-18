@@ -196,7 +196,21 @@ export default function Dashboard() {
         model: effectiveParams.model ?? null,
       }),
     );
-    router.push(`/forecast/${encodeURIComponent(selectedAsset.symbol)}`);
+    const searchParams = new URLSearchParams({
+      provider: selectedAsset.provider,
+    });
+
+    if (effectiveParams.tf) {
+      searchParams.set('tf', String(effectiveParams.tf));
+    }
+
+    if (effectiveParams.window) {
+      searchParams.set('window', String(effectiveParams.window));
+    }
+
+    router.push(
+      `/forecast/${encodeURIComponent(selectedAsset.symbol)}?${searchParams.toString()}`,
+    );
   };
 
   const handleRemoveAsset = (symbol: string, provider?: string) => {
@@ -280,7 +294,9 @@ export default function Dashboard() {
 
                 <XAxis
                   className="text-[#8480C9]"
-                  timestamps={historyTimestamps}
+                  timestamps={
+                    historyTimestamps.length > 0 ? historyTimestamps : undefined
+                  }
                 />
               </div>
             </div>
