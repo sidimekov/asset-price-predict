@@ -10,10 +10,30 @@ import { ForecastManager } from './ForecastManager';
 import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
-import type { MarketTimeframe } from '@/config/market';
-import { mapProviderToMarket } from './provider';
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_TIMEFRAME,
+  type MarketDataProvider,
+  type MarketTimeframe,
+} from '@/config/market';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
+
+function mapProviderToMarket(
+  provider: string,
+): MarketDataProvider | 'MOCK' | null {
+  switch (provider.toLowerCase()) {
+    case 'binance':
+      return 'BINANCE';
+    case 'moex':
+      return 'MOEX';
+    case 'mock':
+    case 'custom':
+      return 'MOCK';
+    default:
+      return null;
+  }
+}
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
@@ -22,11 +42,12 @@ export function useOrchestrator() {
   const selected = useAppSelector(selectSelectedAsset);
   const paramsFromStore = useAppSelector(selectForecastParams);
 
-  const params =
-    paramsFromStore ??
-    (process.env.NODE_ENV !== 'production'
-      ? { tf: '1h', window: 200, horizon: 24, model: null }
-      : undefined);
+  const params = paramsFromStore ?? {
+    tf: DEFAULT_TIMEFRAME,
+    window: DEFAULT_LIMIT,
+    horizon: 24,
+    model: null,
+  };
 
   const predictRequestId = useAppSelector(
     (s: RootState) => (s as any).forecast?.predict?.requestId ?? 0,
