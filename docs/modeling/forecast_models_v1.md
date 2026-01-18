@@ -30,6 +30,7 @@ Order is fixed and must match `apps/web/src/workers/ml-worker.ts`:
 
 - Keep `n=10` for v1 to avoid ML Worker changes.
 - If we switch to `p50`/`p10`/`p90` outputs later, ML Worker will need updates.
+- CatBoost ONNX export (MultiRMSE) failed at runtime (`n_targets_or_classes > 0`), so v1 client uses LGBM only. CatBoost stays for server inference until a stable ONNX path is found.
 
 ## Training scripts
 

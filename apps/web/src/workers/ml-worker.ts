@@ -1,7 +1,7 @@
 /* global self, MessageEvent, performance */
 
 import * as ort from 'onnxruntime-web';
-import { forecastMinimalConfig } from '@/config/ml';
+import { getModelConfig, type ForecastModelConfig } from '@/config/ml';
 
 export type TailPoint = [ts: number, close: number];
 
@@ -39,10 +39,9 @@ export type InferErrorMessage = {
 };
 
 const ctx: any = self;
-const MODEL = forecastMinimalConfig;
 const BAND = 0.01; // +/-1% confidence band from median
 
-let sessionPromise: Promise<ort.InferenceSession> | null = null;
+const sessionCache = new Map<string, Promise<ort.InferenceSession>>();
 
 function ema(values: number[], span: number): number {
   const alpha = 2 / (span + 1);
@@ -52,8 +51,11 @@ function ema(values: number[], span: number): number {
   );
 }
 
-function normalize(features: number[]): Float32Array {
-  const norm = MODEL.normalization;
+function normalize(
+  features: number[],
+  model: ForecastModelConfig,
+): Float32Array {
+  const norm = model.normalization;
   if (norm.type !== 'zscore') {
     return Float32Array.from(features);
   }
@@ -66,14 +68,19 @@ function normalize(features: number[]): Float32Array {
   );
 }
 
-function buildFeatures(tail: TailPoint[]): Float32Array {
-  if (tail.length < MODEL.featureWindow) {
+function buildFeatures(
+  tail: TailPoint[],
+  model: ForecastModelConfig,
+): Float32Array {
+  if (tail.length < model.featureWindow) {
     throw new Error(
-      `Tail too short: expected ${MODEL.featureWindow}, got ${tail.length}`,
+      `Tail too short: expected ${model.featureWindow}, got ${tail.length}`,
     );
   }
 
-  const closes = tail.slice(-MODEL.featureWindow).map(([, close]) => close);
+  const closes = tail
+    .slice(-model.featureWindow)
+    .map(([, close]) => close);
   const returns: number[] = [];
   for (let i = 1; i < closes.length; i++) {
     const prev = closes[i - 1];
@@ -109,7 +116,7 @@ function buildFeatures(tail: TailPoint[]): Float32Array {
     ) / lastReturns20.length;
   feats.push(Math.sqrt(varRet20));
 
-  return normalize(feats);
+  return normalize(feats, model);
 }
 
 function setOrtEnv() {
@@ -120,15 +127,17 @@ function setOrtEnv() {
     'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
 }
 
-async function getSession(modelPath: string): Promise<ort.InferenceSession> {
-  if (sessionPromise) return sessionPromise;
+async function getSession(
+  model: ForecastModelConfig,
+): Promise<ort.InferenceSession> {
+  const key = model.modelVer;
+  const cached = sessionCache.get(key);
+  if (cached) return cached;
 
   setOrtEnv();
-  const candidates = MODEL.quantPath
-    ? [MODEL.quantPath, MODEL.path]
-    : [MODEL.path];
+  const candidates = model.quantPath ? [model.quantPath, model.path] : [model.path];
 
-  sessionPromise = (async () => {
+  const promise = (async () => {
     let lastError: unknown;
     for (const candidate of candidates) {
       try {
@@ -142,18 +151,20 @@ async function getSession(modelPath: string): Promise<ort.InferenceSession> {
     throw lastError || new Error('Unable to load ONNX session');
   })();
 
-  return sessionPromise;
+  sessionCache.set(key, promise);
+  return promise;
 }
 
 async function runOnnx(
   tail: TailPoint[],
   horizon: number,
+  model: ForecastModelConfig,
 ): Promise<InferDoneMessage['payload']> {
-  const session = await getSession(MODEL.path);
+  const session = await getSession(model);
 
   const lastClose = tail[tail.length - 1][1];
-  const features = buildFeatures(tail);
-  const input = new ort.Tensor('float32', features, MODEL.inputShape);
+  const features = buildFeatures(tail, model);
+  const input = new ort.Tensor('float32', features, model.inputShape);
 
   const t0 = performance.now();
   const output = await session.run({ input });
@@ -172,7 +183,7 @@ async function runOnnx(
     diag: {
       runtime_ms: t1 - t0,
       backend: 'onnx-wasm',
-      model_ver: MODEL.modelVer,
+      model_ver: model.modelVer,
     },
   };
 }
@@ -180,6 +191,7 @@ async function runOnnx(
 function runFallback(
   tail: TailPoint[],
   horizon: number,
+  model: ForecastModelConfig,
 ): InferDoneMessage['payload'] {
   const lastClose = tail[tail.length - 1][1];
   const p50: number[] = [];
@@ -199,7 +211,7 @@ function runFallback(
     diag: {
       runtime_ms: 0,
       backend: 'mock',
-      model_ver: MODEL.modelVer,
+      model_ver: model.modelVer,
     },
   };
 }
@@ -227,7 +239,8 @@ ctx.onmessage = async (event: MessageEvent<InferRequest>) => {
       return;
     }
 
-    if (model && model !== MODEL.modelVer) {
+    const modelConfig = getModelConfig(model);
+    if (model && modelConfig.modelVer !== model) {
       ctx.postMessage({
         id,
         type: 'error',
@@ -238,10 +251,10 @@ ctx.onmessage = async (event: MessageEvent<InferRequest>) => {
 
     let result: InferDoneMessage['payload'];
     try {
-      result = await runOnnx(tail, horizon);
+      result = await runOnnx(tail, horizon, modelConfig);
     } catch (err) {
       console.error('[ml-worker] ONNX inference failed, fallback to mock', err);
-      result = runFallback(tail, horizon);
+      result = runFallback(tail, horizon, modelConfig);
     }
 
     const msg: InferDoneMessage = {

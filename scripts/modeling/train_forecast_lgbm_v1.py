@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import List
 
@@ -12,6 +13,11 @@ from sklearn.multioutput import MultiOutputRegressor
 from joblib import dump
 
 from feature_dataset import FEATURE_COLUMNS, load_split, zscore_apply, zscore_stats
+
+ROOT = Path(__file__).resolve().parents[2]
+MPL_DIR = ROOT / ".mplconfig"
+MPL_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
 
 
 def _parse_dirs(value: str) -> List[Path]:
@@ -67,7 +73,7 @@ def main() -> None:
         objective="regression",
         random_state=args.random_state,
     )
-    model = MultiOutputRegressor(base, n_jobs=-1)
+    model = MultiOutputRegressor(base, n_jobs=1)
     model.fit(X_train, train.y)
 
     val_pred = model.predict(X_val)

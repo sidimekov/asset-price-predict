@@ -1,0 +1,60 @@
+{
+  "modelName": "forecast_lgbm_v1",
+  "modelVer": "lgbm-0-1-0",
+  "path": "/models/forecast_lgbm_v1.onnx",
+  "quantPath": "/models/forecast_lgbm_v1.quant.onnx",
+  "onnxSha256": "093a35ed7c0e7d4902c8e4f886162c03516ab85ffd5620247df50363ee0f7416",
+  "quantSha256": "0682335df63d9f838073b13efc06c976215a142c7255a78533bfa93d4a6da9bf",
+  "inputShape": [1, 10],
+  "horizonSteps": 24,
+  "featureWindow": 64,
+  "tailSize": 128,
+  "normalization": {
+    "type": "zscore",
+    "mean": [
+      8320.4013671875,
+      8320.03125,
+      8318.3857421875,
+      95.19403839111328,
+      0.42469319701194763,
+      1.5103819370269775,
+      8320.1064453125,
+      8319.642578125,
+      0.00011972610809607431,
+      0.007521859835833311
+    ],
+    "std": [
+      14593.4619140625,
+      14592.9140625,
+      14590.9638671875,
+      219.14361572265625,
+      188.08030700683594,
+      344.7851867675781,
+      14592.939453125,
+      14592.2041015625,
+      0.004049153532832861,
+      0.005128764547407627
+    ],
+    "epsilon": 1e-6
+  },
+  "features": [
+    { "name": "last_close" },
+    { "name": "mean_5" },
+    { "name": "mean_20" },
+    { "name": "std_20" },
+    { "name": "momentum_3" },
+    { "name": "momentum_8" },
+    { "name": "ema_5" },
+    { "name": "ema_10" },
+    { "name": "ret_mean_5" },
+    { "name": "ret_std_20" }
+  ],
+  "outputs": ["delta"],
+  "postprocess": "last_close_plus_delta",
+  "rtol": 0.001,
+  "atol": 0.0001,
+  "val_metrics": {
+    "mae_delta": 141.66734997629737,
+    "mape_price": 0.011698776407672716
+  }
+}

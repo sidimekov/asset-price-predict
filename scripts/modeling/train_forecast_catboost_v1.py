@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import List
 
@@ -10,6 +11,11 @@ from catboost import CatBoostRegressor
 from sklearn.metrics import mean_absolute_error
 
 from feature_dataset import FEATURE_COLUMNS, load_split, zscore_apply, zscore_stats
+
+ROOT = Path(__file__).resolve().parents[2]
+MPL_DIR = ROOT / ".mplconfig"
+MPL_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
 
 
 def _parse_dirs(value: str) -> List[Path]:

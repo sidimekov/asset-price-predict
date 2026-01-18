@@ -26,39 +26,49 @@ function ensureFile(relPath, expectedHash) {
 }
 
 function main() {
-  const manifestPath = path.join(
-    rootDir,
-    'apps/web/src/config/ml.manifest.json',
-  );
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  const manifests = [
+    {
+      manifest: 'apps/web/src/config/ml.manifest.json',
+      testVectors: 'docs/modeling/test_vectors.json',
+    },
+    {
+      manifest: 'apps/web/src/config/ml.lgbm_v1.json',
+      testVectors: 'docs/modeling/test_vectors_lgbm.json',
+    },
+  ];
 
-  const modelPath = path.join(
-    'apps/web/public',
-    manifest.path.replace(/^\//, ''),
-  );
-  ensureFile(modelPath, manifest.onnxSha256);
+  for (const entry of manifests) {
+    const manifestPath = path.join(rootDir, entry.manifest);
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
-  if (manifest.quantPath) {
-    const quantPath = path.join(
+    const modelPath = path.join(
       'apps/web/public',
-      manifest.quantPath.replace(/^\//, ''),
+      manifest.path.replace(/^\//, ''),
     );
-    ensureFile(quantPath, manifest.quantSha256);
-  }
+    ensureFile(modelPath, manifest.onnxSha256);
 
-  const tvPath = 'docs/modeling/test_vectors.json';
-  const tvFull = path.join(rootDir, tvPath);
-  if (!existsSync(tvFull)) {
-    throw new Error(`Missing test vectors: ${tvPath}`);
-  }
-  const tv = JSON.parse(readFileSync(tvFull, 'utf8'));
-  if (!tv?.cases?.length) {
-    throw new Error('test_vectors.json has no cases');
-  }
+    if (manifest.quantPath) {
+      const quantPath = path.join(
+        'apps/web/public',
+        manifest.quantPath.replace(/^\//, ''),
+      );
+      ensureFile(quantPath, manifest.quantSha256);
+    }
 
-  console.log(
-    `Model artifacts OK (modelVer=${manifest.modelVer}, cases=${tv.cases.length})`,
-  );
+    const tvPath = entry.testVectors;
+    const tvFull = path.join(rootDir, tvPath);
+    if (!existsSync(tvFull)) {
+      throw new Error(`Missing test vectors: ${tvPath}`);
+    }
+    const tv = JSON.parse(readFileSync(tvFull, 'utf8'));
+    if (!tv?.cases?.length) {
+      throw new Error(`${path.basename(tvPath)} has no cases`);
+    }
+
+    console.log(
+      `Model artifacts OK (modelVer=${manifest.modelVer}, cases=${tv.cases.length})`,
+    );
+  }
 }
 
 main();
