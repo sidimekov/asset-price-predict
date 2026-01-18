@@ -9,6 +9,9 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { normalizeHttpError } from './errors';
 import type { HttpError } from './types';
 
+const backendBaseUrl =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, '') || '/api';
+
 const rawBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -16,7 +19,7 @@ const rawBaseQuery: BaseQueryFn<
   {},
   FetchBaseQueryMeta
 > = fetchBaseQuery({
-  baseUrl: '/api',
+  baseUrl: backendBaseUrl,
   timeout: 10_000,
   prepareHeaders: (headers) => {
     const token =
