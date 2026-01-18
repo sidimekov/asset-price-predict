@@ -498,7 +498,7 @@ export async function searchAssets(
   const rawQuery = mode === 'search' ? request.query.trim() : undefined;
   const resolvedMode = mode === 'search' && !rawQuery ? 'listAll' : mode;
   const query = resolvedMode === 'search' ? rawQuery : undefined;
-  const limit = resolvedMode === 'listAll' ? request.limit : undefined;
+  const limit = request.mode === 'listAll' ? request.limit : undefined;
 
   if (process.env.NODE_ENV === 'development') {
     console.debug('[catalog] searchAssets:start', {
