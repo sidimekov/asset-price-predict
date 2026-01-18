@@ -12,7 +12,7 @@ import type { HttpError } from './types';
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
 export const createBaseQuery = (
-  baseUrl: string,
+    baseUrl: string,
 ): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> => {
   const relativeQuery = fetchBaseQuery({ baseUrl });
   const absoluteQuery = fetchBaseQuery({ baseUrl: '' });
@@ -27,19 +27,19 @@ export const createBaseQuery = (
 };
 
 const rawBaseQuery: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  FetchBaseQueryError,
-  {},
-  FetchBaseQueryMeta
+    string | FetchArgs,
+    unknown,
+    FetchBaseQueryError,
+    {},
+    FetchBaseQueryMeta
 > = fetchBaseQuery({
   baseUrl: '/api',
   timeout: 10_000,
   prepareHeaders: (headers) => {
     const token =
-      typeof localStorage === 'undefined'
-        ? null
-        : localStorage.getItem('auth.token');
+        typeof localStorage === 'undefined'
+            ? null
+            : localStorage.getItem('auth.token');
 
     if (token) {
       headers.set('authorization', `Bearer ${token}`);
@@ -65,24 +65,24 @@ const getRequestInfo = (args: string | FetchArgs) => {
 };
 
 export const baseQuery: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  HttpError,
-  {},
-  FetchBaseQueryMeta
+    string | FetchArgs,
+    unknown,
+    HttpError,
+    {},
+    FetchBaseQueryMeta
 > = async (args, api, extraOptions) => {
   const result: QueryReturnValue<
-    unknown,
-    FetchBaseQueryError,
-    FetchBaseQueryMeta
+      unknown,
+      FetchBaseQueryError,
+      FetchBaseQueryMeta
   > = await rawBaseQuery(args, api, extraOptions);
 
   if (process.env.NODE_ENV === 'development') {
     const { method, url } = getRequestInfo(args);
     const status =
-      'error' in result && result.error
-        ? result.error.status
-        : result.meta?.response?.status;
+        'error' in result && result.error
+            ? result.error.status
+            : result.meta?.response?.status;
 
     // eslint-disable-next-line no-console
     console.debug('[Networking]', method, url, status ?? 'no-status');

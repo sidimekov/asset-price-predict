@@ -4,8 +4,12 @@ import RootLayout from '@/app/layout';
 
 // Мокаем next/navigation
 const mockUsePathname = vi.fn();
+const mockReplace = vi.fn();
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
+  useRouter: () => ({
+    replace: mockReplace,
+  }),
 }));
 
 // Мокаем компоненты
@@ -25,6 +29,21 @@ vi.mock('@/app/providers/StoreProvider', () => ({
   ),
 }));
 
+vi.mock('@/shared/api/account.api', () => ({
+  useGetMeQuery: () => ({
+    data: {
+      id: '1',
+      username: 'User',
+      email: 'user@example.com',
+    },
+    error: undefined,
+  }),
+}));
+
+vi.mock('@/shared/store/hooks', () => ({
+  useAppDispatch: () => vi.fn(),
+}));
+
 // Мокаем lucide-react
 vi.mock('lucide-react', () => ({
   Menu: () => <svg data-testid="menu-icon">Menu Icon</svg>,
@@ -40,6 +59,8 @@ describe('RootLayout', () => {
     vi.useFakeTimers();
     // Устанавливаем дефолтное значение
     mockUsePathname.mockReturnValue('/dashboard');
+    localStorage.clear();
+    localStorage.setItem('auth.token', 'test-token');
   });
 
   afterEach(() => {
@@ -85,6 +106,7 @@ describe('RootLayout', () => {
   it('renders children directly for public pages', () => {
     // Мокаем публичную страницу
     mockUsePathname.mockReturnValue('/auth');
+    localStorage.clear();
 
     render(
       <RootLayout>
@@ -108,6 +130,7 @@ describe('RootLayout', () => {
   it('renders children directly for home page', () => {
     // Мокаем домашнюю страницу
     mockUsePathname.mockReturnValue('/');
+    localStorage.clear();
 
     render(
       <RootLayout>
@@ -161,6 +184,7 @@ describe('RootLayout', () => {
 
     publicPaths.forEach((path) => {
       mockUsePathname.mockReturnValue(path);
+      localStorage.clear();
 
       const { unmount } = render(
         <RootLayout>
@@ -184,6 +208,7 @@ describe('RootLayout', () => {
 
     privatePaths.forEach((path) => {
       mockUsePathname.mockReturnValue(path);
+      localStorage.setItem('auth.token', 'test-token');
 
       const { unmount } = render(
         <RootLayout>
