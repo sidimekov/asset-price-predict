@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
+import type { Bar } from '@shared/types/market';
 
 type CandlesChartProps = {
-  bars: number[][];
+  bars: Bar[];
   className?: string;
 };
 
@@ -21,7 +22,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function toCandles(bars: number[][]): Candle[] {
+function toCandles(bars: Bar[]): Candle[] {
   return bars
     .map((bar) => {
       const open = bar?.[1];
