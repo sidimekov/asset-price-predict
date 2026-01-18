@@ -7,6 +7,7 @@ interface InputProps {
   error?: string;
   type?: string;
   ariaDescribedby: string;
+  required?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -16,6 +17,7 @@ export const Input: React.FC<InputProps> = ({
   error,
   type = 'text',
   ariaDescribedby,
+  required = true,
 }) => {
   return (
     <div>
@@ -31,7 +33,7 @@ export const Input: React.FC<InputProps> = ({
         className="input"
         aria-describedby={error ? `${ariaDescribedby}-error` : undefined}
         aria-invalid={!!error}
-        required
+        required={required}
       />
       {error && (
         <span id={`${ariaDescribedby}-error`} className="error-text">

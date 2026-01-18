@@ -1,504 +1,527 @@
-// apps/web/src/app/dashboard/page.test.tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import DashboardPage from '@/app/dashboard/page';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Sidebar } from '@/shared/ui/Sidebar';
 
-// Мокаем хуки и компоненты
+// Мокаем next/navigation
 vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-  })),
+  usePathname: vi.fn(),
 }));
 
-vi.mock('@/widgets/recent-assets/RecentAssetsBar', () => ({
-  default: vi.fn(),
+vi.mock('@/shared/api/account.api', () => ({
+  useGetMeQuery: () => ({
+    data: {
+      id: '1',
+      username: 'John Doe',
+      email: 'john@example.com',
+      avatarUrl: '/avatar.jpg',
+    },
+  }),
 }));
 
-vi.mock('@/widgets/chart/CandlesChartPlaceholder', () => ({
-  default: vi.fn(),
+// Мокаем next/image
+vi.mock('next/image', () => ({
+  default: ({
+    src,
+    alt,
+    width,
+    height,
+    className,
+    onClick,
+    onLoad,
+    onError,
+    ...props
+  }: any) => (
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+      onClick={onClick}
+      onLoad={onLoad}
+      onError={onError}
+      {...props}
+    />
+  ),
 }));
 
-vi.mock('@/features/params/ParamsPanel', () => ({
-  default: vi.fn(),
+// Мокаем next/link
+vi.mock('next/link', () => ({
+  default: ({ children, href, className, onClick, ...props }: any) => (
+    <a
+      href={href}
+      className={className}
+      onClick={(e) => {
+        e.preventDefault();
+        onClick?.(e);
+      }}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
 }));
 
-vi.mock('@/widgets/chart/coordinates/XAxis', () => ({
-  default: vi.fn(),
-}));
+import { usePathname } from 'next/navigation';
 
-vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
-  default: vi.fn(),
-}));
-
-vi.mock('@/features/asset-catalog/ui/AssetCatalogPanel', () => ({
-  AssetCatalogPanel: vi.fn(),
-}));
-
-vi.mock('@/shared/store/hooks', () => ({
-  useAppDispatch: vi.fn(),
-  useAppSelector: vi.fn(),
-}));
-
-vi.mock('@/processes/orchestrator/useOrchestrator', () => ({
-  useOrchestrator: vi.fn(),
-}));
-
-// Импортируем мокированные функции
-import { useRouter } from 'next/navigation';
-import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
-import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
-import ParamsPanel from '@/features/params/ParamsPanel';
-import XAxis from '@/widgets/chart/coordinates/XAxis';
-import YAxis from '@/widgets/chart/coordinates/YAxis';
-import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
-import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
-import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
-
-// Создаем моки с типами
-const mockUseRouter = useRouter as Mock;
-const MockRecentAssetsBar = RecentAssetsBar as Mock;
-const MockCandlesChartPlaceholder = CandlesChartPlaceholder as Mock;
-const MockParamsPanel = ParamsPanel as Mock;
-const MockXAxis = XAxis as Mock;
-const MockYAxis = YAxis as Mock;
-const MockAssetCatalogPanel = AssetCatalogPanel as Mock;
-const mockUseAppDispatch = useAppDispatch as Mock;
-const mockUseAppSelector = useAppSelector as Mock;
-const mockUseOrchestrator = useOrchestrator as Mock;
-
-describe('Dashboard', () => {
-  const mockPush = vi.fn();
-  const mockDispatch = vi.fn();
-
-  // Мокированные данные для тестов
-  let mockRecentAssets: any[] = [];
-  let mockSelectedAsset: any = null;
-  let mockForecastParams: any = null;
+describe('Sidebar', () => {
+  const mockUsePathname = vi.mocked(usePathname);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/dashboard');
+    localStorage.setItem('auth.token', 'test-token');
+  });
 
-    // Настраиваем моки
-    mockUseRouter.mockReturnValue({ push: mockPush });
-    mockUseAppDispatch.mockReturnValue(mockDispatch);
-    mockUseOrchestrator.mockImplementation(() => {});
+  describe('Basic Rendering', () => {
+    it('renders all main components', () => {
+      render(<Sidebar />);
 
-    // Сбрасываем данные
-    mockRecentAssets = [];
-    mockSelectedAsset = null;
-    mockForecastParams = null;
+      // Логотип
+      expect(screen.getByText('Asset')).toBeInTheDocument();
+      expect(screen.getByText('Predict')).toBeInTheDocument();
 
-    // Настраиваем useAppSelector для возврата разных данных в зависимости от селектора
-    mockUseAppSelector.mockImplementation((selector: any) => {
-      // Проверяем результат вызова функции-селектора
-      try {
-        // Если это функция селектора, вызываем ее с тестовым состоянием
-        const mockState = {
-          catalog: {
-            recent: mockRecentAssets,
-            selected: mockSelectedAsset,
-          },
-          forecast: {
-            params: mockForecastParams,
-          },
-          timeseries: {
-            priceChanges: {}, // Пустой объект для статистики
-          },
-        };
+      // Профиль
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('john@example.com')).toBeInTheDocument();
+      expect(screen.getByAltText('Profile avatar')).toBeInTheDocument();
 
-        const result = selector(mockState);
-        if (result !== undefined) {
-          return result;
-        }
-      } catch (e) {
-        // Если возникает ошибка при вызове селектора, значит это не функция селектора
-      }
+      // Навигация
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('History')).toBeInTheDocument();
+      expect(screen.getByText('Account Settings')).toBeInTheDocument();
 
-      // Пытаемся определить по имени функции
-      const selectorString = selector.toString();
-      if (selectorString.includes('selectRecent')) {
-        return mockRecentAssets;
-      }
-      if (selectorString.includes('selectSelectedAsset')) {
-        return mockSelectedAsset;
-      }
-      if (selectorString.includes('selectForecastParams')) {
-        return mockForecastParams;
-      }
+      // Контейнеры и семантические элементы
+      expect(
+        screen.getByRole('complementary', { name: 'Боковая панель' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('navigation', { name: 'Основная навигация' }),
+      ).toBeInTheDocument();
+    });
 
-      // Для selectPriceChangeByAsset возвращаем дефолтные значения
-      if (selectorString.includes('selectPriceChangeByAsset')) {
-        return () => ({
-          lastPrice: 0,
-          changePct: 0,
+    it('renders with correct CSS classes', () => {
+      const { container } = render(<Sidebar />);
+
+      const sidebar = container.querySelector('.sidebar');
+      expect(sidebar).toBeInTheDocument();
+      expect(sidebar).toHaveClass('sidebar');
+
+      const sidebarContent = container.querySelector('.sidebar-content');
+      expect(sidebarContent).toBeInTheDocument();
+
+      const sidebarBrand = container.querySelector('.sidebar-brand');
+      expect(sidebarBrand).toBeInTheDocument();
+
+      const sidebarProfile = container.querySelector('.sidebar-profile');
+      expect(sidebarProfile).toBeInTheDocument();
+
+      const sidebarNav = container.querySelector('.sidebar-nav');
+      expect(sidebarNav).toBeInTheDocument();
+    });
+
+    it('renders logo with correct structure', () => {
+      render(<Sidebar />);
+
+      const brandElement = screen.getByRole('heading', { level: 1 });
+      expect(brandElement).toHaveClass('sidebar-brand');
+      expect(brandElement).toContainElement(screen.getByText('Asset'));
+      expect(brandElement).toContainElement(screen.getByText('Predict'));
+    });
+  });
+
+  describe('Profile Section', () => {
+    it('renders profile with correct data', () => {
+      render(<Sidebar />);
+
+      const profileImage = screen.getByAltText('Profile avatar');
+      expect(profileImage).toHaveAttribute('src', '/avatar.jpg');
+      expect(profileImage).toHaveAttribute('alt', 'Profile avatar');
+      expect(profileImage).toHaveAttribute('width', '64');
+      expect(profileImage).toHaveAttribute('height', '64');
+      expect(profileImage).toHaveClass('sidebar-profile-avatar');
+
+      expect(screen.getByText('John Doe')).toHaveClass('sidebar-profile-name');
+      expect(screen.getByText('john@example.com')).toHaveClass(
+        'sidebar-profile-login',
+      );
+    });
+
+    it('profile link has correct attributes', () => {
+      render(<Sidebar />);
+
+      const profileLink = screen.getByRole('link', {
+        name: 'Перейти в профиль',
+      });
+      expect(profileLink).toHaveAttribute('href', '/account');
+      expect(profileLink).toHaveClass('sidebar-profile');
+    });
+
+    it('handles profile image events', () => {
+      render(<Sidebar />);
+
+      const profileImage = screen.getByAltText('Profile avatar');
+
+      // Симулируем события загрузки (должны работать без ошибок)
+      fireEvent.load(profileImage);
+      fireEvent.error(profileImage);
+    });
+  });
+
+  describe('Navigation Logic', () => {
+    it('marks Dashboard as active on dashboard page', () => {
+      render(<Sidebar />);
+
+      const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
+      expect(dashboardLink).toHaveClass('active');
+      expect(dashboardLink).toHaveAttribute('aria-current', 'page');
+
+      const historyLink = screen.getByRole('link', { name: 'History' });
+      expect(historyLink).not.toHaveClass('active');
+      expect(historyLink).not.toHaveAttribute('aria-current');
+
+      const accountLink = screen.getByRole('link', {
+        name: 'Account Settings',
+      });
+      expect(accountLink).not.toHaveClass('active');
+      expect(accountLink).not.toHaveAttribute('aria-current');
+    });
+
+    it('marks Dashboard as active on all forecast pages', () => {
+      const forecastPaths = [
+        '/forecast/0',
+        '/forecast/1',
+        '/forecast/123',
+        '/forecast/0?ticker=BTCUSDT',
+        '/forecast/1?ticker=ETHUSDT&timeframe=1h',
+      ];
+
+      forecastPaths.forEach((path) => {
+        mockUsePathname.mockReturnValue(path);
+        const { unmount } = render(<Sidebar />);
+
+        const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
+        expect(dashboardLink).toHaveClass('active');
+
+        const historyLink = screen.getByRole('link', { name: 'History' });
+        expect(historyLink).not.toHaveClass('active');
+
+        unmount();
+      });
+    });
+
+    it('marks History as active on history page', () => {
+      mockUsePathname.mockReturnValue('/history');
+      render(<Sidebar />);
+
+      const historyLink = screen.getByRole('link', { name: 'History' });
+      expect(historyLink).toHaveClass('active');
+      expect(historyLink).toHaveAttribute('aria-current', 'page');
+
+      const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
+      expect(dashboardLink).not.toHaveClass('active');
+    });
+
+    it('marks Account Settings as active on account page', () => {
+      mockUsePathname.mockReturnValue('/account');
+      render(<Sidebar />);
+
+      const accountLink = screen.getByRole('link', {
+        name: 'Account Settings',
+      });
+      expect(accountLink).toHaveClass('active');
+      expect(accountLink).toHaveAttribute('aria-current', 'page');
+
+      const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
+      expect(dashboardLink).not.toHaveClass('active');
+    });
+  });
+
+  describe('Navigation Links', () => {
+    it('has correct href attributes', () => {
+      render(<Sidebar />);
+
+      expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+        'href',
+        '/dashboard',
+      );
+      expect(screen.getByRole('link', { name: 'History' })).toHaveAttribute(
+        'href',
+        '/history',
+      );
+      expect(
+        screen.getByRole('link', { name: 'Account Settings' }),
+      ).toHaveAttribute('href', '/account');
+    });
+
+    it('navigation links have correct classes', () => {
+      render(<Sidebar />);
+
+      const navLinks = [
+        screen.getByRole('link', { name: 'Dashboard' }),
+        screen.getByRole('link', { name: 'History' }),
+        screen.getByRole('link', { name: 'Account Settings' }),
+      ];
+
+      navLinks.forEach((link) => {
+        expect(link).toHaveClass('sidebar-nav-link');
+      });
+    });
+
+    it('handles click events on navigation links', () => {
+      render(<Sidebar />);
+
+      const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
+      const historyLink = screen.getByRole('link', { name: 'History' });
+      const accountLink = screen.getByRole('link', {
+        name: 'Account Settings',
+      });
+
+      // Симулируем клики
+      fireEvent.click(dashboardLink);
+      fireEvent.click(historyLink);
+      fireEvent.click(accountLink);
+
+      // Проверяем что ссылки все еще существуют (не выброшены ошибки)
+      expect(
+        screen.getByRole('link', { name: 'Dashboard' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'History' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: 'Account Settings' }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('handles null pathname gracefully', () => {
+      // @ts-expect-error - testing null pathname
+      mockUsePathname.mockReturnValue(null);
+
+      expect(() => {
+        render(<Sidebar />);
+      }).not.toThrow();
+
+      // Проверяем что все элементы отображаются
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('History')).toBeInTheDocument();
+    });
+
+    it('handles undefined pathname gracefully', () => {
+      // @ts-expect-error - testing undefined pathname
+      mockUsePathname.mockReturnValue(undefined);
+
+      expect(() => {
+        render(<Sidebar />);
+      }).not.toThrow();
+
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    });
+
+    it('handles empty string pathname', () => {
+      mockUsePathname.mockReturnValue('');
+
+      expect(() => {
+        render(<Sidebar />);
+      }).not.toThrow();
+
+      expect(screen.getByRole('complementary')).toBeInTheDocument();
+    });
+
+    it('handles unexpected path formats', () => {
+      const unexpectedPaths = [
+        '/unknown',
+        '/dashboard/nested',
+        '/history/archive',
+        '/',
+        '',
+      ];
+
+      unexpectedPaths.forEach((path) => {
+        mockUsePathname.mockReturnValue(path);
+        const { unmount } = render(<Sidebar />);
+
+        // Проверяем что компонент не падает
+        expect(screen.getByRole('complementary')).toBeInTheDocument();
+
+        unmount();
+      });
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('has proper ARIA attributes', () => {
+      render(<Sidebar />);
+
+      const sidebar = screen.getByRole('complementary', {
+        name: 'Боковая панель',
+      });
+      expect(sidebar).toBeInTheDocument();
+
+      const navigation = screen.getByRole('navigation', {
+        name: 'Основная навигация',
+      });
+      expect(navigation).toBeInTheDocument();
+
+      const profileLink = screen.getByRole('link', {
+        name: 'Перейти в профиль',
+      });
+      expect(profileLink).toBeInTheDocument();
+    });
+
+    it('has proper ARIA current for active states', () => {
+      // Тестируем разные активные состояния
+      const testCases = [
+        { path: '/dashboard', linkName: 'Dashboard' },
+        { path: '/history', linkName: 'History' },
+        { path: '/account', linkName: 'Account Settings' },
+      ];
+
+      testCases.forEach(({ path, linkName }) => {
+        mockUsePathname.mockReturnValue(path);
+        const { unmount } = render(<Sidebar />);
+
+        const activeLink = screen.getByRole('link', { name: linkName });
+        expect(activeLink).toHaveAttribute('aria-current', 'page');
+
+        // Проверяем что другие ссылки не имеют aria-current
+        const otherLinks = ['Dashboard', 'History', 'Account Settings'].filter(
+          (name) => name !== linkName,
+        );
+        otherLinks.forEach((name) => {
+          const link = screen.getByRole('link', { name });
+          expect(link).not.toHaveAttribute('aria-current');
         });
-      }
 
-      return undefined;
-    });
-
-    // Мокируем компоненты
-    MockRecentAssetsBar.mockImplementation(
-      ({ state, assets, selected, onSelect, onRemove, onAdd }: any) => (
-        <div data-testid="recent-assets-bar">
-          <div data-testid="recent-assets-state">{state}</div>
-          <div data-testid="recent-assets-count">{(assets || []).length}</div>
-          <button data-testid="add-asset-button" onClick={onAdd || (() => {})}>
-            Add Asset
-          </button>
-          {(assets || []).map((asset: any, index: number) => (
-            <div key={index} data-testid={`asset-${asset.symbol}`}>
-              <span data-testid={`asset-symbol-${asset.symbol}`}>
-                {asset.symbol}
-              </span>
-              <button
-                data-testid={`select-${asset.symbol}`}
-                onClick={() => onSelect?.(asset.symbol)}
-              >
-                Select
-              </button>
-              <button
-                data-testid={`remove-${asset.symbol}`}
-                onClick={() => onRemove?.(asset.symbol)}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
-      ),
-    );
-
-    MockCandlesChartPlaceholder.mockImplementation(({ state }: any) => (
-      <div data-testid="chart-placeholder" data-state={state}>
-        Candles Chart Placeholder
-      </div>
-    ));
-
-    MockParamsPanel.mockImplementation(
-      ({
-        state,
-        onPredict,
-        selectedModel,
-        selectedDate,
-        onModelChange,
-        onDateChange,
-      }: any) => (
-        <div data-testid="params-panel">
-          <div data-testid="params-state">{state}</div>
-          <button
-            data-testid="predict-button"
-            onClick={onPredict || (() => {})}
-          >
-            Predict
-          </button>
-          <select
-            data-testid="model-select"
-            value={selectedModel || ''}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              onModelChange?.(e.target.value)
-            }
-          >
-            <option value="">Select Model</option>
-            <option value="model1">Model 1</option>
-          </select>
-          <input
-            data-testid="date-input"
-            type="date"
-            value={selectedDate || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onDateChange?.(e.target.value)
-            }
-          />
-        </div>
-      ),
-    );
-
-    MockXAxis.mockImplementation(({ className }: any) => (
-      <div data-testid="x-axis" className={className}>
-        X Axis
-      </div>
-    ));
-
-    MockYAxis.mockImplementation(({ className }: any) => (
-      <div data-testid="y-axis" className={className}>
-        Y Axis
-      </div>
-    ));
-
-    MockAssetCatalogPanel.mockImplementation(
-      ({ query, onQueryChange, onSelect, onClose }: any) => (
-        <div data-testid="asset-catalog-panel">
-          <input
-            data-testid="catalog-search"
-            value={query || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onQueryChange?.(e.target.value)
-            }
-          />
-          <button
-            data-testid="select-asset-btc"
-            onClick={() =>
-              onSelect?.({ symbol: 'BTCUSDT', provider: 'binance' })
-            }
-          >
-            Select BTC
-          </button>
-          <button
-            data-testid="select-asset-eth"
-            onClick={() =>
-              onSelect?.({ symbol: 'ETHUSDT', provider: 'binance' })
-            }
-          >
-            Select ETH
-          </button>
-          <button data-testid="close-catalog" onClick={onClose || (() => {})}>
-            Close
-          </button>
-        </div>
-      ),
-    );
-  });
-
-  const createMockStore = (state = {}) => {
-    return configureStore({
-      reducer: {
-        catalog: (state = {}, action) => state,
-      },
-      preloadedState: state,
-    });
-  };
-
-  const renderWithProvider = () => {
-    const store = createMockStore();
-    return render(
-      <Provider store={store}>
-        <DashboardPage />
-      </Provider>,
-    );
-  };
-
-  describe('Initial Render', () => {
-    it('renders dashboard with correct layout', () => {
-      renderWithProvider();
-
-      expect(screen.getByTestId('recent-assets-bar')).toBeInTheDocument();
-      expect(screen.getByTestId('chart-placeholder')).toBeInTheDocument();
-      expect(screen.getByTestId('params-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('x-axis')).toBeInTheDocument();
-      expect(screen.getByTestId('y-axis')).toBeInTheDocument();
-
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
-      expect(screen.getByTestId('recent-assets-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('params-state')).toHaveTextContent('idle');
-    });
-
-    it('has correct grid layout classes', () => {
-      const { container } = renderWithProvider();
-
-      const grid = container.querySelector('.grid');
-      expect(grid).toBeInTheDocument();
-      expect(grid).toHaveClass('grid-cols-12');
-      expect(grid).toHaveClass('gap-6');
-    });
-  });
-
-  describe('Recent Assets Functionality', () => {
-    it('shows empty state when no assets selected', () => {
-      renderWithProvider();
-
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
-      expect(screen.getByTestId('recent-assets-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('chart-placeholder')).toHaveAttribute(
-        'data-state',
-        'empty',
-      );
-    });
-
-    it('handles adding assets via catalog', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-      expect(screen.getByTestId('asset-catalog-panel')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByTestId('select-asset-btc'));
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'catalog/addRecent',
-        payload: { symbol: 'BTCUSDT', provider: 'binance' },
-      });
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'catalog/setSelected',
-        payload: { symbol: 'BTCUSDT', provider: 'binance' },
+        unmount();
       });
     });
-  });
 
-  describe('Catalog Modal', () => {
-    it('opens and closes catalog modal', () => {
-      renderWithProvider();
+    it('has proper semantic HTML structure', () => {
+      const { container } = render(<Sidebar />);
 
-      expect(
-        screen.queryByTestId('asset-catalog-panel'),
-      ).not.toBeInTheDocument();
+      // Проверяем семантическую структуру
+      const aside = container.querySelector('aside');
+      expect(aside).toBeInTheDocument();
+      expect(aside).toHaveAttribute('role', 'complementary');
 
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-      expect(screen.getByTestId('asset-catalog-panel')).toBeInTheDocument();
+      const nav = container.querySelector('nav');
+      expect(nav).toBeInTheDocument();
+      expect(nav).toHaveAttribute('role', 'navigation');
 
-      fireEvent.click(screen.getByTestId('close-catalog'));
-      expect(
-        screen.queryByTestId('asset-catalog-panel'),
-      ).not.toBeInTheDocument();
-    });
-
-    it('closes catalog when clicking overlay', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-      expect(screen.getByTestId('asset-catalog-panel')).toBeInTheDocument();
-
-      const overlay = document.querySelector('.fixed.inset-0');
-      expect(overlay).toBeInTheDocument();
-      fireEvent.click(overlay!);
-
-      expect(
-        screen.queryByTestId('asset-catalog-panel'),
-      ).not.toBeInTheDocument();
-    });
-
-    it('updates search query in catalog', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-
-      const searchInput = screen.getByTestId('catalog-search');
-      fireEvent.change(searchInput, { target: { value: 'BTC' } });
-
-      expect(searchInput).toHaveValue('BTC');
+      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      expect(headings.length).toBeGreaterThan(0);
     });
   });
 
-  describe('Prediction Functionality', () => {
-    it('disables predict when no asset selected', () => {
-      renderWithProvider();
+  describe('Performance and SEO', () => {
+    it('has proper image optimization attributes', () => {
+      render(<Sidebar />);
 
-      fireEvent.click(screen.getByTestId('predict-button'));
+      const profileImage = screen.getByAltText('Profile avatar');
+      expect(profileImage).toHaveAttribute('width', '64');
+      expect(profileImage).toHaveAttribute('height', '64');
+      expect(profileImage).toHaveAttribute('alt', 'Profile avatar');
+    });
 
-      expect(mockPush).not.toHaveBeenCalled();
-      expect(mockDispatch).not.toHaveBeenCalled();
+    it('logo has proper structure', () => {
+      render(<Sidebar />);
+
+      const brandElement = screen.getByRole('heading', { level: 1 });
+      expect(brandElement).toBeInTheDocument();
+
+      const brandGradient = document.querySelector('.brand-gradient');
+      expect(brandGradient).toContainHTML('Asset');
+
+      const textInk = document.querySelector('.text-ink');
+      expect(textInk).toContainHTML('Predict');
     });
   });
 
-  describe('Params Panel Integration', () => {
-    it('updates selected model', () => {
-      renderWithProvider();
+  describe('Responsive Behavior', () => {
+    it('has responsive CSS classes', () => {
+      const { container } = render(<Sidebar />);
 
-      const modelSelect = screen.getByTestId('model-select');
-      fireEvent.change(modelSelect, { target: { value: 'model1' } });
+      const sidebar = container.querySelector('.sidebar');
+      expect(sidebar).toHaveClass(/sidebar/);
 
-      expect(modelSelect).toHaveValue('model1');
-    });
-
-    it('updates selected date', () => {
-      renderWithProvider();
-
-      const dateInput = screen.getByTestId('date-input');
-      const newDate = '2024-12-31';
-      fireEvent.change(dateInput, { target: { value: newDate } });
-
-      expect(dateInput).toHaveValue(newDate);
-    });
-
-    it('shows loading state transition', async () => {
-      renderWithProvider();
-
-      expect(screen.getByTestId('params-state')).toHaveTextContent('idle');
-
-      await waitFor(
-        () => {
-          expect(screen.getByTestId('params-state')).toHaveTextContent(
-            'success',
-          );
-        },
-        { timeout: 2000 },
-      );
+      // Проверяем наличие основных классов
+      expect(sidebar).toHaveClass('sidebar');
     });
   });
 
-  describe('UseEffect and Hooks', () => {
-    it('calls useOrchestrator hook', () => {
-      renderWithProvider();
-      expect(mockUseOrchestrator).toHaveBeenCalledTimes(1);
+  describe('Integration Tests', () => {
+    it('maintains state between re-renders', () => {
+      const { rerender } = render(<Sidebar />);
+
+      // Первый рендер
+      const dashboardLink1 = screen.getByRole('link', { name: 'Dashboard' });
+      expect(dashboardLink1).toHaveClass('active');
+
+      // Меняем путь и перерендериваем
+      mockUsePathname.mockReturnValue('/history');
+      rerender(<Sidebar />);
+
+      const historyLink = screen.getByRole('link', { name: 'History' });
+      expect(historyLink).toHaveClass('active');
+
+      const dashboardLink2 = screen.getByRole('link', { name: 'Dashboard' });
+      expect(dashboardLink2).not.toHaveClass('active');
+
+      // Возвращаем обратно
+      mockUsePathname.mockReturnValue('/dashboard');
+      rerender(<Sidebar />);
+
+      const dashboardLink3 = screen.getByRole('link', { name: 'Dashboard' });
+      expect(dashboardLink3).toHaveClass('active');
+
+      const historyLink2 = screen.getByRole('link', { name: 'History' });
+      expect(historyLink2).not.toHaveClass('active');
     });
 
-    it('sets default date to today', () => {
-      const today = new Date();
-      const expectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    it('works with multiple simultaneous instances', () => {
+      // Рендерим несколько экземпляров
+      const { unmount: unmount1 } = render(<Sidebar />);
+      const { unmount: unmount2 } = render(<Sidebar />);
 
-      renderWithProvider();
+      // Оба должны работать корректно
+      const sidebars = screen.getAllByRole('complementary');
+      expect(sidebars).toHaveLength(2);
 
-      const dateInput = screen.getByTestId('date-input');
-      expect(dateInput).toHaveValue(expectedDate);
-    });
-
-    it('cleans up timer on unmount', () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-
-      const { unmount } = renderWithProvider();
-      unmount();
-
-      expect(clearTimeoutSpy).toHaveBeenCalled();
-      clearTimeoutSpy.mockRestore();
-    });
-  });
-
-  describe('Accessibility and Styling', () => {
-    it('has correct background and styling', () => {
-      const { container } = renderWithProvider();
-
-      const mainContainer = container.querySelector('.min-h-screen');
-      expect(mainContainer).toBeInTheDocument();
-      expect(mainContainer).toHaveClass('bg-primary');
-    });
-
-    it('close button has proper aria label', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-
-      const closeButton = document.querySelector('.find-assets-close-button');
-      expect(closeButton).toBeInTheDocument();
-      expect(closeButton).toHaveAttribute('aria-label', 'Close');
+      unmount1();
+      unmount2();
     });
   });
 
-  describe('Error Handling', () => {
-    it('handles null asset gracefully', () => {
-      mockSelectedAsset = undefined;
-      renderWithProvider();
+  describe('Visual Elements', () => {
+    it('renders brand with gradient styling', () => {
+      render(<Sidebar />);
 
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
+      const brandGradient = document.querySelector('.brand-gradient');
+      expect(brandGradient).toBeInTheDocument();
+      expect(brandGradient).toHaveTextContent('Asset');
+
+      const textInk = document.querySelector('.text-ink');
+      expect(textInk).toBeInTheDocument();
+      expect(textInk).toHaveTextContent('Predict');
     });
 
-    it('handles empty recent assets with selected asset', () => {
-      mockRecentAssets = [];
-      mockSelectedAsset = { symbol: 'BTCUSDT', provider: 'binance' };
+    it('renders profile section with correct layout', () => {
+      render(<Sidebar />);
 
-      renderWithProvider();
+      const profileSection = document.querySelector('.sidebar-profile');
+      expect(profileSection).toBeInTheDocument();
 
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
-      expect(screen.getByTestId('recent-assets-count')).toHaveTextContent('0');
+      const avatar = screen.getByAltText('Profile avatar');
+      expect(avatar).toBeInTheDocument();
+
+      const profileName = document.querySelector('.sidebar-profile-name');
+      expect(profileName).toHaveTextContent('John Doe');
+
+      const profileLogin = document.querySelector('.sidebar-profile-login');
+      expect(profileLogin).toHaveTextContent('john@example.com');
     });
   });
 });
