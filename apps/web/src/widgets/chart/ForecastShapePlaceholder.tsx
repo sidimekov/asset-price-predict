@@ -8,6 +8,10 @@ type ForecastShapePlaceholderProps = {
   p50?: ForecastSeries;
   p10?: ForecastSeries;
   p90?: ForecastSeries;
+  yRange?: {
+    min: number;
+    max: number;
+  };
 };
 
 function toValues(series?: ForecastSeries): number[] {
@@ -19,6 +23,7 @@ export default function ForecastShapePlaceholder({
   p50,
   p10,
   p90,
+  yRange,
 }: ForecastShapePlaceholderProps) {
   const series = p50 ?? [];
 
@@ -36,14 +41,19 @@ export default function ForecastShapePlaceholder({
     (v) => Number.isFinite(v),
   );
 
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
+  const fallbackMin = Math.min(...values);
+  const fallbackMax = Math.max(...values);
+  const rangeMin =
+    yRange && Number.isFinite(yRange.min) ? yRange.min : fallbackMin;
+  const rangeMax =
+    yRange && Number.isFinite(yRange.max) ? yRange.max : fallbackMax;
 
   const width = 100;
   const height = 100;
 
   const valueToY = (v: number) => {
-    const t = maxVal === minVal ? 0.5 : (v - minVal) / (maxVal - minVal);
+    const t =
+      rangeMax === rangeMin ? 0.5 : (v - rangeMin) / (rangeMax - rangeMin);
     return height - t * height;
   };
 

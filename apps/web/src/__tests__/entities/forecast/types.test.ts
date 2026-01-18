@@ -70,6 +70,7 @@ describe('forecast types smoke tests', () => {
 
   it('ForecastState maps keys to forecast entries', () => {
     const state: ForecastState = {
+      params: { tf: '1h', window: 200, horizon: 24, model: null },
       byKey: {
         k: {
           p50: [[100, 1]],
