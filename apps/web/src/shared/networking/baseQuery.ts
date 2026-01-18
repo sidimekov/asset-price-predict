@@ -12,32 +12,55 @@ import type { HttpError } from './types';
 const backendBaseUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, '') || '/api';
 
+const ABSOLUTE_URL_RE = /^https?:\/\//i;
+
+const createBaseQuery = (
+  baseUrl: string,
+): BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError,
+  {},
+  FetchBaseQueryMeta
+> =>
+  fetchBaseQuery({
+    baseUrl,
+    timeout: 10_000,
+    prepareHeaders: (headers) => {
+      const token =
+        typeof localStorage === 'undefined'
+          ? null
+          : localStorage.getItem('auth.token');
+
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+
+      if (!headers.has('content-type')) {
+        headers.set('content-type', 'application/json');
+      }
+
+      return headers;
+    },
+  });
+
+const relativeBaseQuery = createBaseQuery(backendBaseUrl);
+const absoluteBaseQuery = createBaseQuery('');
+
 const rawBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError,
   {},
   FetchBaseQueryMeta
-> = fetchBaseQuery({
-  baseUrl: backendBaseUrl,
-  timeout: 10_000,
-  prepareHeaders: (headers) => {
-    const token =
-      typeof localStorage === 'undefined'
-        ? null
-        : localStorage.getItem('auth.token');
-
-    if (token) {
-      headers.set('authorization', `Bearer ${token}`);
-    }
-
-    if (!headers.has('content-type')) {
-      headers.set('content-type', 'application/json');
-    }
-
-    return headers;
-  },
-});
+> = (args, api, extraOptions) => {
+  const url = typeof args === 'string' ? args : args.url;
+  return (ABSOLUTE_URL_RE.test(url) ? absoluteBaseQuery : relativeBaseQuery)(
+    args,
+    api,
+    extraOptions,
+  );
+};
 
 const getRequestInfo = (args: string | FetchArgs) => {
   if (typeof args === 'string') {
