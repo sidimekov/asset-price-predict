@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main", "devops/deploy" ]
+    branches: [ "main", "fix/yandex-metrika-env" ]
   workflow_dispatch: {}
 
 permissions:
