@@ -24,7 +24,10 @@ import {
   selectTimeseriesErrorByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
-import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import {
+  forecastPredictRequested,
+  setForecastParams,
+} from '@/entities/forecast/model/forecastSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 import { makeTimeseriesKey } from '@/processes/orchestrator/keys';
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
@@ -105,6 +108,16 @@ export default function Dashboard() {
     if (!selectedSymbol || !selectedAsset) return;
     dispatch(setSelected(selectedAsset));
     dispatch(setForecastParams(effectiveParams));
+    dispatch(
+      forecastPredictRequested({
+        symbol: selectedAsset.symbol,
+        provider: selectedAsset.provider,
+        tf: effectiveParams.tf,
+        window: effectiveParams.window,
+        horizon: effectiveParams.horizon,
+        model: effectiveParams.model ?? null,
+      }),
+    );
     router.push(`/forecast/${encodeURIComponent(selectedAsset.symbol)}`);
   };
 

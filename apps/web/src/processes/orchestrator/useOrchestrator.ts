@@ -112,7 +112,6 @@ export function useOrchestrator() {
   useEffect(() => {
     if (!predictRequestId) return;
     if (predictRequestId === fcLastRequestIdRef.current) return;
-    fcLastRequestIdRef.current = predictRequestId;
 
     const req = predictRequest;
 
@@ -131,6 +130,8 @@ export function useOrchestrator() {
     const windowNum = typeof window === 'string' ? Number(window) : window;
     if (!Number.isFinite(windowNum) || windowNum <= 0) return;
 
+    const requestId = predictRequestId;
+
     if (fcTimeoutRef.current) {
       clearTimeout(fcTimeoutRef.current);
       fcTimeoutRef.current = null;
@@ -144,6 +145,7 @@ export function useOrchestrator() {
     fcAbortRef.current = abortController;
 
     fcTimeoutRef.current = setTimeout(() => {
+      fcLastRequestIdRef.current = requestId;
       ForecastManager.runForecast(
         {
           symbol: symbol as any,

@@ -13,6 +13,7 @@ import type { ForecastState, ForecastEntry } from '@/entities/forecast/types';
 
 const initialState: ForecastState = {
   params: undefined,
+  predict: { requestId: 0, request: null },
   byKey: {},
   loadingByKey: {},
   errorByKey: {},
@@ -68,6 +69,7 @@ describe('forecastSlice', () => {
   it('clearForecast удаляет конкретный ключ', () => {
     const filled: ForecastState = {
       params: undefined,
+      predict: { requestId: 0, request: null },
       byKey: { k: sampleEntry },
       loadingByKey: { k: false },
       errorByKey: { k: null },
@@ -83,6 +85,7 @@ describe('forecastSlice', () => {
   it('clearAllForecasts сбрасывает стейт к initialState', () => {
     const filled: ForecastState = {
       params: undefined,
+      predict: { requestId: 0, request: null },
       byKey: { k: sampleEntry },
       loadingByKey: { k: false },
       errorByKey: { k: null },

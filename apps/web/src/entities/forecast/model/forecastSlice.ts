@@ -4,10 +4,12 @@ import type {
   ForecastEntry,
   ForecastState,
   ForecastParams,
+  ForecastPredictRequest,
 } from '../types';
 
 const initialState: ForecastState = {
   params: undefined,
+  predict: { requestId: 0, request: null },
   byKey: {},
   loadingByKey: {},
   errorByKey: {},
@@ -21,6 +23,15 @@ const forecastSlice = createSlice({
       const key = action.payload;
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
+    },
+    forecastPredictRequested(
+      state,
+      action: PayloadAction<ForecastPredictRequest>,
+    ) {
+      state.predict = {
+        requestId: state.predict.requestId + 1,
+        request: action.payload,
+      };
     },
     setForecastParams(state, action: PayloadAction<ForecastParams>) {
       state.params = action.payload;
@@ -69,6 +80,7 @@ const forecastSlice = createSlice({
 
 export const {
   forecastRequested,
+  forecastPredictRequested,
   forecastReceived,
   forecastFailed,
   forecastCancelled,
