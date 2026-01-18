@@ -71,6 +71,57 @@ describe('fetchMoexTimeseries', () => {
     expect(result).toBe(mockData);
   });
 
+  it('использует дефолтный интервал для неизвестного таймфрейма', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+
+    const params = {
+      symbol: 'SBER',
+      timeframe: '2h' as any,
+      limit: 20,
+    };
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockResolvedValue([]),
+      unsubscribe: vi.fn(),
+    };
+
+    mockMoexInitiate.mockReturnValue(mockQueryResult);
+
+    await fetchMoexTimeseries(mockDispatch as any, params as any);
+
+    expect(mockMoexInitiate).toHaveBeenCalledWith({
+      symbol: 'SBER',
+      engine: 'stock',
+      market: 'shares',
+      board: 'TQBR',
+      interval: 24,
+      limit: 20,
+    });
+  });
+
+  it('бросает ошибку при сбое запроса', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+
+    const params = {
+      symbol: 'SBER',
+      timeframe: '1d' as const,
+      limit: 20,
+    };
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockRejectedValue(new Error('fail')),
+      unsubscribe: vi.fn(),
+    };
+
+    mockMoexInitiate.mockReturnValue(mockQueryResult);
+
+    await expect(
+      fetchMoexTimeseries(mockDispatch as any, params as any),
+    ).rejects.toThrow('MOEX timeseries fetch failed: fail');
+
+    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('абортирует inflight запрос через AbortSignal', async () => {
     const mockDispatch = vi.fn((action: any) => action);
     const controller = new AbortController();
@@ -112,5 +163,37 @@ describe('fetchMoexTimeseries', () => {
     ).rejects.toMatchObject({ name: 'AbortError' });
 
     expect(mockMoexSearchInitiate).not.toHaveBeenCalled();
+  });
+
+  it('searchMoexSymbols возвращает пустой массив при ошибке', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockRejectedValue(new Error('fail')),
+      unsubscribe: vi.fn(),
+      abort: vi.fn(),
+    };
+
+    mockMoexSearchInitiate.mockReturnValue(mockQueryResult);
+
+    const result = await searchMoexSymbols(mockDispatch as any, 'SBER');
+
+    expect(result).toEqual([]);
+    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('searchMoexSymbols триммит запрос', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockResolvedValue([]),
+      unsubscribe: vi.fn(),
+    };
+
+    mockMoexSearchInitiate.mockReturnValue(mockQueryResult);
+
+    await searchMoexSymbols(mockDispatch as any, '  SBER  ');
+
+    expect(mockMoexSearchInitiate).toHaveBeenCalledWith('SBER');
   });
 });
