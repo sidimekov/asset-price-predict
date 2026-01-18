@@ -37,6 +37,7 @@ import SegmentedControl from '@/shared/ui/SegmentedControl';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
 type ChartViewMode = 'line' | 'candles';
+
 const SMALL_TIMEFRAMES = new Set(['1m', '5m', '15m']);
 const VIEW_MODE_STORAGE_KEY = 'chart:viewMode';
 
@@ -57,9 +58,8 @@ export default function ForecastPage() {
   const tfQuery = searchParams.get('tf');
   const windowQuery = searchParams.get('window');
   const providerValue = providerQuery || selectedAsset?.provider || null;
-  const providerNorm = providerValue
-    ? mapProviderToMarket(providerValue)
-    : null;
+  const providerNorm = providerValue ? mapProviderToMarket(providerValue) : null;
+
   const [viewMode, setViewMode] = React.useState<ChartViewMode>(() => {
     if (typeof window === 'undefined') return 'line';
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -138,9 +138,13 @@ export default function ForecastPage() {
     fcKey ? selectForecastLoading(state, fcKey) : false,
   );
 
-  const handleBackToAssets = () => {
-    router.push('/dashboard');
-  };
+  React.useEffect(() => {
+    if (hasUserSelectedView) return;
+    const mode = SMALL_TIMEFRAMES.has(String(effectiveParams.tf))
+      ? 'candles'
+      : 'line';
+    setViewMode(mode);
+  }, [effectiveParams.tf, hasUserSelectedView]);
 
   const handleViewModeChange = (mode: ChartViewMode) => {
     setHasUserSelectedView(true);
@@ -148,6 +152,10 @@ export default function ForecastPage() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
     }
+  };
+
+  const handleBackToAssets = () => {
+    router.push('/dashboard');
   };
 
   const seriesRows = forecastEntry
@@ -206,14 +214,6 @@ export default function ForecastPage() {
   const historyWeight = historyCount > 0 ? historyCount : 1;
   const forecastWeight = forecastCount > 0 ? forecastCount : 1;
   const chartGridColumns = `${historyWeight}fr ${forecastWeight}fr`;
-
-  React.useEffect(() => {
-    if (hasUserSelectedView) return;
-    const mode = SMALL_TIMEFRAMES.has(String(effectiveParams.tf))
-      ? 'candles'
-      : 'line';
-    setViewMode(mode);
-  }, [effectiveParams.tf, hasUserSelectedView]);
 
   React.useEffect(() => {
     if (!selectedAsset && providerValue && selectedSymbol) {
