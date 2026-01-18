@@ -17,6 +17,9 @@ import {
   type ForecastCreateReq,
   type ForecastItem,
   type ForecastDetailRes,
+  type LoginReq,
+  type LoginRes,
+  type AccountRes,
 
   // Zod-схемы
   zForecastCreateReq,
@@ -104,6 +107,8 @@ packages/shared/
 │   │   ├── market.ts      # Timeframe, Symbol, Bar, Bars, Provider
 │   │   └── common.ts      # BrandedId, ISODate, Pagination, Range
 │   ├── dto/
+│   │   ├── account.ts     # AccountRes, AccountProfile
+│   │   ├── auth.ts        # LoginReq, LoginRes, AuthUser
 │   │   └── forecast.ts    # ForecastCreateReq, ForecastItem, ForecastDetailRes, etc.
 │   ├── schemas/
 │   │   ├── market.schema.ts    # Zod-схемы для рыночных типов
@@ -176,6 +181,48 @@ packages/shared/
 
 - **ForecastDetailRes**: детальный ответ о прогнозе (с `factors` и `metrics`)
 - **ForecastListReq/Res**: запрос и ответ списка прогнозов с пагинацией
+
+### DTO аккаунта (`dto/account.ts`)
+
+- **AccountRes**: профиль пользователя
+
+  ```typescript
+  {
+    id: AccountId;
+    username: string;
+    email: string;
+  }
+  ```
+
+### DTO аутентификации (`dto/auth.ts`)
+
+- **LoginReq**: запрос на логин
+
+  ```typescript
+  {
+    email: string;
+    password: string;
+  }
+  ```
+
+- **LoginRes**: ответ логина
+
+  ```typescript
+  {
+    token: string;
+    user: AuthUser;
+  }
+  ```
+
+- **RegisterReq**: запрос на регистрацию
+
+  ```typescript
+  {
+    email: string;
+    password: string;
+    username?: string;
+  }
+  ```
 
 ## Zod-схемы
 

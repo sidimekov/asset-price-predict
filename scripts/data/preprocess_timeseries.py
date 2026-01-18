@@ -191,6 +191,8 @@ def preprocess(in_path: Path, out_dir: Path) -> None:
         dest.write_text(json.dumps(bars, ensure_ascii=True))
         gap_msg = f", filled_gaps={gap_count}" if gap_count else ""
         print(f"[preprocess] {src} -> {dest} ({len(bars)} bars{gap_msg})")
+        gap_msg = f", filled_gaps={gap_count}" if gap_count else ""
+        print(f"[preprocess] {src} -> {dest} ({len(bars)} bars{gap_msg})")
 
 
 def main() -> None:

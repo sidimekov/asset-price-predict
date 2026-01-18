@@ -1,5 +1,3 @@
-// apps/web/src/features/market-adapter/MarketAdapter.ts
-
 import { z } from 'zod';
 import type { AppDispatch } from '@/shared/store';
 import {
@@ -13,36 +11,33 @@ import {
   makeTimeseriesCacheKey,
   type Bar,
 } from './cache/ClientTimeseriesCache';
-
 import { fetchBinanceTimeseries } from './providers/BinanceProvider';
 import {
   fetchMockTimeseries,
   generateMockBarsRaw,
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
-
-import type { BinanceKline } from '@/shared/api/marketApi';
+import type {
+  BinanceKlineRaw,
+  MoexCandlesResponse,
+  MoexSecuritiesResponse,
+} from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
 import type { ProviderRequestBase } from './providers/types';
+import {
+  searchBinanceSymbols,
+  fetchBinanceExchangeInfo,
+} from './providers/BinanceProvider';
+import { searchMoexSymbols } from './providers/MoexProvider';
+import { searchMockSymbols, MOCK_SYMBOLS } from './providers/MockProvider';
 
-// ============================================================================
-// TIMESERIES
-// ============================================================================
+// TYPES
 
-const providerSchema = zProvider.or(z.literal('MOCK'));
-const timeframeSchema = zTimeframe;
-const limitSchema = z.number().int().positive().max(2000);
-
-export const marketAdapterRequestSchema = z.object({
-  symbol: zSymbol,
-  provider: providerSchema.optional(),
-  timeframe: timeframeSchema.optional(),
-  limit: limitSchema.optional(),
-});
-
-export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
+export type SearchAssetsRequest =
+  | { mode: 'search'; query: string; provider: MarketDataProvider | 'MOCK' }
+  | { mode: 'listAll'; provider: MarketDataProvider | 'MOCK'; limit?: number };
 
 export type MarketAdapterProvider = MarketDataProvider | 'MOCK';
 
@@ -63,8 +58,23 @@ export interface MarketAdapterError {
   message: string;
 }
 
+// TIMESERIES
+
+const providerSchema = zProvider.or(z.literal('MOCK'));
+const timeframeSchema = zTimeframe;
+const limitSchema = z.number().int().positive().max(2000);
+
+export const marketAdapterRequestSchema = z.object({
+  symbol: zSymbol,
+  provider: providerSchema.optional(),
+  timeframe: timeframeSchema.optional(),
+  limit: limitSchema.optional(),
+});
+
+export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
+
 // Нормализация баров
-function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
+function normalizeBinanceKlines(klines: BinanceKlineRaw[]): Bar[] {
   return klines.map((k) => [
     k[0],
     Number(k[1]),
@@ -90,6 +100,67 @@ function normalizeRawBars(raw: unknown): Bar[] {
   });
 }
 
+function isMoexCandlesResponse(raw: unknown): raw is MoexCandlesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'candles' in raw;
+}
+
+function isMoexSecuritiesResponse(raw: unknown): raw is MoexSecuritiesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'securities' in raw;
+}
+
+function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
+  const { columns, data } = raw.candles;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  const idx = (name: string) => columns.indexOf(name);
+  const tsIdx = idx('begin') !== -1 ? idx('begin') : idx('end');
+  const oIdx = idx('open');
+  const hIdx = idx('high');
+  const lIdx = idx('low');
+  const cIdx = idx('close');
+  const vIdx = idx('volume') !== -1 ? idx('volume') : idx('value');
+
+  return data
+    .map((row) => {
+      const tsRaw = row[tsIdx];
+      const ts =
+        typeof tsRaw === 'string' ? Date.parse(tsRaw) : Number(tsRaw ?? NaN);
+      const o = Number(row[oIdx]);
+      const h = Number(row[hIdx]);
+      const l = Number(row[lIdx]);
+      const c = Number(row[cIdx]);
+      const v =
+        vIdx === -1 || row[vIdx] == null ? undefined : Number(row[vIdx]);
+
+      return [ts, o, h, l, c, v] as Bar;
+    })
+    .filter((b) => Number.isFinite(b[0]));
+}
+
+function normalizeMoexSecuritiesResponse(
+  raw: MoexSecuritiesResponse,
+): Record<string, unknown>[] {
+  const { columns, data } = raw.securities;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  return data.map((row) => {
+    const record: Record<string, unknown> = {};
+    columns.forEach((column, index) => {
+      record[column] = row[index];
+    });
+    return record;
+  });
+}
+
+function logMoexStats(bars: Bar[]): void {
+  if (process.env.NODE_ENV !== 'development' || bars.length === 0) return;
+  const avgClose =
+    bars.reduce((sum, b) => sum + (Number(b[4]) || 0), 0) / bars.length;
+  console.info('[MOEX] candles:', bars.length, 'avgClose:', avgClose);
+}
+
 // Приводим timestamp к ms, сортируем и чистим ряд
 function normalizeBarsFinal(bars: Bar[]): Bar[] {
   const msBars = bars
@@ -100,7 +171,6 @@ function normalizeBarsFinal(bars: Bar[]): Bar[] {
     })
     .filter((b) => Number.isFinite(b[0]));
 
-  // Bars должны быть строго возрастающими по времени
   msBars.sort((a, b) => a[0] - b[0]);
 
   const deduped: Bar[] = [];
@@ -110,7 +180,6 @@ function normalizeBarsFinal(bars: Bar[]): Bar[] {
     deduped.push(b);
     lastTs = b[0];
   }
-
   return deduped;
 }
 
@@ -134,15 +203,10 @@ async function resolveProviderData(
   params: ProviderRequestBase,
   opts: AdapterCallOpts = {},
 ): Promise<ProviderResolveResult> {
-  const paramsWithSignal = {
-    ...params,
-    signal: opts.signal,
-  } as ProviderRequestBase & AdapterCallOpts;
-
   try {
     switch (provider) {
       case 'BINANCE': {
-        const klines = await fetchBinanceTimeseries(dispatch, paramsWithSignal);
+        const klines = await fetchBinanceTimeseries(dispatch, params, opts);
         return {
           ok: true,
           raw: klines,
@@ -150,23 +214,21 @@ async function resolveProviderData(
           source: 'NETWORK',
         };
       }
-
       case 'MOEX': {
-        const moexRaw = await fetchMoexTimeseries(dispatch, paramsWithSignal);
+        const moexRaw = await fetchMoexTimeseries(dispatch, params, opts);
+        const moexBars = isMoexCandlesResponse(moexRaw)
+          ? normalizeMoexCandlesResponse(moexRaw)
+          : normalizeRawBars(moexRaw);
+        logMoexStats(moexBars);
         return {
           ok: true,
           raw: moexRaw,
-          normalized: normalizeBarsFinal(normalizeRawBars(moexRaw)),
+          normalized: normalizeBarsFinal(moexBars),
           source: 'NETWORK',
         };
       }
-
       case 'MOCK': {
-        const mockRaw = await fetchMockTimeseries(
-          dispatch,
-          paramsWithSignal,
-          opts,
-        );
+        const mockRaw = await fetchMockTimeseries(dispatch, params, opts);
         return {
           ok: true,
           raw: mockRaw,
@@ -174,17 +236,6 @@ async function resolveProviderData(
           source: 'LOCAL',
         };
       }
-
-      case 'CUSTOM': {
-        const customRaw = generateMockBarsRaw(params);
-        return {
-          ok: true,
-          raw: customRaw,
-          normalized: normalizeBarsFinal(normalizeRawBars(customRaw)),
-          source: 'LOCAL',
-        };
-      }
-
       default:
         return {
           ok: false,
@@ -195,7 +246,10 @@ async function resolveProviderData(
         };
     }
   } catch (err: any) {
-    // Никаких throw наружу
+    // Обработка AbortError отдельно
+    if (err.name === 'AbortError') {
+      throw err; // Пробрасываем AbortError выше
+    }
     return {
       ok: false,
       error: {
@@ -239,6 +293,7 @@ export async function getMarketTimeseries(
   if (!resolved.ok) return resolved.error;
 
   clientTimeseriesCache.set(cacheKey, resolved.normalized);
+
   return {
     bars: resolved.normalized,
     symbol,
@@ -248,82 +303,165 @@ export async function getMarketTimeseries(
   };
 }
 
-// ============================================================================
-// ASSET CATALOG SEARCH — РАБОЧАЯ ВЕРСИЯ
-// ============================================================================
-
-// Моковые данные
-const BINANCE_MOCK = [
-  { symbol: 'BTCUSDT', baseAsset: 'BTC', quoteAsset: 'USDT' },
-  { symbol: 'ETHUSDT', baseAsset: 'ETH', quoteAsset: 'USDT' },
-  { symbol: 'BNBUSDT', baseAsset: 'BNB', quoteAsset: 'USDT' },
-  { symbol: 'SOLUSDT', baseAsset: 'SOL', quoteAsset: 'USDT' },
-  { symbol: 'XRPUSDT', baseAsset: 'XRP', quoteAsset: 'USDT' },
-  { symbol: 'ADAUSDT', baseAsset: 'ADA', quoteAsset: 'USDT' },
-];
-
-const MOEX_MOCK = [
-  { SECID: 'SBER', SHORTNAME: 'Сбербанк', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'GAZP', SHORTNAME: 'Газпром', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'YNDX', SHORTNAME: 'Яндекс', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'LKOH', SHORTNAME: 'Лукойл', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'ROSN', SHORTNAME: 'Роснефть', CURRENCYID: 'RUB', TYPE: 'stock' },
-  { SECID: 'VTBR', SHORTNAME: 'ВТБ', CURRENCYID: 'RUB', TYPE: 'stock' },
-];
+// ASSET CATALOG SEARCH
 
 const searchCache = new Map<string, { items: CatalogItem[]; ts: number }>();
 const SEARCH_TTL_MS = 30_000;
 
 function makeSearchCacheKey(
-  provider: MarketDataProvider,
-  query: string,
+  provider: MarketDataProvider | 'MOCK',
+  mode: SearchAssetsRequest['mode'],
+  queryOrLimit: string,
 ): string {
-  return `${provider}:${query.trim().toLowerCase()}`;
+  return `${provider}:${mode}:${queryOrLimit}`;
 }
 
-async function fetchSearchRaw(
-  _dispatch: AppDispatch,
-  provider: MarketDataProvider,
-  query: string,
+async function fetchProviderCatalog(
+  dispatch: AppDispatch,
+  provider: MarketDataProvider | 'MOCK',
+  mode: SearchAssetsRequest['mode'],
+  query?: string,
+  limit?: number,
+  opts: AdapterCallOpts = {},
 ): Promise<unknown[]> {
-  const q = query.trim().toLowerCase();
+  let raw: unknown[] = [];
 
-  if (provider === 'BINANCE') {
-    const filtered = BINANCE_MOCK.filter(
-      (i) =>
-        i.symbol.toLowerCase().includes(q) ||
-        i.baseAsset.toLowerCase().includes(q),
-    );
-    return !q ? BINANCE_MOCK : filtered;
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:start', {
+      provider,
+      mode,
+      query,
+      limit,
+    });
   }
 
-  if (provider === 'MOEX') {
-    const filtered = MOEX_MOCK.filter(
-      (i) =>
-        i.SECID.toLowerCase().includes(q) ||
-        (i.SHORTNAME && i.SHORTNAME.toLowerCase().includes(q)),
-    );
-    return !q ? MOEX_MOCK : filtered;
+  try {
+    switch (provider) {
+      case 'BINANCE':
+        if (mode === 'listAll') {
+          const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
+          raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
+        } else {
+          raw = (await searchBinanceSymbols(
+            dispatch,
+            query ?? '',
+            opts,
+          )) as unknown[];
+        }
+        break;
+
+      case 'MOEX':
+        const q = mode === 'listAll' ? '' : (query ?? '');
+        {
+          const response = await searchMoexSymbols(dispatch, q, opts);
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[catalog] moex:rawResponse', response);
+          }
+          raw = isMoexSecuritiesResponse(response)
+            ? normalizeMoexSecuritiesResponse(response)
+            : Array.isArray(response)
+              ? response
+              : [];
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('[catalog] moex:normalized', {
+            count: raw.length,
+            sample: raw.slice(0, 3),
+          });
+        }
+        if (mode === 'listAll' && limit) {
+          raw = raw.slice(0, limit);
+        }
+        break;
+
+      case 'MOCK':
+        let symbols = MOCK_SYMBOLS;
+        if (mode === 'search' && query) {
+          symbols = await searchMockSymbols(query, opts);
+        } else if (mode === 'listAll') {
+          symbols = MOCK_SYMBOLS;
+        }
+        raw = symbols.slice(0, limit ?? Infinity);
+        break;
+
+      default:
+        return [];
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err; // Пробрасываем Abорт выше
+    }
+    console.warn(`Failed to fetch catalog for ${provider}:`, err);
+    return [];
   }
 
-  return [];
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:done', {
+      provider,
+      mode,
+      count: raw.length,
+    });
+  }
+  return raw;
 }
 
 export async function searchAssets(
   dispatch: AppDispatch,
-  { query, provider }: { query: string; provider: MarketDataProvider },
+  request: SearchAssetsRequest,
+  opts: AdapterCallOpts = {},
 ): Promise<CatalogItem[]> {
-  const q = query.trim();
+  const { provider, mode } = request;
+  const query = mode === 'search' ? request.query.trim() : undefined;
+  const limit = mode === 'listAll' ? request.limit : undefined;
 
-  const cacheKey = makeSearchCacheKey(provider, q);
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:start', {
+      provider,
+      mode,
+      query,
+      limit,
+    });
+  }
+
+  const cacheKey = makeSearchCacheKey(
+    provider,
+    mode,
+    query ?? `limit_${limit ?? 'inf'}`,
+  );
+
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_TTL_MS) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[catalog] searchAssets:cacheHit', {
+        provider,
+        mode,
+        count: cached.items.length,
+      });
+    }
     return cached.items;
   }
 
-  const raw = await fetchSearchRaw(dispatch, provider, q);
+  const raw = await fetchProviderCatalog(
+    dispatch,
+    provider,
+    mode,
+    query,
+    limit,
+    opts,
+  );
+
   const items = normalizeCatalogResponse(raw as any[], provider);
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:normalized', {
+      provider,
+      mode,
+      count: items.length,
+      sample: items.slice(0, 3),
+    });
+  }
+
   searchCache.set(cacheKey, { items, ts: Date.now() });
+
   return items;
 }

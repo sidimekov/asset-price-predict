@@ -1,6 +1,9 @@
 // apps/web/src/__tests__/features/market-adapter/providers/MockProvider.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchMockTimeseries } from '@/features/market-adapter/providers/MockProvider';
+import {
+  fetchMockTimeseries,
+  searchMockSymbols,
+} from '@/features/market-adapter/providers/MockProvider';
 
 const dispatch = vi.fn() as any;
 
@@ -66,5 +69,46 @@ describe('MockProvider', () => {
     const stepB = b[1][0] - b[0][0];
 
     expect(stepB).toBeGreaterThan(stepA);
+  });
+
+  it('fetchMockTimeseries сразу отказывает при abort', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      fetchMockTimeseries(
+        dispatch,
+        {
+          symbol: 'TEST',
+          timeframe: '1h',
+          limit: 5,
+        },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('searchMockSymbols сразу отказывает при abort', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      searchMockSymbols('btc', { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('searchMockSymbols возвращает все элементы при пустом запросе', async () => {
+    const result = await searchMockSymbols('');
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('searchMockSymbols фильтрует по символу и имени', async () => {
+    const bySymbol = await searchMockSymbols('BTC');
+    const byName = await searchMockSymbols('bitcoin');
+
+    expect(bySymbol.length).toBeGreaterThan(0);
+    expect(byName.length).toBeGreaterThan(0);
   });
 });

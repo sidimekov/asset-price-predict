@@ -3,6 +3,7 @@
 import './globals.css';
 import { Sidebar } from '@/shared/ui/Sidebar';
 import { Container } from '@/shared/ui/Container';
+import { YandexMetrika } from '@/shared/ui/YandexMetrika';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
@@ -50,6 +51,7 @@ export default function RootLayout({
       {/* ←←← ВОТ ЗДЕСЬ ОБЕРНУЛИ В PROVIDER — всё остальное без изменений */}
       <body className="bg-primary text-ink font-sans antialiased min-h-screen">
         <StoreProvider>
+          <YandexMetrika />
           {showAppLayout ? (
             <div className="flex h-screen overflow-hidden">
               <div className={sidebarOpen ? 'sidebar' : 'sidebar collapsed'}>

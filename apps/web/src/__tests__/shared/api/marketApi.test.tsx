@@ -31,7 +31,10 @@ describe('marketApi endpoints', () => {
       store.dispatch(
         marketApi.endpoints.getMoexTimeseries.initiate({
           symbol: 'SBER',
-          timeframe: '1h',
+          engine: 'stock',
+          market: 'shares',
+          board: 'TQBR',
+          interval: 60,
           limit: 10,
         }) as any,
       );
@@ -53,11 +56,6 @@ describe('marketApi endpoints', () => {
       // Moex search
       store.dispatch(
         marketApi.endpoints.searchMoexSymbols.initiate('sber') as any,
-      );
-
-      // Mock search
-      store.dispatch(
-        marketApi.endpoints.searchMockSymbols.initiate('test') as any,
       );
     }).not.toThrow();
   });

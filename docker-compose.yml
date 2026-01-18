@@ -1,0 +1,58 @@
+services:
+  postgres:
+    env_file:
+      - .env
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-assetpredict}
+      POSTGRES_USER: ${POSTGRES_USER:-assetpredict}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assetpredict}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./apps/api/src/db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-assetpredict} -d ${POSTGRES_DB:-assetpredict}',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      PORT: ${API_PORT:-3001}
+      # Внутри compose хост БД = postgres
+      DATABASE_URL: postgres://${POSTGRES_USER:-assetpredict}:${POSTGRES_PASSWORD:-assetpredict}@postgres:5432/${POSTGRES_DB:-assetpredict}
+      NODE_ENV: production
+    ports:
+      - '${API_PORT:-3001}:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3001}
+      NEXT_PUBLIC_USE_MOCK_MARKET: ${NEXT_PUBLIC_USE_MOCK_MARKET:-}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

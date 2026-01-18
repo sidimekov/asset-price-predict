@@ -1,7 +1,15 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ForecastKey, ForecastEntry, ForecastState } from '../types';
+import type {
+  ForecastKey,
+  ForecastEntry,
+  ForecastState,
+  ForecastParams,
+  ForecastPredictRequest,
+} from '../types';
 
 const initialState: ForecastState = {
+  params: undefined,
+  predict: { requestId: 0, request: null },
   byKey: {},
   loadingByKey: {},
   errorByKey: {},
@@ -15,6 +23,18 @@ const forecastSlice = createSlice({
       const key = action.payload;
       state.loadingByKey[key] = true;
       state.errorByKey[key] = null;
+    },
+    forecastPredictRequested(
+      state,
+      action: PayloadAction<ForecastPredictRequest>,
+    ) {
+      state.predict = {
+        requestId: state.predict.requestId + 1,
+        request: action.payload,
+      };
+    },
+    setForecastParams(state, action: PayloadAction<ForecastParams>) {
+      state.params = action.payload;
     },
 
     forecastReceived(
@@ -60,9 +80,11 @@ const forecastSlice = createSlice({
 
 export const {
   forecastRequested,
+  forecastPredictRequested,
   forecastReceived,
   forecastFailed,
   forecastCancelled,
+  setForecastParams,
   clearForecast,
   clearAllForecasts,
 } = forecastSlice.actions;

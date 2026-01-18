@@ -1,16 +1,8 @@
-// apps/web/src/features/market-adapter/providers/MockProvider.ts
 import type { AppDispatch } from '@/shared/store';
-import type { ProviderRequestBase } from './types';
+import type { ProviderCallOpts, ProviderRequestBase } from './types';
 import type { CatalogItem } from '@shared/types/market';
 
-type FetchOpts = {
-  signal?: AbortSignal;
-};
-
-// Deterministic PRNG (seeded) - stable for UX/tests
-
 function hashSeed(input: string): number {
-  // simple, fast string hash -> uint32
   let h = 2166136261;
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i);
@@ -41,73 +33,49 @@ function timeframeToStepMs(timeframe: string): number {
     case '7d':
       return 7 * 24 * 60 * 60 * 1000;
     case '1mo':
-      // приближение - 30 дней, достаточно для моков
-      return 30 * 24 * 60 * 60 * 1000;
+      return 30 * 24 * 60 * 60 * 1000; // approximation
     default:
       return 60 * 60 * 1000;
   }
 }
 
-/**
- * MOCK по умолчанию - полностью локальный генератор свечей без сети
- */
-export async function fetchMockTimeseries(
-  _dispatch: AppDispatch,
-  params: ProviderRequestBase,
-  _opts: FetchOpts = {},
-): Promise<unknown> {
-  return generateMockBarsRaw(params);
+function createAbortError(): Error {
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
 }
 
-/**
- * (опционально) сетевой мок отдельным режимом
- * если когда-нибудь понадобится
- */
-export async function fetchMockTimeseriesViaApi(
-  dispatch: AppDispatch,
-  params: ProviderRequestBase,
-  opts: FetchOpts = {},
-): Promise<unknown> {
-  const { marketApi } = await import('@/shared/api/marketApi');
-  const { symbol, timeframe, limit } = params;
-
-  const queryResult = dispatch(
-    marketApi.endpoints.getMockTimeseries.initiate({
-      symbol,
-      timeframe,
-      limit,
-    }),
-  );
-
-  try {
-    const data = await queryResult.unwrap();
-    return data;
-  } finally {
-    queryResult.unsubscribe();
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw createAbortError();
   }
 }
 
 /**
- * локальный генератор свечей
- * Детерминированный seed = symbol+timeframe+limit
+ * Локальный генератор свечей (без сети)
  */
+export async function fetchMockTimeseries(
+  _dispatch: AppDispatch,
+  params: ProviderRequestBase,
+  opts: ProviderCallOpts = {},
+): Promise<unknown> {
+  throwIfAborted(opts.signal);
+  return generateMockBarsRaw(params);
+}
+
 export function generateMockBarsRaw(
   params: ProviderRequestBase,
 ): [number, number, number, number, number, number][] {
   const { limit, symbol, timeframe } = params;
-
   const stepMs = timeframeToStepMs(timeframe);
   const seed = hashSeed(`${symbol}:${timeframe}:${limit}`);
   const rnd = mulberry32(seed);
 
-  // текущая точка времени (не Date.now), чтобы не плавали снапшоты
-  const baseEpoch = 1700000000000; // ~2023-11-14
+  const baseEpoch = 1700000000000; // ~2023-11
   const now = baseEpoch + (seed % (365 * 24 * 60 * 60 * 1000));
   const endTs = Math.floor(now / stepMs) * stepMs;
 
   const res: [number, number, number, number, number, number][] = [];
-
-  // Базовый уровень зависит от seed, чтобы серии отличались по символам.
   let lastClose = 80 + (seed % 120);
 
   for (let i = limit - 1; i >= 0; i--) {
@@ -126,66 +94,99 @@ export function generateMockBarsRaw(
 }
 
 /**
- * Сырой тип мокового символа (немного отличается от CatalogItem, чтобы была "нормализация").
+ * Тип мокового символа для каталога
  */
 export type MockSymbolRaw = {
   symbol: string;
   name: string;
   exchange: string;
-  class: CatalogItem['assetClass'];
+  assetClass: CatalogItem['assetClass'];
   currency?: string;
 };
 
 /**
- * Статический моковый каталог инструментов.
- * Можно потом вынести в отдельный JSON.
+ * Статический мок-каталог (локальный, без запросов к API)
  */
-const MOCK_SYMBOLS: MockSymbolRaw[] = [
+export const MOCK_SYMBOLS: MockSymbolRaw[] = [
   {
     symbol: 'BTCUSDT',
     name: 'Bitcoin / Tether',
     exchange: 'BINANCE',
-    class: 'crypto',
+    assetClass: 'crypto',
     currency: 'USDT',
   },
   {
     symbol: 'ETHUSDT',
     name: 'Ethereum / Tether',
     exchange: 'BINANCE',
-    class: 'crypto',
+    assetClass: 'crypto',
+    currency: 'USDT',
+  },
+  {
+    symbol: 'SOLUSDT',
+    name: 'Solana / Tether',
+    exchange: 'BINANCE',
+    assetClass: 'crypto',
     currency: 'USDT',
   },
   {
     symbol: 'AAPL',
     name: 'Apple Inc.',
     exchange: 'NASDAQ',
-    class: 'equity',
+    assetClass: 'equity',
+    currency: 'USD',
+  },
+  {
+    symbol: 'TSLA',
+    name: 'Tesla Inc.',
+    exchange: 'NASDAQ',
+    assetClass: 'equity',
     currency: 'USD',
   },
   {
     symbol: 'SBER',
     name: 'Sberbank',
     exchange: 'MOEX',
-    class: 'equity',
+    assetClass: 'equity',
     currency: 'RUB',
+  },
+  {
+    symbol: 'GAZP',
+    name: 'Gazprom',
+    exchange: 'MOEX',
+    assetClass: 'equity',
+    currency: 'RUB',
+  },
+  {
+    symbol: 'EURUSD',
+    name: 'Euro / US Dollar',
+    exchange: 'MOCKEX',
+    assetClass: 'fx',
+    currency: 'USD',
   },
 ];
 
 /**
- * Поиск в моковом каталоге по строке запроса.
- * Никакого HTTP, всё локально.
+ * Поиск в локальном мок-каталоге
  */
 export async function searchMockSymbols(
   query: string,
+  opts: ProviderCallOpts = {},
 ): Promise<MockSymbolRaw[]> {
+  throwIfAborted(opts.signal);
+
   const q = query.trim().toLowerCase();
-  if (!q) return [];
+
+  if (!q) {
+    return MOCK_SYMBOLS;
+  }
 
   return MOCK_SYMBOLS.filter((item) => {
     return (
       item.symbol.toLowerCase().includes(q) ||
       item.name.toLowerCase().includes(q) ||
-      item.exchange.toLowerCase().includes(q)
+      item.exchange.toLowerCase().includes(q) ||
+      (item.assetClass && item.assetClass.toLowerCase().includes(q))
     );
   });
 }

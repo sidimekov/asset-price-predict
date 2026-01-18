@@ -1,11 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-type ErrorResponse = {
-  error: string;
-  message: string;
-  statusCode: number;
-  requestId?: string;
-};
+import { sendError } from '../http/errors.js';
 
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler(
@@ -24,15 +19,13 @@ export function registerErrorHandler(app: FastifyInstance) {
         req.log.warn({ err }, 'Request error');
       }
 
-      const payload: ErrorResponse = {
-        error: statusCode >= 500 ? 'Internal Server Error' : 'Bad Request',
-        message:
-          typeof err?.message === 'string' ? err.message : 'Unknown error',
-        statusCode,
-        requestId: req.id,
-      };
+      const code = statusCode >= 500 ? 'INTERNAL_SERVER_ERROR' : 'BAD_REQUEST';
+      const message =
+        typeof err?.message === 'string' ? err.message : 'Unknown error';
 
-      await reply.status(statusCode).send(payload);
+      await sendError(reply, statusCode, code, message, {
+        requestId: req.id,
+      });
     },
   );
 }

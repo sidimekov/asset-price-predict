@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/shared/store';
 import type { CatalogItem } from '@shared/types/market';
 
-export type Provider = 'binance' | 'moex';
+export type Provider = 'binance' | 'moex' | 'mock';
 
 export type RecentItem = {
   symbol: string;
@@ -23,12 +23,28 @@ interface CatalogState {
 const RECENT_KEY = 'asset_catalog_recent';
 const MAX_RECENT = 10;
 
+const normalizeProvider = (provider: string): Provider | null => {
+  if (provider === 'custom') return 'mock';
+  if (provider === 'mock' || provider === 'moex' || provider === 'binance') {
+    return provider;
+  }
+  return null;
+};
+
 const loadRecent = (): RecentItem[] => {
   try {
     const raw = localStorage.getItem(RECENT_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENT) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item: RecentItem) => {
+        const provider = normalizeProvider(String(item.provider));
+        if (!provider || !item.symbol) return null;
+        return { ...item, provider };
+      })
+      .filter((item): item is RecentItem => Boolean(item))
+      .slice(0, MAX_RECENT);
   } catch {
     return [];
   }
@@ -126,14 +142,19 @@ export const {
 
 export const selectCurrentProvider = (state: RootState): Provider =>
   state.catalog.provider;
+
 export const selectCatalogResults = (state: RootState): CatalogItem[] =>
   state.catalog.results;
+
 export const selectIsSearching = (state: RootState): boolean =>
   state.catalog.loading;
+
 export const selectCatalogError = (state: RootState): string | null =>
   state.catalog.error;
+
 export const selectRecent = (state: RootState): RecentItem[] =>
   state.catalog.recent;
+
 export const selectSelectedAsset = (state: RootState) => state.catalog.selected;
 
 export default catalogSlice.reducer;

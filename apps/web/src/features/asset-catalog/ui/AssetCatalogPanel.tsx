@@ -1,5 +1,4 @@
 'use client';
-
 import React, {
   useCallback,
   useEffect,
@@ -29,12 +28,12 @@ const DEBOUNCE_MS = 400;
 
 type CatalogFilters = {
   categories: {
-    equities: boolean; // Акции
-    indices: boolean; // Индексы (Index CFDs / ETFs)
-    fx: boolean; // Валюты
-    crypto: boolean; // Криптовалюты
-    commodities: boolean; // Сырьё
-    bonds: boolean; // Облигации
+    equities: boolean;
+    indices: boolean;
+    fx: boolean;
+    crypto: boolean;
+    commodities: boolean;
+    bonds: boolean;
   };
   order: 'asc' | 'desc';
 };
@@ -55,6 +54,27 @@ const detectAssetCategory = (
   const provider = item.provider.toUpperCase();
   const assetClass = item.assetClass?.toLowerCase() || '';
 
+  if (provider === 'MOCK') {
+    switch (assetClass) {
+      case 'crypto':
+        return 'crypto';
+      case 'equity':
+      case 'stock':
+        return 'equities';
+      case 'index':
+        return 'indices';
+      case 'fx':
+      case 'forex':
+        return 'fx';
+      case 'commodity':
+        return 'commodities';
+      case 'bond':
+        return 'bonds';
+      default:
+        return 'crypto';
+    }
+  }
+
   if (provider === 'MOEX') {
     if (
       item.name?.toLowerCase().includes('облигация') ||
@@ -63,7 +83,6 @@ const detectAssetCategory = (
     ) {
       return 'bonds';
     }
-
     if (
       assetClass.includes('stock') ||
       assetClass.includes('акция') ||
@@ -71,14 +90,12 @@ const detectAssetCategory = (
     ) {
       return 'equities';
     }
-
     if (
       assetClass.includes('index') ||
       item.name?.toLowerCase().includes('индекс')
     ) {
       return 'indices';
     }
-
     return 'equities';
   }
 
@@ -92,7 +109,6 @@ const detectAssetCategory = (
     ) {
       return 'crypto';
     }
-
     if (
       (symbol.includes('USD') && symbol.length === 6) ||
       assetClass.includes('forex') ||
@@ -100,7 +116,6 @@ const detectAssetCategory = (
     ) {
       return 'fx';
     }
-
     if (
       assetClass.includes('index') ||
       item.name?.toLowerCase().includes('index') ||
@@ -108,7 +123,6 @@ const detectAssetCategory = (
     ) {
       return 'indices';
     }
-
     if (
       assetClass.includes('commodity') ||
       symbol.includes('XAU') ||
@@ -118,42 +132,16 @@ const detectAssetCategory = (
     ) {
       return 'commodities';
     }
-
     return 'crypto';
   }
 
-  return provider === 'MOEX' ? 'equities' : 'crypto';
-};
-
-const getAllAssetsFromProvider = async (
-  dispatch: any,
-  provider: 'binance' | 'moex',
-  filters?: CatalogFilters,
-): Promise<CatalogItem[]> => {
-  try {
-    const filter = provider === 'binance' ? 'u' : '';
-
-    const items = await searchAssets(dispatch, {
-      query: filter,
-      provider: provider.toUpperCase() as any,
-    });
-
-    console.log(`All assets ${provider}:`, items);
-
-    if (filters) {
-      return applyFiltersToItems(items, filters);
-    }
-
-    return items;
-  } catch (error) {
-    console.error(`Ошибка при получении активов ${provider}:`, error);
-    return [];
-  }
+  return 'crypto';
 };
 
 const applyFiltersToItems = (
   items: CatalogItem[],
   filters: CatalogFilters,
+  provider: string,
 ): CatalogItem[] => {
   let filtered = [...items];
 
@@ -161,6 +149,7 @@ const applyFiltersToItems = (
     .filter(([_, isActive]) => isActive)
     .map(([category]) => category);
 
+  // Фильтрация для всех провайдеров, включая mock
   if (activeCategories.length > 0) {
     filtered = filtered.filter((item) => {
       const itemCategory = detectAssetCategory(item);
@@ -184,7 +173,10 @@ const applyFiltersToItems = (
 interface AssetCatalogPanelProps {
   query: string;
   onQueryChange: (q: string) => void;
-  onSelect?: (item: { symbol: string; provider: 'binance' | 'moex' }) => void;
+  onSelect?: (item: {
+    symbol: string;
+    provider: 'binance' | 'moex' | 'mock';
+  }) => void;
   onClose: () => void;
 }
 
@@ -195,7 +187,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   onClose,
 }) => {
   const dispatch = useAppDispatch();
-
   const results = useAppSelector(selectCatalogResults);
   const loading = useAppSelector(selectIsSearching);
   const error = useAppSelector(selectCatalogError);
@@ -203,13 +194,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const recent = useAppSelector(selectRecent);
 
   const abortRef = useRef<AbortController | null>(null);
-  const filterPopoverRef = useRef<HTMLDivElement>(null);
 
+  const filterPopoverRef = useRef<HTMLDivElement>(null);
   const [selectedForAdd, setSelectedForAdd] = useState<{
     symbol: string;
-    provider: 'binance' | 'moex';
+    provider: 'binance' | 'moex' | 'mock';
   } | null>(null);
-
   const [filterClicked, setFilterClicked] = useState(false);
   const [filters, setFilters] = useState<CatalogFilters>({
     categories: {
@@ -232,11 +222,9 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         setFilterClicked(false);
       }
     }
-
     if (filterClicked) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -246,45 +234,46 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     async (q: string) => {
       console.log(`Поиск: "${q}", провайдер: ${provider}, фильтры:`, filters);
 
-      if (q.length < 2) {
-        try {
-          const all = await getAllAssetsFromProvider(
-            dispatch,
-            provider,
-            filters,
-          );
-          console.log(`Получено активов после фильтрации: ${all.length}`, all);
-          dispatch(searchSucceeded(all));
-          setSelectedForAdd(null);
-        } catch (error) {
-          console.error('Ошибка при получении всех активов:', error);
-          dispatch(searchFailed('Failed to load assets'));
-        }
-        return;
-      }
-
       abortRef.current?.abort();
       abortRef.current = new AbortController();
+      const signal = abortRef.current.signal;
 
       dispatch(searchStarted());
 
       try {
-        const items = await searchAssets(dispatch, {
-          query: q,
-          provider: provider.toUpperCase() as any,
-        });
+        let items: CatalogItem[];
 
-        console.log(`Результаты поиска "${q}":`, items);
+        const upperProvider = provider.toUpperCase() as
+          | 'BINANCE'
+          | 'MOEX'
+          | 'MOCK';
 
-        const filteredItems = applyFiltersToItems(items, filters);
+        if (q.length < 2) {
+          items = await searchAssets(
+            dispatch,
+            { mode: 'listAll', provider: upperProvider },
+            { signal },
+          );
+        } else {
+          items = await searchAssets(
+            dispatch,
+            { mode: 'search', query: q, provider: upperProvider },
+            { signal },
+          );
+        }
 
-        if (!abortRef.current?.signal.aborted) {
+        const filteredItems = applyFiltersToItems(items, filters, provider);
+
+        if (!signal.aborted) {
           dispatch(searchSucceeded(filteredItems));
         }
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
+        if (err.name === 'AbortError') {
+          // Просто игнорируем отмену запроса
+          console.log('Search aborted');
+        } else {
           console.error('Ошибка поиска:', err);
-          dispatch(searchFailed('Search failed'));
+          dispatch(searchFailed(err.message || 'Search failed'));
         }
       }
     },
@@ -297,8 +286,10 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   );
 
   useEffect(() => {
-    debouncedSearch(query);
-  }, [query, debouncedSearch]);
+    if (provider) {
+      debouncedSearch(query);
+    }
+  }, [provider, query, debouncedSearch]);
 
   useEffect(() => {
     return () => {
@@ -312,8 +303,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   };
 
   const applyFiltersHandler = () => {
-    console.log('Применяем фильтры:', filters);
-    // Триггерим новый поиск с текущим запросом
     performSearch(query);
     setFilterClicked(false);
   };
@@ -332,39 +321,64 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     });
   };
 
+  const normalizeProvider = (
+    value: string,
+  ): 'binance' | 'moex' | 'mock' | null => {
+    const lower = value.toLowerCase();
+    if (lower === 'custom') return 'mock';
+    if (lower === 'binance' || lower === 'moex' || lower === 'mock') {
+      return lower;
+    }
+    return null;
+  };
+
   const handleItemClick = (item: CatalogItem) => {
+    const provider = normalizeProvider(item.provider);
+    if (!provider) return;
     setSelectedForAdd({
       symbol: item.symbol,
-      provider: item.provider.toLowerCase() as 'binance' | 'moex',
+      provider,
     });
   };
 
   const handleAddClick = () => {
     if (!selectedForAdd) return;
-
-    dispatch(setSelected(selectedForAdd));
-    dispatch(addRecent(selectedForAdd));
-
-    onSelect?.(selectedForAdd);
+    if (onSelect) {
+      onSelect(selectedForAdd);
+    } else {
+      dispatch(setSelected(selectedForAdd));
+      dispatch(addRecent(selectedForAdd));
+    }
     onClose();
   };
 
   const handleRecentItemClick = (recentItem: {
     symbol: string;
-    provider: 'binance' | 'moex';
+    provider: 'binance' | 'moex' | 'mock';
   }) => {
-    dispatch(setSelected(recentItem));
-    dispatch(addRecent(recentItem));
-    onSelect?.(recentItem);
+    if (onSelect) {
+      onSelect(recentItem);
+    } else {
+      dispatch(setSelected(recentItem));
+      dispatch(addRecent(recentItem));
+    }
     onClose();
   };
 
+  // Добавляем MOCK только в dev режиме
+  const providers: ('binance' | 'moex' | 'mock')[] = ['binance', 'moex'];
+  if (process.env.NODE_ENV !== 'production') {
+    providers.push('mock');
+  }
+
   const showAllAssets = !query || query.length < 2;
   const displayItems = results;
-
   const activeFilterCount = Object.values(filters.categories).filter(
     Boolean,
   ).length;
+
+  const showNoResultsMessage =
+    !loading && !error && query.length >= 2 && displayItems.length === 0;
 
   return (
     <div className="px-6 pt-6 pb-6 flex flex-col h-full">
@@ -386,7 +400,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>
-
           <input
             type="text"
             value={query}
@@ -395,7 +408,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             className="find-assets-search-input"
             autoFocus
           />
-
           <button
             className={`find-assets-filter-icon relative ${activeFilterCount < 6 ? 'text-gradient-primary' : ''}`}
             onClick={handleFilterClick}
@@ -542,7 +554,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
       {/* Provider tabs */}
       <div className="flex justify-center -mt-2 mb-5">
         <div className="auth-tabs provider-tabs-under-search" role="tablist">
-          {(['binance', 'moex'] as const).map((p) => (
+          {providers.map((p) => (
             <button
               key={p}
               role="tab"
@@ -574,7 +586,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             <h3 className="text-white text-med font-semibold mb-3 px-2">
               Recently used
             </h3>
-
             <div className="flex flex-col gap-1">
               {recent.map((r) => (
                 <button
@@ -590,10 +601,13 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                       {r.symbol}
                     </div>
                     <div className="text-xs text-white/50 capitalize mt-2 opacity-80">
-                      {r.provider === 'binance' ? 'crypto' : 'stock'}
+                      {r.provider === 'binance'
+                        ? 'crypto'
+                        : r.provider === 'moex'
+                          ? 'stock'
+                          : 'mock'}
                     </div>
                   </div>
-
                   <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
                     {r.provider.toUpperCase()}
                   </span>
@@ -609,21 +623,16 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             Searching...
           </div>
         )}
-
         {error && (
           <div className="flex items-center justify-center h-32 text-error text-lg">
             {error}
           </div>
         )}
-
-        {!loading &&
-          !error &&
-          query.length >= 2 &&
-          displayItems.length === 0 && (
-            <div className="flex items-center justify-center h-32 text-white/50">
-              No assets found for "{query}"
-            </div>
-          )}
+        {showNoResultsMessage && (
+          <div className="flex items-center justify-center h-32 text-white/50">
+            No assets found for "{query}"
+          </div>
+        )}
 
         {/* Items */}
         {!loading && !error && displayItems.length > 0 && (
@@ -647,11 +656,9 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             )}
 
             {displayItems.map((item) => {
-              const lowerProvider = item.provider.toLowerCase() as
-                | 'binance'
-                | 'moex';
+              const lowerProvider = normalizeProvider(item.provider);
+              if (!lowerProvider) return null;
               const category = detectAssetCategory(item);
-
               const isSelected =
                 selectedForAdd?.symbol === item.symbol &&
                 selectedForAdd?.provider === lowerProvider;
@@ -684,7 +691,6 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                       </div>
                     )}
                   </div>
-
                   <span className="ml-4 px-4 py-2 rounded-full text-xs font-bold bg-gradient-primary text-white shadow-glow">
                     {item.provider.toUpperCase()}
                   </span>
@@ -693,6 +699,18 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             })}
           </div>
         )}
+
+        {/* Показываем сообщение, если это первый запуск и нет результатов */}
+        {!loading &&
+          !error &&
+          query.length < 2 &&
+          displayItems.length === 0 && (
+            <div className="flex items-center justify-center h-32 text-white/50">
+              {provider === 'mock'
+                ? 'Loading mock assets...'
+                : 'Loading assets...'}
+            </div>
+          )}
       </div>
 
       {/* Add button */}

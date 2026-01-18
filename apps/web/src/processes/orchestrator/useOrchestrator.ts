@@ -1,5 +1,4 @@
 'use client';
-/* global AbortController */
 
 import { useEffect, useRef } from 'react';
 import { useStore } from 'react-redux';
@@ -11,76 +10,159 @@ import { ForecastManager } from './ForecastManager';
 import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
 import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
-import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+const DEFAULT_WINDOW =
+  process.env.NODE_ENV !== 'production' ? 200 : DEFAULT_LIMIT;
+
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_TIMEFRAME,
+  type MarketTimeframe,
+} from '@/config/market';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
-function mapProviderToMarket(provider: string): MarketDataProvider | null {
-  switch (provider) {
-    case 'binance':
-      return 'BINANCE';
-    case 'moex':
-      return 'MOEX';
-    default:
-      return null;
-  }
-}
+const DEFAULT_FORECAST_PARAMS = {
+  tf: DEFAULT_TIMEFRAME,
+  window: DEFAULT_WINDOW,
+  horizon: 24,
+  model: null,
+};
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
   const store = useStore<RootState>();
 
   const selected = useAppSelector(selectSelectedAsset);
-  const params = useAppSelector(selectForecastParams);
+  const paramsFromStore = useAppSelector(selectForecastParams);
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSignatureRef = useRef<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const params = paramsFromStore ?? DEFAULT_FORECAST_PARAMS;
+
+  const predictRequestId = useAppSelector(
+    (s: RootState) => (s as any).forecast?.predict?.requestId ?? 0,
+  );
+
+  const predictRequest = useAppSelector(
+    (s: RootState) => (s as any).forecast?.predict?.request ?? null,
+  ) as {
+    symbol: string;
+    provider?: string;
+    tf: string;
+    window: number;
+    horizon: number;
+    model?: string | null;
+  } | null;
+
+  const tsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tsLastSignatureRef = useRef<string | null>(null);
+  const tsAbortRef = useRef<AbortController | null>(null);
+
+  const fcTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fcLastRequestIdRef = useRef<number>(0);
+  const fcAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!selected || !params) return;
 
     const { symbol, provider } = selected;
-    const { tf, window, horizon, model } = params;
+    const { tf, window } = params;
 
-    if (!symbol || !provider || !tf || !horizon) return;
+    if (!symbol || !provider || !tf) return;
 
     const providerNorm = mapProviderToMarket(provider);
     if (!providerNorm) return;
 
     const windowNum = typeof window === 'string' ? Number(window) : window;
+    if (!Number.isFinite(windowNum) || windowNum <= 0) return;
 
-    if (!Number.isFinite(windowNum) || windowNum <= 0) {
-      return;
+    const signature = `${providerNorm}:${symbol}:${tf}:${windowNum}`;
+    if (signature === tsLastSignatureRef.current) return;
+    tsLastSignatureRef.current = signature;
+
+    if (tsTimeoutRef.current) {
+      clearTimeout(tsTimeoutRef.current);
+      tsTimeoutRef.current = null;
     }
-
-    const signature = `${providerNorm}:${symbol}:${tf}:${windowNum}:${horizon}:${
-      model ?? 'client'
-    }`;
-
-    if (signature === lastSignatureRef.current) return;
-    lastSignatureRef.current = signature;
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
+    if (tsAbortRef.current) {
+      tsAbortRef.current.abort();
+      tsAbortRef.current = null;
     }
 
     const abortController = new AbortController();
-    abortRef.current = abortController;
+    tsAbortRef.current = abortController;
 
-    timeoutRef.current = setTimeout(() => {
-      ForecastManager.run(
+    tsTimeoutRef.current = setTimeout(() => {
+      ForecastManager.ensureTimeseriesOnly(
         {
           symbol,
           provider: providerNorm,
           tf: tf as MarketTimeframe,
           window: windowNum,
-          horizon,
+        },
+        {
+          dispatch,
+          getState: store.getState,
+          signal: abortController.signal,
+        },
+      );
+    }, ORCHESTRATOR_DEBOUNCE_MS);
+
+    return () => {
+      if (tsTimeoutRef.current) {
+        clearTimeout(tsTimeoutRef.current);
+        tsTimeoutRef.current = null;
+      }
+      if (tsAbortRef.current) {
+        tsAbortRef.current.abort();
+        tsAbortRef.current = null;
+      }
+    };
+  }, [dispatch, store, selected, params]);
+
+  useEffect(() => {
+    if (!predictRequestId) return;
+    if (predictRequestId === fcLastRequestIdRef.current) return;
+
+    const req = predictRequest;
+
+    const symbol = req?.symbol ?? selected?.symbol;
+    const uiProvider = req?.provider ?? selected?.provider;
+    const tf = req?.tf ?? params?.tf;
+    const window = req?.window ?? params?.window;
+    const horizon = req?.horizon ?? params?.horizon;
+    const model = req?.model ?? params?.model ?? null;
+
+    if (!symbol || !uiProvider || !tf || !horizon || !window) return;
+
+    const providerNorm = mapProviderToMarket(String(uiProvider));
+    if (!providerNorm) return;
+
+    const windowNum = typeof window === 'string' ? Number(window) : window;
+    if (!Number.isFinite(windowNum) || windowNum <= 0) return;
+
+    const requestId = predictRequestId;
+
+    if (fcTimeoutRef.current) {
+      clearTimeout(fcTimeoutRef.current);
+      fcTimeoutRef.current = null;
+    }
+    if (fcAbortRef.current) {
+      fcAbortRef.current.abort();
+      fcAbortRef.current = null;
+    }
+
+    const abortController = new AbortController();
+    fcAbortRef.current = abortController;
+
+    fcTimeoutRef.current = setTimeout(() => {
+      fcLastRequestIdRef.current = requestId;
+      ForecastManager.runForecast(
+        {
+          symbol: symbol as any,
+          provider: providerNorm,
+          tf: tf as MarketTimeframe,
+          window: windowNum,
+          horizon: Number(horizon),
           model,
         },
         {
@@ -89,18 +171,17 @@ export function useOrchestrator() {
           signal: abortController.signal,
         },
       );
-      // ForecastManager.run больше не бросает ошибки наружу
     }, ORCHESTRATOR_DEBOUNCE_MS);
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      if (fcTimeoutRef.current) {
+        clearTimeout(fcTimeoutRef.current);
+        fcTimeoutRef.current = null;
       }
-      if (abortRef.current) {
-        abortRef.current.abort();
-        abortRef.current = null;
+      if (fcAbortRef.current) {
+        fcAbortRef.current.abort();
+        fcAbortRef.current = null;
       }
     };
-  }, [dispatch, store, selected, params]);
+  }, [dispatch, store, selected, params, predictRequestId, predictRequest]);
 }

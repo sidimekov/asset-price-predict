@@ -9,12 +9,16 @@ export * from './types/market.js';
 export * from './types/common.js';
 
 // DTO
+export * from './dto/account.js';
+export * from './dto/auth.js';
 export * from './dto/forecast.js';
 
 // Zod-схемы
 export * from './schemas/market.schema.js';
 export * from './schemas/common.schema.js';
 export * from './schemas/forecast.schema.js';
+export * from './schemas/auth.schema.js';
+export * from './schemas/account.schema.js';
 
 // Утилиты
 export * from './utils/zodErrors.js';
