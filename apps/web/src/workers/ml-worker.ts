@@ -21,6 +21,7 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const BACKEND_PREF = (
   process.env.NEXT_PUBLIC_ORT_BACKEND || 'auto'
 ).toLowerCase();
+
 const FEATURES_BACKEND_PREF = (
   process.env.NEXT_PUBLIC_FEATURES_BACKEND || 'auto'
 ).toLowerCase();
