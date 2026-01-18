@@ -61,6 +61,28 @@ export interface ForecastMeta {
 }
 
 /**
+ * Параметры прогноза для оркестратора/страниц.
+ */
+export interface ForecastParams {
+  tf: string;
+  window: number;
+  horizon: number;
+  model?: string | null;
+}
+
+/**
+ * Запрос на запуск прогноза (кнопка Predict).
+ */
+export interface ForecastPredictRequest {
+  symbol: string;
+  provider?: string;
+  tf: string;
+  window: number;
+  horizon: number;
+  model?: string | null;
+}
+
+/**
  * Одна запись прогноза в сторе
  */
 export interface ForecastEntry {
@@ -80,6 +102,11 @@ export interface ForecastEntry {
  * Полный стейт среза forecast
  */
 export interface ForecastState {
+  params?: ForecastParams;
+  predict: {
+    requestId: number;
+    request: ForecastPredictRequest | null;
+  };
   byKey: Record<ForecastKey, ForecastEntry>;
   loadingByKey: Record<ForecastKey, boolean>;
   errorByKey: Record<ForecastKey, string | null>;

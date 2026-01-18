@@ -65,7 +65,7 @@ describe('normalizeHttpError', () => {
       error: 'AbortError',
     });
 
-    const other = normalizeHttpError({
+    const network = normalizeHttpError({
       status: 'FETCH_ERROR',
       error: 'Socket hang up',
     });
@@ -82,7 +82,7 @@ describe('normalizeHttpError', () => {
       code: 'aborted',
     });
 
-    expect(other).toEqual({
+    expect(network).toEqual({
       status: 0,
       message: 'Network error',
       code: 'network_error',
@@ -112,6 +112,30 @@ describe('normalizeHttpError', () => {
       status: 0,
       message: 'Oops',
       code: 'custom_error',
+    });
+  });
+
+  it('falls back to generic payloads and unknown status codes', () => {
+    const withCodeOnly = normalizeHttpError({
+      status: 400,
+      data: { code: 'bad_request' },
+    });
+
+    const unknownStatus = normalizeHttpError({
+      status: 'SOMETHING_ELSE',
+      error: 'Nope',
+    });
+
+    expect(withCodeOnly).toEqual({
+      status: 400,
+      message: 'Request failed',
+      code: 'bad_request',
+    });
+
+    expect(unknownStatus).toEqual({
+      status: 0,
+      message: 'Nope',
+      code: 'unknown_error',
     });
   });
 
