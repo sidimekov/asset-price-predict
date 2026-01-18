@@ -37,6 +37,8 @@ export default function ParamsPanel({
   readOnly = false,
 }: ParamsPanelProps) {
   const isLoading = state === 'loading';
+  const windowMin = 1;
+  const windowMax = 2000;
 
   const [internalTimeframe, setInternalTimeframe] = React.useState<string>(
     selectedTimeframe ?? '1h',
@@ -160,16 +162,22 @@ export default function ParamsPanel({
 
       <input
         type="number"
-        min={1}
+        min={windowMin}
+        max={windowMax}
         step={1}
         className="text-center param-panel-item w-full h-12 pl-4 rounded"
         value={windowValue}
         onChange={handleWindowChange}
         disabled={readOnly}
         placeholder="Window (lookback)"
+        title="Window = количество исторических баров (lookback)"
       />
 
       <br />
+      <div className="text-xs text-ink-muted text-center">
+        Window = количество исторических баров (lookback). Диапазон {windowMin}–
+        {windowMax}.
+      </div>
       <br />
 
       <input
