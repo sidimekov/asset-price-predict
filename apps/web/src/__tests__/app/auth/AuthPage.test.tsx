@@ -1,17 +1,13 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AuthPage from '@/app/auth/page';
+import { Suspense } from 'react';
 
 // === МОК useSearchParams ===
 const mockGet = vi.fn();
-const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: mockGet,
-  }),
-  useRouter: () => ({
-    push: mockPush,
-    replace: vi.fn(),
   }),
 }));
 
@@ -29,29 +25,17 @@ vi.mock('@/features/auth/AuthTabs', () => ({
 
 vi.mock('@/features/auth/SignUpForm', () => ({
   default: ({ onSubmit, isLoading }: any) => (
-    <button
-      type="button"
-      data-testid="signup-form"
-      onClick={() =>
-        onSubmit({ email: 'test@example.com', password: 'pass123' })
-      }
-    >
+    <form data-testid="signup-form" onSubmit={onSubmit}>
       {isLoading ? 'Submitting...' : 'Sign Up'}
-    </button>
+    </form>
   ),
 }));
 
 vi.mock('@/features/auth/SignInForm', () => ({
   default: ({ onSubmit, isLoading }: any) => (
-    <button
-      type="button"
-      data-testid="signin-form"
-      onClick={() =>
-        onSubmit({ email: 'test@example.com', password: 'pass123' })
-      }
-    >
+    <form data-testid="signin-form" onSubmit={onSubmit}>
       {isLoading ? 'Submitting...' : 'Sign In'}
-    </button>
+    </form>
   ),
 }));
 
@@ -63,19 +47,10 @@ vi.mock('@/shared/ui/GradientCard', () => ({
   ),
 }));
 
-const mockLogin = vi.fn();
-const mockRegister = vi.fn();
-vi.mock('@/shared/api/auth.api', () => ({
-  useLoginMutation: () => [mockLogin, { isLoading: false }],
-  useRegisterMutation: () => [mockRegister, { isLoading: false }],
-}));
-
 describe('AuthPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGet.mockReturnValue(null); // по умолчанию
-    mockLogin.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
-    mockRegister.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
   });
 
   test('initializes with signup mode by default', async () => {
@@ -111,21 +86,27 @@ describe('AuthPage', () => {
     });
   });
 
-  test('submits register form and redirects on success', async () => {
+  test('handles form submit with loading state and alert', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
     mockGet.mockReturnValue(null);
     render(<AuthPage />);
 
     await waitFor(() => screen.getByTestId('signup-form'));
 
-    fireEvent.click(screen.getByTestId('signup-form'));
+    const form = screen.getByTestId('signup-form');
+    fireEvent.submit(form);
+
+    expect(screen.getByTestId('signup-form')).toHaveTextContent(
+      'Submitting...',
+    );
 
     await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'pass123',
-      });
-      expect(mockPush).toHaveBeenCalledWith('/dashboard');
+      expect(alertSpy).toHaveBeenCalledWith('Зарегистрировано (мок)');
+      expect(screen.getByTestId('signup-form')).toHaveTextContent('Sign Up');
     });
+
+    alertSpy.mockRestore();
   });
 
   test('has correct responsive classes', async () => {

@@ -8,7 +8,6 @@ type BackendErrorData = {
   message?: string;
   error?: string;
   code?: string;
-  detail?: unknown;
 };
 
 const isBackendErrorData = (data: unknown): data is BackendErrorData => {
@@ -20,8 +19,7 @@ const isBackendErrorData = (data: unknown): data is BackendErrorData => {
   return (
     typeof candidate.message === 'string' ||
     typeof candidate.error === 'string' ||
-    typeof candidate.code === 'string' ||
-    'detail' in candidate
+    typeof candidate.code === 'string'
   );
 };
 
@@ -54,15 +52,10 @@ const errorFromFetchError = (error: string | undefined): HttpError => {
 export const normalizeHttpError = (error: ErrorPayload): HttpError => {
   if ('status' in error) {
     if (typeof error.status === 'number') {
-      const detail = isBackendErrorData(error.data)
-        ? error.data.detail
-        : undefined;
-
       return {
         status: error.status,
         message: pickMessage(error.data, 'Request failed'),
         code: isBackendErrorData(error.data) ? error.data.code : undefined,
-        ...(detail === undefined ? {} : { detail }),
       };
     }
 

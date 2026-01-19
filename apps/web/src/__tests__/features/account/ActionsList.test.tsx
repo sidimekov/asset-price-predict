@@ -51,16 +51,6 @@ describe('ActionsList', () => {
     expect(handleClick).toHaveBeenCalledWith('Edit photo');
   });
 
-  it('calls onLogout when logout button clicked', () => {
-    const handleLogout = vi.fn();
-    render(<ActionsList loading={false} onLogout={handleLogout} />);
-
-    const logoutButton = screen.getByText('Log out');
-    fireEvent.click(logoutButton);
-
-    expect(handleLogout).toHaveBeenCalledTimes(1);
-  });
-
   it('shows alert when button clicked without onClick prop', () => {
     const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
