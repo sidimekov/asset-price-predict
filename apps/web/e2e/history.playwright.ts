@@ -73,13 +73,7 @@ test.describe('History Page', () => {
     await expect(ths).toHaveCount(5);
 
     await expect(ths).toHaveText(
-      [
-        'Asset',
-        'Date',
-        'Model',
-        'Provider',
-        'Period',
-      ],
+      ['Asset', 'Date', 'Model', 'Provider', 'Period'],
       { useInnerText: true }, // чтобы нормально схлопывались пробелы/переносы
     );
   });
