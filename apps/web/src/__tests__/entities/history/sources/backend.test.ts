@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { HistoryEntry } from '@/entities/history/model';
 import { baseQuery } from '@/shared/networking/baseQuery';
 import { backendHistorySource } from '@/entities/history/sources/backend';
+import { DEFAULT_MODEL_VER } from '@/config/ml';
 
 vi.mock('@/shared/networking/baseQuery', () => ({
   baseQuery: vi.fn(),
@@ -54,9 +55,9 @@ describe('backendHistorySource', () => {
           symbol: 'BTC',
           tf: '1h',
           horizon: 4,
-          provider: 'BACKEND',
+          provider: 'binance',
           p50: [],
-          meta: { runtime_ms: 0, backend: 'server' },
+          meta: { runtime_ms: 0, backend: 'server', model_ver: DEFAULT_MODEL_VER },
         },
       ],
       total: 1,
@@ -95,7 +96,7 @@ describe('backendHistorySource', () => {
       symbol: 'ETH',
       tf: '1d',
       horizon: 8,
-      provider: 'BACKEND',
+      provider: 'binance',
       p50: [
         [1, 10],
         [2, 20],
@@ -126,7 +127,7 @@ describe('backendHistorySource', () => {
           confidence: 0.1,
         },
       ],
-      meta: { runtime_ms: 0, backend: 'server' },
+      meta: { runtime_ms: 0, backend: 'server', model_ver: DEFAULT_MODEL_VER },
     } as HistoryEntry);
   });
 
