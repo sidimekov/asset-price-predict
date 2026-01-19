@@ -4,7 +4,7 @@ import { zForecastCreateReq } from '@assetpredict/shared';
 import { ForecastController } from '../../modules/forecast/ForecastController.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { parseOr400 } from '../validation.js';
-import { sendError } from '../errors';
+import { sendError } from '../errors.js';
 
 export async function forecastRoutes(app: FastifyInstance) {
   const controller = new ForecastController();
