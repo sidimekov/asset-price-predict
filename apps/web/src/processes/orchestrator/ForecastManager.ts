@@ -200,6 +200,7 @@ export class ForecastManager {
             tf,
             horizon,
             provider,
+            model,
           },
           storeEntry,
           inferResult,
@@ -409,6 +410,7 @@ export class ForecastManager {
       tf: MarketTimeframe;
       horizon: number;
       provider: MarketDataProvider | 'MOCK';
+      model?: string | null;
     },
     storeEntry: {
       p50: Array<[number, number]>;
@@ -431,7 +433,7 @@ export class ForecastManager {
       meta: {
         runtime_ms: inferResult.diag.runtime_ms,
         backend: 'client',
-        model_ver: inferResult.diag.model_ver,
+        model_ver: inferResult.diag.model_ver ?? ctx.model ?? undefined,
       },
     };
   }
