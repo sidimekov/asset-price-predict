@@ -327,6 +327,7 @@ export default function Dashboard() {
                         <CandlesChart
                           className="h-96 w-full"
                           bars={bars ?? []}
+                          timeframe={effectiveParams.tf as MarketTimeframe}
                         />
                       ) : (
                         <LineChart

@@ -128,6 +128,8 @@ const buildTicksFromTimestamps = (
   const clean = timestamps.filter((ts) => Number.isFinite(ts));
   if (clean.length === 0) return [];
   const formatter = buildTimestampFormatter(rangeMs);
+  const minTs = Math.min(...clean);
+  const maxTs = Math.max(...clean);
 
   if (clean.length === 1) {
     return [{ label: formatter(clean[0]), percent: 0 }];
@@ -147,7 +149,8 @@ const buildTicksFromTimestamps = (
       clean[idx],
       position > 0 ? clean[sortedIndices[position - 1]] : undefined,
     ),
-    percent: (idx / lastIndex) * 100,
+    percent:
+      maxTs === minTs ? 0 : ((clean[idx] - minTs) / (maxTs - minTs)) * 100,
   }));
 };
 
