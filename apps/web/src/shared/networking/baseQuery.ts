@@ -9,47 +9,88 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { normalizeHttpError } from './errors';
 import type { HttpError } from './types';
 
+const backendBaseUrl =
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, '') || '/api';
+
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
-export const createBaseQuery = (
-  baseUrl: string,
-): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> => {
-  const relativeQuery = fetchBaseQuery({ baseUrl });
-  const absoluteQuery = fetchBaseQuery({ baseUrl: '' });
-
-  return (args, api, extraOptions) => {
-    const url = typeof args === 'string' ? args : args.url;
-    if (ABSOLUTE_URL_RE.test(url)) {
-      return absoluteQuery(args, api, extraOptions);
-    }
-    return relativeQuery(args, api, extraOptions);
+type CreateBaseQueryOptions = {
+  withAuth?: boolean;
+  withContentType?: boolean;
+  allowAbsolute?: boolean;
+  absolute?: {
+    withAuth?: boolean;
+    withContentType?: boolean;
   };
 };
 
-const rawBaseQuery: BaseQueryFn<
+const buildBaseQuery = (
+  baseUrl: string,
+  options: Pick<CreateBaseQueryOptions, 'withAuth' | 'withContentType'>,
+) =>
+  fetchBaseQuery({
+    baseUrl,
+    timeout: 10_000,
+    prepareHeaders: (headers) => {
+      if (options.withAuth ?? true) {
+        const token =
+          typeof localStorage === 'undefined'
+            ? null
+            : localStorage.getItem('auth.token');
+
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+      }
+
+      if (options.withContentType ?? true) {
+        if (!headers.has('content-type')) {
+          headers.set('content-type', 'application/json');
+        }
+      }
+
+      return headers;
+    },
+  });
+
+export const createBaseQuery = (
+  baseUrl: string,
+  options: CreateBaseQueryOptions = {},
+): BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError,
   {},
   FetchBaseQueryMeta
-> = fetchBaseQuery({
-  baseUrl: '/api',
-  timeout: 10_000,
-  prepareHeaders: (headers) => {
-    const token =
-      typeof localStorage === 'undefined'
-        ? null
-        : localStorage.getItem('auth.token');
+> => {
+  const relativeBaseQuery = buildBaseQuery(baseUrl, {
+    withAuth: options.withAuth,
+    withContentType: options.withContentType,
+  });
 
-    if (token) {
-      headers.set('authorization', `Bearer ${token}`);
-    }
+  if (options.allowAbsolute === false) {
+    return relativeBaseQuery;
+  }
 
-    if (!headers.has('content-type')) {
-      headers.set('content-type', 'application/json');
-    }
+  const absoluteBaseQuery = buildBaseQuery('', {
+    withAuth: options.absolute?.withAuth ?? false,
+    withContentType: options.absolute?.withContentType ?? false,
+  });
 
-    return headers;
+  return (args, api, extraOptions) => {
+    const url = typeof args === 'string' ? args : args.url;
+    return (ABSOLUTE_URL_RE.test(url) ? absoluteBaseQuery : relativeBaseQuery)(
+      args,
+      api,
+      extraOptions,
+    );
+  };
+};
+
+const rawBaseQuery = createBaseQuery(backendBaseUrl, {
+  absolute: {
+    withAuth: false,
+    withContentType: false,
   },
 });
 

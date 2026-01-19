@@ -4,10 +4,18 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import profile from '@/mocks/profile.json';
+import { useGetMeQuery } from '@/shared/api/account.api';
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const token =
+    typeof localStorage === 'undefined'
+      ? null
+      : localStorage.getItem('auth.token');
+  const { data: profile } = useGetMeQuery(undefined, { skip: !token });
+  const avatarUrl = profile?.avatarUrl ?? '/images/profile-avatar.png';
+  const username = profile?.username ?? 'Account';
+  const email = profile?.email ?? '';
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard' },
@@ -29,15 +37,15 @@ export const Sidebar: React.FC = () => {
           aria-label="Перейти в профиль"
         >
           <Image
-            src={profile.avatarUrl}
+            src={avatarUrl}
             alt="Profile avatar"
             width={64}
             height={64}
             className="sidebar-profile-avatar"
           />
           <div>
-            <p className="sidebar-profile-name">{profile.username}</p>
-            <p className="sidebar-profile-login">{profile.login}</p>
+            <p className="sidebar-profile-name">{username}</p>
+            <p className="sidebar-profile-login">{email}</p>
           </div>
         </Link>
 

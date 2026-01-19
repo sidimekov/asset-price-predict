@@ -2,26 +2,50 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ProfileHeader } from '@/features/account/ProfileHeader';
 
-// Мокаем JSON данные
-vi.mock('@/mocks/profile.json', () => ({
-  default: {
-    avatarUrl: '/test-avatar.jpg',
-    username: 'testuser',
-    login: 'test@example.com',
-  },
-}));
-
 describe('ProfileHeader', () => {
   it('shows profile info when not loading', () => {
-    render(<ProfileHeader loading={false} />);
+    render(
+      <ProfileHeader
+        loading={false}
+        profile={{
+          id: '1',
+          username: 'testuser',
+          email: 'test@example.com',
+          avatarUrl: '/test-avatar.jpg',
+        }}
+      />,
+    );
     // Проверяем только основные элементы
     expect(screen.getByAltText('testuser avatar')).toBeInTheDocument();
     expect(screen.getByText('testuser')).toBeInTheDocument();
   });
 
+  it('renders fallback values without profile', () => {
+    render(<ProfileHeader loading={false} profile={null} />);
+
+    expect(screen.getByAltText('Unknown user avatar')).toBeInTheDocument();
+    expect(screen.getByText('Unknown user')).toBeInTheDocument();
+    expect(screen.getByText('Email:')).toBeInTheDocument();
+  });
+
+  it('shows skeletons when loading', () => {
+    render(<ProfileHeader loading={true} />);
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
   it('renders without onClick prop', () => {
-    render(<ProfileHeader loading={false} />);
-    // Просто проверяем что компонент рендерится
+    render(
+      <ProfileHeader
+        loading={false}
+        profile={{
+          id: '1',
+          username: 'testuser',
+          email: 'test@example.com',
+          avatarUrl: '/test-avatar.jpg',
+        }}
+      />,
+    );
     expect(screen.getByAltText('testuser avatar')).toBeInTheDocument();
   });
 });

@@ -6,11 +6,13 @@ import Skeleton from '@/shared/ui/Skeleton';
 interface ActionsListProps {
   loading?: boolean;
   onClick?: (label: string) => void;
+  onLogout?: () => void;
 }
 
 export const ActionsList: React.FC<ActionsListProps> = ({
   loading = false,
   onClick,
+  onLogout,
 }) => {
   const actions = [
     'Edit photo',
@@ -40,7 +42,7 @@ export const ActionsList: React.FC<ActionsListProps> = ({
       {loading ? (
         <Skeleton height="48px" />
       ) : (
-        <Button onClick={handleClick('Log out')} variant="danger">
+        <Button onClick={onLogout} variant="danger">
           Log out
         </Button>
       )}
