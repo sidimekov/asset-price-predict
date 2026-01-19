@@ -54,7 +54,7 @@ export default function ForecastPage() {
     : null;
 
   const defaultParams = React.useMemo(
-    () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
+    () => ({ tf: '1h', window: 200, horizon: 24, model: 'minimal' }),
     [],
   );
 

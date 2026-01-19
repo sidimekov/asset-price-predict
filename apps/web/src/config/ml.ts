@@ -1,3 +1,4 @@
+import catboostManifest from './ml.catboost_v1.json';
 import lgbmManifest from './ml.lgbm_v1.json';
 import manifest from './ml.manifest.json';
 
@@ -46,10 +47,39 @@ export const forecastLgbmConfig: ForecastModelConfig = {
   postprocess: lgbmManifest.postprocess as ForecastModelConfig['postprocess'],
 };
 
+export const forecastCatboostConfig: ForecastModelConfig = {
+  ...catboostManifest,
+  inputShape: catboostManifest.inputShape as [number, number],
+  normalization: catboostManifest.normalization as Normalization,
+  outputs: catboostManifest.outputs as ForecastModelConfig['outputs'],
+  postprocess: catboostManifest.postprocess as ForecastModelConfig['postprocess'],
+};
+
 export const modelRegistry: ModelManifest = [
   forecastLgbmConfig,
+  forecastCatboostConfig,
   forecastMinimalConfig,
 ];
+
+export type ModelAlias = 'minimal' | 'lgbm' | 'catboost';
+
+export const modelAliasToVersion: Record<ModelAlias, string> = {
+  minimal: forecastMinimalConfig.modelVer,
+  lgbm: forecastLgbmConfig.modelVer,
+  catboost: forecastCatboostConfig.modelVer,
+};
+
+export function resolveModelVersion(model?: string | null): string | null {
+  if (!model) return null;
+  const normalized = model.toLowerCase();
+  if (normalized in modelAliasToVersion) {
+    return modelAliasToVersion[normalized as ModelAlias];
+  }
+  const found = modelRegistry.find(
+    (entry) => entry.modelVer === model || entry.modelName === model,
+  );
+  return found?.modelVer ?? null;
+}
 
 export function getModelConfig(version?: string | null): ForecastModelConfig {
   if (!version) return forecastLgbmConfig;
