@@ -17,9 +17,6 @@ const backendBaseUrl = (() => {
   if (configuredUrl) {
     return configuredUrl;
   }
-  if (process.env.NODE_ENV === 'production') {
-    return '/api';
-  }
   return 'http://localhost:3001';
 })();
 
