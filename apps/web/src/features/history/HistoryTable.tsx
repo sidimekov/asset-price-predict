@@ -18,6 +18,8 @@ function buildForecastHref(entry: HistoryEntry): string {
     provider: entry.provider,
     tf: entry.tf,
     window: String(DEFAULT_WINDOW),
+    horizon: String(entry.horizon),
+    historyId: entry.id,
   });
   return `/forecast/${encodeURIComponent(entry.symbol)}?${searchParams.toString()}`;
 }
@@ -63,29 +65,29 @@ export default function HistoryTable({
             {rows.map((entry) => {
               const href = buildForecastHref(entry);
               return (
-                <tr
-                  key={entry.id}
-                  role="link"
-                  tabIndex={0}
-                  aria-label={`Open forecast for ${entry.symbol}`}
-                  onClick={() => router.push(href)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      router.push(href);
-                    }
-                  }}
-                >
-                  <td>
-                    <Link href={href}>{entry.symbol}</Link>
-                  </td>
-                  <td>{formatDate(entry.created_at)}</td>
-                  <td>{entry.meta.model_ver ?? '—'}</td>
-                  <td>{entry.provider}</td>
-                  <td style={{ whiteSpace: 'pre-line' }}>
-                    {entry.tf} / {entry.horizon}
-                  </td>
-                </tr>
+              <tr
+                key={entry.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`Open forecast for ${entry.symbol}`}
+                onClick={() => router.push(href)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    router.push(href);
+                  }
+                }}
+              >
+                <td>
+                  <Link href={href}>{entry.symbol}</Link>
+                </td>
+                <td>{formatDate(entry.created_at)}</td>
+                <td>{entry.meta.model_ver ?? '—'}</td>
+                <td>{entry.provider}</td>
+                <td style={{ whiteSpace: 'pre-line' }}>
+                  {entry.tf} / {entry.horizon}
+                </td>
+              </tr>
               );
             })}
           </tbody>
