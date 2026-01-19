@@ -26,6 +26,7 @@ export function buildApp() {
   app.register(cors, {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
+      if (env.corsOrigins.includes('*')) return cb(null, true);
       if (env.corsOrigins.includes(origin)) return cb(null, true);
       app.log.warn({ origin }, 'CORS origin rejected');
       return cb(new Error('CORS not allowed'), false);
