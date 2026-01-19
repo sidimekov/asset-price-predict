@@ -40,10 +40,7 @@ function parseCorsOrigins(v: string | undefined, nodeEnv: NodeEnv): string[] {
     .filter(Boolean);
 }
 
-function parseJwtSecret(
-  v: string | undefined,
-  nodeEnv: NodeEnv,
-): string {
+function parseJwtSecret(v: string | undefined, nodeEnv: NodeEnv): string {
   if (v?.trim()) {
     return v;
   }
