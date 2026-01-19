@@ -2,16 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 type HeadersInstance = InstanceType<typeof globalThis.Headers>;
 
-const { relativeQueryFn, absoluteQueryFn, captured } =
-  vi.hoisted(() => ({
-    relativeQueryFn: vi.fn(),
-    absoluteQueryFn: vi.fn(),
-    captured: {
-      prepareHeaders: undefined as
-        | ((headers: HeadersInstance) => HeadersInstance)
-        | undefined,
-    },
-  }));
+const { relativeQueryFn, absoluteQueryFn, captured } = vi.hoisted(() => ({
+  relativeQueryFn: vi.fn(),
+  absoluteQueryFn: vi.fn(),
+  captured: {
+    prepareHeaders: undefined as
+      | ((headers: HeadersInstance) => HeadersInstance)
+      | undefined,
+  },
+}));
 
 vi.mock('@reduxjs/toolkit/query/react', () => ({
   fetchBaseQuery: (opts: { baseUrl?: string }) => {
