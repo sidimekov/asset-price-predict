@@ -1,8 +1,7 @@
 services:
   postgres:
     env_file:
-      - path: .env
-        required: false
+      - .env
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-assetpredict}
@@ -25,8 +24,7 @@ services:
 
   api:
     env_file:
-      - path: .env
-        required: false
+      - .env
     build:
       context: .
       dockerfile: apps/api/Dockerfile.dev
@@ -57,8 +55,7 @@ services:
 
   web:
     env_file:
-      - path: .env
-        required: false
+      - .env
     build:
       context: .
       dockerfile: apps/web/Dockerfile.dev
