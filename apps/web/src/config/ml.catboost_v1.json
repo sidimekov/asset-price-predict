@@ -1,10 +1,10 @@
 {
   "modelName": "forecast_catboost_v1",
-  "modelVer": "catboost-0-1-0",
+  "modelVer": "cat-0-1-0",
   "path": "/models/forecast_catboost_v1.onnx",
   "onnxSha256": "ca286c9aaed2d3119ceb4a3490f050226a288e2aa8967c42f4cebbfa14dd69b8",
   "inputShape": [1, 10],
-  "horizonSteps": 24,
+  "horizonSteps": 1,
   "featureWindow": 64,
   "tailSize": 128,
   "normalization": {

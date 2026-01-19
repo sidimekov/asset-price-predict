@@ -6,6 +6,7 @@ import {
   DEFAULT_MODEL_VER,
   getModelConfig,
   resolveModelVersion,
+  type ForecastModelConfig,
 } from '@/config/ml';
 
 import {
@@ -48,8 +49,14 @@ function setOrtEnv() {
     ort.env.wasm.wasmPaths || `${BASE_PATH}/onnxruntime/`;
 }
 
-function shouldUseWebGpu(): boolean {
+function shouldUseWebGpu(modelConfig: ForecastModelConfig): boolean {
   if (BACKEND_PREF === 'wasm') return false;
+  if (
+    modelConfig.modelName.includes('lgbm') ||
+    modelConfig.modelName.includes('catboost')
+  ) {
+    return false;
+  }
   if (BACKEND_PREF === 'webgpu') return true;
   return Boolean((ctx as any).navigator?.gpu);
 }
@@ -89,14 +96,14 @@ async function getSession(modelVer: string): Promise<SessionInfo> {
     : [modelConfig.path];
 
   const sessionPromise = (async () => {
-    const useWebGpu = shouldUseWebGpu();
+    const useWebGpu = shouldUseWebGpu(modelConfig);
     let lastError: unknown;
 
     if (useWebGpu) {
       try {
         const session = await tryCreateSession('webgpu', candidates);
         if (session) {
-          return { session, backend: 'webgpu' };
+          return { session, backend: 'webgpu' } as const;
         }
       } catch (err) {
         lastError = err;
@@ -106,7 +113,7 @@ async function getSession(modelVer: string): Promise<SessionInfo> {
     try {
       const session = await tryCreateSession('wasm', candidates);
       if (session) {
-        return { session, backend: 'wasm' };
+        return { session, backend: 'wasm' } as const;
       }
     } catch (err) {
       lastError = err;
@@ -186,7 +193,22 @@ async function handleInferRequest(
 
   // 5) postprocess
   const lastClose = tail[tail.length - 1][1];
-  const p50 = postprocessDelta(raw, lastClose, horizon);
+  const deltas = Array.from(raw);
+  const resolvedHorizon =
+    modelConfig.horizonSteps > 0
+      ? Math.min(horizon, modelConfig.horizonSteps)
+      : horizon;
+  const shapedDeltas =
+    deltas.length === resolvedHorizon
+      ? deltas
+      : deltas.length === 1 && resolvedHorizon > 1
+        ? Array.from({ length: resolvedHorizon }, () => deltas[0])
+        : deltas.slice(0, resolvedHorizon);
+  const p50 = postprocessDelta(
+    Float32Array.from(shapedDeltas),
+    lastClose,
+    resolvedHorizon,
+  );
 
   // временный p10/p90 (пока модель/постпроцесс не отдают их)
   const p10 = p50.map((v) => v * (1 - BAND));
