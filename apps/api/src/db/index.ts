@@ -3,8 +3,26 @@ import type { FastifyBaseLogger } from 'fastify';
 
 let dbHealthy = false;
 
+const nodeEnv = process.env.NODE_ENV ?? 'development';
+const defaultHost = nodeEnv === 'production' ? 'postgres' : 'localhost';
+
+function buildConnectionString() {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+
+  const user = process.env.POSTGRES_USER ?? 'postgres';
+  const password = process.env.POSTGRES_PASSWORD ?? '';
+  const database = process.env.POSTGRES_DB ?? 'postgres';
+  const host = process.env.POSTGRES_HOST ?? defaultHost;
+  const port = process.env.POSTGRES_PORT ?? '5432';
+  const encodedPassword = encodeURIComponent(password);
+
+  return `postgres://${user}:${encodedPassword}@${host}:${port}/${database}`;
+}
+
 export const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: buildConnectionString(),
 });
 
 db.on('error', (err) => {
