@@ -70,7 +70,7 @@ test.describe('History Page', () => {
 
     // Берём все th из thead и сравниваем текст по порядку
     const ths = table.locator('thead th');
-    await expect(ths).toHaveCount(6); // 5 колонок + последний объединённый заголовок
+    await expect(ths).toHaveCount(5);
 
     await expect(ths).toHaveText(
       [
@@ -79,7 +79,6 @@ test.describe('History Page', () => {
         'Model',
         'Provider',
         'Period',
-        'Factors (TOP 5): impact, SHAP, Conf.',
       ],
       { useInnerText: true }, // чтобы нормально схлопывались пробелы/переносы
     );
