@@ -1,10 +1,9 @@
 /* global GPUAdapter, GPUBindGroup, GPUBindGroupLayout, GPUBuffer, GPUBufferUsage, GPUCommandEncoder, GPUComputePassEncoder, GPUComputePipeline, GPUDevice, GPUMapMode, GPUQueue, GPUShaderModule */
 /// <reference lib="webworker" />
 
-import { forecastMinimalConfig } from '@/config/ml';
+import type { ForecastModelConfig } from '@/config/ml';
 import { TailPoint } from '@/workers/types';
 
-const MODEL = forecastMinimalConfig;
 const FEATURE_COUNT = 10;
 
 type GpuState = {
@@ -13,6 +12,7 @@ type GpuState = {
   normMeanBuffer: GPUBuffer;
   normStdBuffer: GPUBuffer;
   paramsBuffer: GPUBuffer;
+  modelVer: string;
 };
 
 const shader = `
@@ -125,8 +125,10 @@ export function isWebGpuSupported(): boolean {
   return Boolean(getNavigator()?.gpu);
 }
 
-async function getGpuState(): Promise<GpuState> {
-  if (gpuState) return gpuState;
+async function getGpuState(
+  modelConfig: ForecastModelConfig,
+): Promise<GpuState> {
+  if (gpuState?.modelVer === modelConfig.modelVer) return gpuState;
 
   const navigator = getNavigator();
   if (!navigator?.gpu) {
@@ -145,7 +147,7 @@ async function getGpuState(): Promise<GpuState> {
     compute: { module, entryPoint: 'main' },
   });
 
-  const norm = MODEL.normalization;
+  const norm = modelConfig.normalization;
   if (!norm || norm.type !== 'zscore') {
     throw new Error('WebGPU feature pipeline expects zscore normalization');
   }
@@ -166,21 +168,31 @@ async function getGpuState(): Promise<GpuState> {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  gpuState = { device, pipeline, normMeanBuffer, normStdBuffer, paramsBuffer };
+  gpuState = {
+    device,
+    pipeline,
+    normMeanBuffer,
+    normStdBuffer,
+    paramsBuffer,
+    modelVer: modelConfig.modelVer,
+  };
   return gpuState;
 }
 
 export async function buildFeaturesGpu(
   tail: TailPoint[],
+  modelConfig: ForecastModelConfig,
 ): Promise<Float32Array> {
-  if (tail.length < MODEL.featureWindow) {
+  if (tail.length < modelConfig.featureWindow) {
     throw new Error(
-      `EBADINPUT: tail too short (need >= ${MODEL.featureWindow}, got ${tail.length})`,
+      `EBADINPUT: tail too short (need >= ${modelConfig.featureWindow}, got ${tail.length})`,
     );
   }
 
-  const closes = tail.slice(-MODEL.featureWindow).map(([, close]) => close);
-  const state = await getGpuState();
+  const closes = tail
+    .slice(-modelConfig.featureWindow)
+    .map(([, close]) => close);
+  const state = await getGpuState(modelConfig);
   const { device, pipeline, normMeanBuffer, normStdBuffer, paramsBuffer } =
     state;
 
@@ -199,7 +211,7 @@ export async function buildFeaturesGpu(
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
 
-  const norm = MODEL.normalization;
+  const norm = modelConfig.normalization;
   if (!norm || norm.type !== 'zscore') {
     throw new Error('WebGPU feature pipeline expects zscore normalization');
   }

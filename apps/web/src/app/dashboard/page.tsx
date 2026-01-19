@@ -108,15 +108,6 @@ export default function Dashboard() {
   const [modalQuery, setModalQuery] = React.useState('');
   const [paramsState, setParamsState] = React.useState<ParamsState>('idle');
 
-  const [selectedModel, setSelectedModel] = React.useState('');
-  const [selectedDate, setSelectedDate] = React.useState(() => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-      2,
-      '0',
-    )}-${String(today.getDate()).padStart(2, '0')}`;
-  });
-
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setParamsState('success');
@@ -130,7 +121,7 @@ export default function Dashboard() {
     : null;
 
   const defaultParams = React.useMemo(
-    () => ({ tf: '1h', window: 200, horizon: 24, model: null }),
+    () => ({ tf: '1h', window: 200, horizon: 24, model: 'minimal' }),
     [],
   );
 

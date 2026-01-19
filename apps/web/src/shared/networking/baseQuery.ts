@@ -14,13 +14,48 @@ const backendBaseUrl =
 
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
-type HeadersInstance = InstanceType<typeof globalThis.Headers>;
+type CreateBaseQueryOptions = {
+  withAuth?: boolean;
+  withContentType?: boolean;
+  allowAbsolute?: boolean;
+  absolute?: {
+    withAuth?: boolean;
+    withContentType?: boolean;
+  };
+};
 
-const getUrl = (args: string | FetchArgs) =>
-  typeof args === 'string' ? args : args.url;
+const buildBaseQuery = (
+  baseUrl: string,
+  options: Pick<CreateBaseQueryOptions, 'withAuth' | 'withContentType'>,
+) =>
+  fetchBaseQuery({
+    baseUrl,
+    timeout: 10_000,
+    prepareHeaders: (headers) => {
+      if (options.withAuth ?? true) {
+        const token =
+          typeof localStorage === 'undefined'
+            ? null
+            : localStorage.getItem('auth.token');
+
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
+      }
+
+      if (options.withContentType ?? true) {
+        if (!headers.has('content-type')) {
+          headers.set('content-type', 'application/json');
+        }
+      }
+
+      return headers;
+    },
+  });
 
 export const createBaseQuery = (
   baseUrl: string,
+  options: CreateBaseQueryOptions = {},
 ): BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -28,37 +63,36 @@ export const createBaseQuery = (
   {},
   FetchBaseQueryMeta
 > => {
-  const queryOptions = {
-    baseUrl,
-    timeout: 10_000,
-    prepareHeaders: (headers: HeadersInstance) => {
-      const token =
-        typeof localStorage === 'undefined'
-          ? null
-          : localStorage.getItem('auth.token');
+  const relativeBaseQuery = buildBaseQuery(baseUrl, {
+    withAuth: options.withAuth,
+    withContentType: options.withContentType,
+  });
 
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
+  if (options.allowAbsolute === false) {
+    return relativeBaseQuery;
+  }
 
-      if (!headers.has('content-type')) {
-        headers.set('content-type', 'application/json');
-      }
+  const absoluteBaseQuery = buildBaseQuery('', {
+    withAuth: options.absolute?.withAuth ?? false,
+    withContentType: options.absolute?.withContentType ?? false,
+  });
 
-      return headers;
-    },
+  return (args, api, extraOptions) => {
+    const url = typeof args === 'string' ? args : args.url;
+    return (ABSOLUTE_URL_RE.test(url) ? absoluteBaseQuery : relativeBaseQuery)(
+      args,
+      api,
+      extraOptions,
+    );
   };
-
-  const relativeBaseQuery = fetchBaseQuery(queryOptions);
-  const absoluteBaseQuery = fetchBaseQuery({ ...queryOptions, baseUrl: '' });
-
-  return (args, api, extraOptions) =>
-    (ABSOLUTE_URL_RE.test(getUrl(args))
-      ? absoluteBaseQuery
-      : relativeBaseQuery)(args, api, extraOptions);
 };
 
-const rawBaseQuery = createBaseQuery(backendBaseUrl);
+const rawBaseQuery = createBaseQuery(backendBaseUrl, {
+  absolute: {
+    withAuth: false,
+    withContentType: false,
+  },
+});
 
 const getRequestInfo = (args: string | FetchArgs) => {
   if (typeof args === 'string') {

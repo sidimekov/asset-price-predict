@@ -2,7 +2,12 @@
 /* global performance */
 /// <reference lib="webworker" />
 import * as ort from 'onnxruntime-web';
-import { forecastMinimalConfig } from '@/config/ml';
+import {
+  DEFAULT_MODEL_VER,
+  getModelConfig,
+  resolveModelVersion,
+  type ForecastModelConfig,
+} from '@/config/ml';
 
 import {
   buildFeaturesWithBackend,
@@ -16,7 +21,6 @@ import type {
 } from './types';
 
 const ctx = self as DedicatedWorkerGlobalScope;
-const MODEL = forecastMinimalConfig;
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const BACKEND_PREF = (
   process.env.NEXT_PUBLIC_ORT_BACKEND || 'auto'
@@ -34,7 +38,8 @@ type SessionInfo = {
   backend: 'webgpu' | 'wasm';
 };
 
-let sessionPromise: Promise<SessionInfo> | null = null;
+const sessionPromises = new Map<string, Promise<SessionInfo>>();
+let runQueue = Promise.resolve();
 
 function setOrtEnv() {
   ort.env.wasm.numThreads = 1;
@@ -44,8 +49,14 @@ function setOrtEnv() {
     ort.env.wasm.wasmPaths || `${BASE_PATH}/onnxruntime/`;
 }
 
-function shouldUseWebGpu(): boolean {
+function shouldUseWebGpu(modelConfig: ForecastModelConfig): boolean {
   if (BACKEND_PREF === 'wasm') return false;
+  if (
+    modelConfig.modelName.includes('lgbm') ||
+    modelConfig.modelName.includes('catboost')
+  ) {
+    return false;
+  }
   if (BACKEND_PREF === 'webgpu') return true;
   return Boolean((ctx as any).navigator?.gpu);
 }
@@ -73,24 +84,26 @@ async function tryCreateSession(
   return null;
 }
 
-async function getSession(): Promise<SessionInfo> {
-  if (sessionPromise) return sessionPromise;
+async function getSession(modelVer: string): Promise<SessionInfo> {
+  const existing = sessionPromises.get(modelVer);
+  if (existing) return existing;
 
   setOrtEnv();
 
-  const candidates = MODEL.quantPath
-    ? [MODEL.quantPath, MODEL.path]
-    : [MODEL.path];
+  const modelConfig = getModelConfig(modelVer);
+  const candidates = modelConfig.quantPath
+    ? [modelConfig.quantPath, modelConfig.path]
+    : [modelConfig.path];
 
-  sessionPromise = (async () => {
-    const useWebGpu = shouldUseWebGpu();
+  const sessionPromise = (async () => {
+    const useWebGpu = shouldUseWebGpu(modelConfig);
     let lastError: unknown;
 
     if (useWebGpu) {
       try {
         const session = await tryCreateSession('webgpu', candidates);
         if (session) {
-          return { session, backend: 'webgpu' };
+          return { session, backend: 'webgpu' } as const;
         }
       } catch (err) {
         lastError = err;
@@ -100,7 +113,7 @@ async function getSession(): Promise<SessionInfo> {
     try {
       const session = await tryCreateSession('wasm', candidates);
       if (session) {
-        return { session, backend: 'wasm' };
+        return { session, backend: 'wasm' } as const;
       }
     } catch (err) {
       lastError = err;
@@ -109,6 +122,7 @@ async function getSession(): Promise<SessionInfo> {
     throw lastError || new Error('Unable to load ONNX session');
   })();
 
+  sessionPromises.set(modelVer, sessionPromise);
   return sessionPromise;
 }
 
@@ -125,86 +139,112 @@ function postError(
   ctx.postMessage(msg);
 }
 
-ctx.addEventListener(
-  'message',
-  async (event: MessageEvent<InferRequestMessage>) => {
-    const { id, type, payload } = event.data;
+async function handleInferRequest(
+  id: string,
+  payload: InferRequestMessage['payload'],
+): Promise<void> {
+  const t0 = performance.now();
+  const { tail, horizon, model } = payload;
 
-    if (type !== 'infer:request') {
-      postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
-      return;
-    }
+  if (!tail || tail.length === 0 || horizon <= 0) {
+    postError(id, 'EBADINPUT', 'Invalid tail or horizon');
+    return;
+  }
 
-    const t0 = performance.now();
+  const resolvedModelVer = resolveModelVersion(model);
+  if (model && !resolvedModelVer) {
+    postError(id, 'EBADINPUT', `Unsupported model version: ${model}`);
+    return;
+  }
+  const modelVer = resolvedModelVer ?? DEFAULT_MODEL_VER;
+  const modelConfig = getModelConfig(modelVer);
+  // 1) features
+  const { features, backend: featuresBackend } = await buildFeaturesWithBackend(
+    tail,
+    modelConfig,
+    FEATURES_BACKEND_PREF as FeatureBackend,
+  );
 
-    try {
-      const { tail, horizon, model } = payload;
+  // 2) session
+  const { session, backend } = await getSession(modelConfig.modelVer);
 
-      if (!tail || tail.length === 0 || horizon <= 0) {
-        postError(id, 'EBADINPUT', 'Invalid tail or horizon');
-        return;
-      }
+  // 3) run
+  const inputName = (session as any).inputNames?.[0] ?? 'input';
+  const inputTensor = new ort.Tensor(
+    'float32',
+    features,
+    modelConfig.inputShape,
+  );
 
-      if (model && model !== MODEL.modelVer) {
-        postError(id, 'EBADINPUT', `Unsupported model version: ${model}`);
-        return;
-      }
-      // 1) features
-      const { features, backend: featuresBackend } =
-        await buildFeaturesWithBackend(
-          tail,
-          FEATURES_BACKEND_PREF as FeatureBackend,
-        );
+  const outMap = await session.run({ [inputName]: inputTensor });
 
-      // 2) session
-      const { session, backend } = await getSession();
+  // 4) достаём delta (если нет delta - берём первый output)
+  const outName = (outMap as any).delta
+    ? 'delta'
+    : ((session as any).outputNames?.[0] ?? Object.keys(outMap)[0]);
 
-      // 3) run
-      const inputName = (session as any).inputNames?.[0] ?? 'input';
-      const inputTensor = new ort.Tensor('float32', features, MODEL.inputShape);
+  const raw = outMap[outName]?.data as Float32Array | undefined;
 
-      const outMap = await session.run({ [inputName]: inputTensor });
+  if (!raw) {
+    postError(id, 'ERUNTIME', `ONNX output "${outName}" is missing`);
+    return;
+  }
 
-      // 4) достаём delta (если нет delta - берём первый output)
-      const outName = (outMap as any).delta
-        ? 'delta'
-        : ((session as any).outputNames?.[0] ?? Object.keys(outMap)[0]);
+  // 5) postprocess
+  const lastClose = tail[tail.length - 1][1];
+  const deltas = Array.from(raw);
+  const resolvedHorizon =
+    modelConfig.horizonSteps > 0
+      ? Math.min(horizon, modelConfig.horizonSteps)
+      : horizon;
+  const shapedDeltas =
+    deltas.length === resolvedHorizon
+      ? deltas
+      : deltas.length === 1 && resolvedHorizon > 1
+        ? Array.from({ length: resolvedHorizon }, () => deltas[0])
+        : deltas.slice(0, resolvedHorizon);
+  const p50 = postprocessDelta(
+    Float32Array.from(shapedDeltas),
+    lastClose,
+    resolvedHorizon,
+  );
 
-      const raw = outMap[outName]?.data as Float32Array | undefined;
+  // временный p10/p90 (пока модель/постпроцесс не отдают их)
+  const p10 = p50.map((v) => v * (1 - BAND));
+  const p90 = p50.map((v) => v * (1 + BAND));
 
-      if (!raw) {
-        postError(id, 'ERUNTIME', `ONNX output "${outName}" is missing`);
-        return;
-      }
+  const t1 = performance.now();
 
-      // 5) postprocess
-      const lastClose = tail[tail.length - 1][1];
-      const p50 = postprocessDelta(raw, lastClose, horizon);
+  const msg: InferDoneMessage = {
+    id,
+    type: 'infer:done',
+    payload: {
+      p50,
+      p10,
+      p90,
+      diag: {
+        runtime_ms: t1 - t0,
+        backend,
+        features_backend: featuresBackend,
+        model_ver: modelConfig.modelVer,
+      },
+    },
+  };
 
-      // временный p10/p90 (пока модель/постпроцесс не отдают их)
-      const p10 = p50.map((v) => v * (1 - BAND));
-      const p90 = p50.map((v) => v * (1 + BAND));
+  ctx.postMessage(msg);
+}
 
-      const t1 = performance.now();
+ctx.addEventListener('message', (event: MessageEvent<InferRequestMessage>) => {
+  const { id, type, payload } = event.data;
 
-      const msg: InferDoneMessage = {
-        id,
-        type: 'infer:done',
-        payload: {
-          p50,
-          p10,
-          p90,
-          diag: {
-            runtime_ms: t1 - t0,
-            backend,
-            features_backend: featuresBackend,
-            model_ver: MODEL.modelVer,
-          },
-        },
-      };
+  if (type !== 'infer:request') {
+    postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
+    return;
+  }
 
-      ctx.postMessage(msg);
-    } catch (e: any) {
+  runQueue = runQueue
+    .then(() => handleInferRequest(id, payload))
+    .catch((e: any) => {
       const message = e?.message || 'ML worker runtime error';
       if (
         String(message).toLowerCase().includes('load') ||
@@ -214,6 +254,5 @@ ctx.addEventListener(
         return;
       }
       postError(id, 'ERUNTIME', message);
-    }
-  },
-);
+    });
+});

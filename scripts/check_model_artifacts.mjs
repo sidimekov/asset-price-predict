@@ -35,6 +35,10 @@ function main() {
       manifest: 'apps/web/src/config/ml.lgbm_v1.json',
       testVectors: 'docs/modeling/test_vectors_lgbm.json',
     },
+    {
+      manifest: 'apps/web/src/config/ml.catboost_v1.json',
+      testVectors: 'docs/modeling/test_vectors_catboost.json',
+    },
   ];
 
   for (const entry of manifests) {

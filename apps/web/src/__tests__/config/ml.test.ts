@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_MODEL_VER,
+  forecastCatboostConfig,
   forecastLgbmConfig,
   forecastMinimalConfig,
   getModelConfig,
+  resolveModelVersion,
 } from '@/config/ml';
 
 describe('ml config', () => {
@@ -21,6 +23,18 @@ describe('ml config', () => {
 
     const fallback = getModelConfig('unknown-version');
     expect(fallback).toBe(forecastLgbmConfig);
+  });
+
+  it('resolves model aliases and versions', () => {
+    expect(resolveModelVersion('minimal')).toBe(forecastMinimalConfig.modelVer);
+    expect(resolveModelVersion('lgbm')).toBe(forecastLgbmConfig.modelVer);
+    expect(resolveModelVersion('catboost')).toBe(
+      forecastCatboostConfig.modelVer,
+    );
+    expect(resolveModelVersion(forecastCatboostConfig.modelVer)).toBe(
+      forecastCatboostConfig.modelVer,
+    );
+    expect(resolveModelVersion('unknown')).toBeNull();
   });
 
   it('exports default model version', () => {
