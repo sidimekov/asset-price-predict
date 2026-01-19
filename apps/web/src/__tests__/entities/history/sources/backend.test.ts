@@ -57,7 +57,11 @@ describe('backendHistorySource', () => {
           horizon: 4,
           provider: 'binance',
           p50: [],
-          meta: { runtime_ms: 0, backend: 'server', model_ver: DEFAULT_MODEL_VER },
+          meta: {
+            runtime_ms: 0,
+            backend: 'server',
+            model_ver: DEFAULT_MODEL_VER,
+          },
         },
       ],
       total: 1,

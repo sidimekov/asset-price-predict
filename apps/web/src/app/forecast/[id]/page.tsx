@@ -114,7 +114,8 @@ export default function ForecastPage() {
   }, [storedParams, defaultParams, tfQuery, windowQuery, horizonQuery]);
 
   const effectiveParams = resolvedParams;
-  const routeSymbol = typeof id === 'string' && id.trim().length > 0 ? id : null;
+  const routeSymbol =
+    typeof id === 'string' && id.trim().length > 0 ? id : null;
   const selectedSymbol = routeSymbol ?? selectedAsset?.symbol ?? null;
   const tickerQuery = searchParams.get('ticker');
   const displaySymbol = tickerQuery || selectedSymbol || String(id);
@@ -230,13 +231,7 @@ export default function ForecastPage() {
     return () => {
       isActive = false;
     };
-  }, [
-    dispatch,
-    effectiveParams,
-    historyIdQuery,
-    routeSymbol,
-    selectedAsset,
-  ]);
+  }, [dispatch, effectiveParams, historyIdQuery, routeSymbol, selectedAsset]);
 
   const handleBackToAssets = () => {
     router.push('/dashboard');
