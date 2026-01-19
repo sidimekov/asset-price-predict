@@ -22,12 +22,13 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const getStoredToken = () =>
+    typeof localStorage === 'undefined'
+      ? null
+      : localStorage.getItem('auth.token');
 
   useEffect(() => {
-    const storedToken =
-      typeof localStorage === 'undefined'
-        ? null
-        : localStorage.getItem('auth.token');
+    const storedToken = getStoredToken();
     setToken(storedToken);
     setIsAuthChecked(true);
   }, [pathname]);
@@ -42,10 +43,16 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
     if (!isAuthChecked) {
       return;
     }
-    if (!token && !isPublicPage) {
+    const storedToken = getStoredToken();
+    const resolvedToken = token ?? storedToken;
+    if (!resolvedToken && !isPublicPage) {
       router.replace('/auth');
+      return;
     }
-  }, [token, isPublicPage, isAuthChecked, router]);
+    if (resolvedToken && safePathname === '/auth') {
+      router.replace('/dashboard');
+    }
+  }, [token, isPublicPage, isAuthChecked, router, safePathname]);
 
   useEffect(() => {
     const isHttpError = (error: unknown): error is HttpError =>
