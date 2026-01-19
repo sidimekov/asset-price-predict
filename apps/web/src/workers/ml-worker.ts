@@ -159,12 +159,11 @@ async function handleInferRequest(
   const modelVer = resolvedModelVer ?? DEFAULT_MODEL_VER;
   const modelConfig = getModelConfig(modelVer);
   // 1) features
-  const { features, backend: featuresBackend } =
-    await buildFeaturesWithBackend(
-      tail,
-      modelConfig,
-      FEATURES_BACKEND_PREF as FeatureBackend,
-    );
+  const { features, backend: featuresBackend } = await buildFeaturesWithBackend(
+    tail,
+    modelConfig,
+    FEATURES_BACKEND_PREF as FeatureBackend,
+  );
 
   // 2) session
   const { session, backend } = await getSession(modelConfig.modelVer);
@@ -235,28 +234,25 @@ async function handleInferRequest(
   ctx.postMessage(msg);
 }
 
-ctx.addEventListener(
-  'message',
-  (event: MessageEvent<InferRequestMessage>) => {
-    const { id, type, payload } = event.data;
+ctx.addEventListener('message', (event: MessageEvent<InferRequestMessage>) => {
+  const { id, type, payload } = event.data;
 
-    if (type !== 'infer:request') {
-      postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
-      return;
-    }
+  if (type !== 'infer:request') {
+    postError(id, 'EBADINPUT', `Unsupported message type: ${type}`);
+    return;
+  }
 
-    runQueue = runQueue
-      .then(() => handleInferRequest(id, payload))
-      .catch((e: any) => {
-        const message = e?.message || 'ML worker runtime error';
-        if (
-          String(message).toLowerCase().includes('load') ||
-          String(message).toLowerCase().includes('onnx')
-        ) {
-          postError(id, 'ELOAD', message);
-          return;
-        }
-        postError(id, 'ERUNTIME', message);
-      });
-  },
-);
+  runQueue = runQueue
+    .then(() => handleInferRequest(id, payload))
+    .catch((e: any) => {
+      const message = e?.message || 'ML worker runtime error';
+      if (
+        String(message).toLowerCase().includes('load') ||
+        String(message).toLowerCase().includes('onnx')
+      ) {
+        postError(id, 'ELOAD', message);
+        return;
+      }
+      postError(id, 'ERUNTIME', message);
+    });
+});

@@ -52,7 +52,8 @@ export const forecastCatboostConfig: ForecastModelConfig = {
   inputShape: catboostManifest.inputShape as [number, number],
   normalization: catboostManifest.normalization as Normalization,
   outputs: catboostManifest.outputs as ForecastModelConfig['outputs'],
-  postprocess: catboostManifest.postprocess as ForecastModelConfig['postprocess'],
+  postprocess:
+    catboostManifest.postprocess as ForecastModelConfig['postprocess'],
 };
 
 export const modelRegistry: ModelManifest = [
