@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main" , "revert-176-ci/remove-deploy-tmp"]
+    branches: [ "main" , "fix/db-connection-api"]
   workflow_dispatch: {}
 
 permissions:
