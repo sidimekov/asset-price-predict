@@ -4,7 +4,9 @@ import type { FastifyBaseLogger } from 'fastify';
 let dbHealthy = false;
 
 export const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString:
+    process.env.DATABASE_URL ??
+    'postgres://assetpredict:assetpredict@localhost:5432/assetpredict',
 });
 
 db.on('error', (err) => {

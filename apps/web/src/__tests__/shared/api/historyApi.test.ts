@@ -37,6 +37,16 @@ describe('historyApi', () => {
   const fetchMock = vi.fn();
   const NativeRequest = globalThis.Request;
   const baseUrl = 'http://localhost';
+  const backendBaseUrl = (() => {
+    const configuredUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(
+      /\/+$/,
+      '',
+    );
+    if (configuredUrl) {
+      return configuredUrl;
+    }
+    return 'http://localhost:3001';
+  })();
 
   beforeEach(() => {
     fetchMock.mockReset();
@@ -77,7 +87,7 @@ describe('historyApi', () => {
 
     const [input] = fetchMock.mock.calls[0];
     const url = getRequestUrl(input);
-    expect(url).toContain('/api/forecasts');
+    expect(url).toContain(`${backendBaseUrl}/forecasts`);
     expect(url).toContain('symbol=BTC');
   });
 });

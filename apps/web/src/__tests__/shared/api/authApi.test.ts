@@ -36,8 +36,19 @@ const getRequestUrl = (input: RequestInput | URL) => {
 describe('authApi token handling', () => {
   const fetchMock = vi.fn();
   const NativeRequest = globalThis.Request;
-  const backendBaseUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, '') || '/api';
+  const backendBaseUrl = (() => {
+    const configuredUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(
+      /\/+$/,
+      '',
+    );
+    if (configuredUrl) {
+      return configuredUrl;
+    }
+    if (process.env.NODE_ENV === 'production') {
+      return '/api';
+    }
+    return 'http://localhost:3001';
+  })();
   const absoluteBaseUrl = backendBaseUrl.startsWith('http')
     ? backendBaseUrl
     : 'http://localhost';
