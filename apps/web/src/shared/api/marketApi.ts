@@ -140,11 +140,10 @@ export const marketApi = createApi({
       }),
     }),
 
-    // GET /api/market/binance/search-symbols?q=...
+    // GET /api/market/binance/search-symbols
     searchBinanceSymbols: builder.query<BinanceExchangeInfo, SearchQuery>({
-      query: (q) => ({
+      query: () => ({
         url: 'https://api.binance.com/api/v3/exchangeInfo',
-        params: { q },
       }),
     }),
 
