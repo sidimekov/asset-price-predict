@@ -1,0 +1,79 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "main" , "revert-176-ci/remove-deploy-tmp"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/asset-price-predict-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/asset-price-predict-web
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+  COMPOSE_FILE: docker-compose.prod.yml
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR (for push)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_API }}:latest
+            ${{ env.IMAGE_API }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push WEB
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_WEB }}:latest
+            ${{ env.IMAGE_WEB }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_YM_ID=${{ secrets.NEXT_PUBLIC_YM_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy on server (pull & up)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT }}
+          script: |
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+            docker compose -f ${{ env.COMPOSE_FILE }} pull
+            docker compose -f ${{ env.COMPOSE_FILE }} up -d
+
+            docker image prune -f
