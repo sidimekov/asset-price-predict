@@ -33,7 +33,7 @@ describe('ParamsPanel', () => {
       <ParamsPanel
         state="success"
         onPredict={vi.fn()}
-        selectedModel=""
+        selectedModel="minimal"
         selectedTimeframe="1h"
         selectedWindow={100}
         selectedHorizon={12}
@@ -48,8 +48,8 @@ describe('ParamsPanel', () => {
     fireEvent.change(selects[0], { target: { value: '8h' } });
     expect(onTimeframeChange).toHaveBeenCalledWith('8h');
 
-    fireEvent.change(selects[1], { target: { value: 'lgbm_v1' } });
-    expect(onModelChange).toHaveBeenCalledWith('lgbm_v1');
+    fireEvent.change(selects[1], { target: { value: 'lgbm' } });
+    expect(onModelChange).toHaveBeenCalledWith('lgbm');
 
     const numberInputs = container.querySelectorAll('input[type="number"]');
 
@@ -72,7 +72,7 @@ describe('ParamsPanel', () => {
       <ParamsPanel
         state="success"
         onPredict={vi.fn()}
-        selectedModel="client"
+        selectedModel="minimal"
         selectedTimeframe="1h"
         selectedWindow={100}
         selectedHorizon={12}
@@ -90,7 +90,7 @@ describe('ParamsPanel', () => {
     expect(numberInputs.length).toBeGreaterThan(1);
 
     fireEvent.change(selects[0], { target: { value: '8h' } });
-    fireEvent.change(selects[1], { target: { value: 'baseline' } });
+    fireEvent.change(selects[1], { target: { value: 'catboost' } });
     fireEvent.change(numberInputs[0], { target: { value: '220' } });
     fireEvent.change(numberInputs[1], { target: { value: '30' } });
 
@@ -132,25 +132,6 @@ describe('ParamsPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('allows clearing model to default', () => {
-    const onModelChange = vi.fn();
-    render(
-      <ParamsPanel
-        state="success"
-        onPredict={vi.fn()}
-        selectedTimeframe="1h"
-        selectedWindow={200}
-        selectedHorizon={24}
-        selectedModel="client"
-        onModelChange={onModelChange}
-      />,
-    );
-
-    const selects = screen.getAllByRole('combobox');
-    fireEvent.change(selects[1], { target: { value: '' } });
-    expect(onModelChange).toHaveBeenCalledWith(null);
-  });
-
   it('updates internal values when controlled props are not provided', () => {
     render(<ParamsPanel state="success" onPredict={vi.fn()} />);
 
@@ -160,6 +141,7 @@ describe('ParamsPanel', () => {
     expect(selects[0]).toHaveValue('1h');
     expect(numberInputs[0]).toHaveValue(200);
     expect(numberInputs[1]).toHaveValue(24);
+    expect(selects[1]).toHaveValue('minimal');
 
     fireEvent.change(selects[0], { target: { value: '8h' } });
     fireEvent.change(numberInputs[0], { target: { value: '180' } });

@@ -50,7 +50,7 @@ export default function ParamsPanel({
     selectedHorizon ?? 24,
   );
   const [internalModel, setInternalModel] = React.useState<string>(
-    selectedModel ?? '',
+    selectedModel ?? 'minimal',
   );
 
   const timeframeValue = selectedTimeframe ?? internalTimeframe;
@@ -88,12 +88,11 @@ export default function ParamsPanel({
   };
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const rawValue = e.target.value;
+    const value = e.target.value;
     if (readOnly) return;
-    const value = rawValue === '' ? null : rawValue;
     onModelChange?.(value);
     if (selectedModel === undefined) {
-      setInternalModel(value ?? '');
+      setInternalModel(value);
     }
   };
 
@@ -197,17 +196,13 @@ export default function ParamsPanel({
 
       <select
         className="appearance-none text-center param-panel-item w-full h-12 pl-4 rounded"
-        value={modelValue ?? ''}
+        value={modelValue}
         onChange={handleModelChange}
         disabled={readOnly}
       >
-        <option value="" className="text-center">
-          Default model
-        </option>
-        <option value="client">Client model</option>
-        <option value="lgbm_v1">LGBM v1</option>
-        <option value="catboost_v1">CatBoost v1</option>
-        <option value="baseline">Baseline</option>
+        <option value="minimal">Minimal</option>
+        <option value="lgbm">LGBM</option>
+        <option value="catboost">CatBoost</option>
       </select>
 
       <br />
