@@ -1,18 +1,16 @@
 'use client';
 import React from 'react';
-import type { AccountRes } from '@assetpredict/shared';
+import profile from '@/mocks/profile.json';
 import Skeleton from '@/shared/ui/Skeleton';
 
 interface ProfileHeaderProps {
   loading?: boolean;
   onClick?: () => void;
-  profile?: AccountRes | null;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   loading = false,
   onClick,
-  profile,
 }) => {
   if (loading) {
     return (
@@ -26,22 +24,19 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     );
   }
 
-  const avatarUrl = profile?.avatarUrl ?? '/images/profile-avatar.png';
-  const username = profile?.username ?? 'Unknown user';
-  const email = profile?.email ?? '';
-
   return (
     <div className="profile-header" onClick={onClick}>
       <img
-        src={avatarUrl}
-        alt={`${username} avatar`}
+        src={profile.avatarUrl}
+        alt={`${profile.username} avatar`}
         className="profile-header-avatar"
       />
       <div className="profile-header-text">
         <p className="profile-header-username">
-          Username: <span className="profile-header-username">{username}</span>
+          Username:{' '}
+          <span className="profile-header-username">{profile.username}</span>
         </p>
-        <p className="profile-header-login">Email: {email}</p>
+        <p className="profile-header-login">Login: {profile.login}</p>
       </div>
     </div>
   );

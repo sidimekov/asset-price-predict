@@ -60,10 +60,9 @@ export const authApi = backendApi.injectEndpoints({
       async onQueryStarted(_, { queryFulfilled }) {
         try {
           await queryFulfilled;
+          clearAuthToken();
         } catch {
           // handled by RTK Query
-        } finally {
-          clearAuthToken();
         }
       },
     }),

@@ -7,26 +7,14 @@ import { Button } from '@/shared/ui/Button';
 import Skeleton from '@/shared/ui/Skeleton';
 
 interface SignInFormProps {
-  onSubmit: (payload: { email: string; password: string }) => void;
+  onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
-  serverErrors?: { email?: string; password?: string };
-  serverMessage?: string;
 }
 
-const SignInForm: React.FC<SignInFormProps> = ({
-  onSubmit,
-  isLoading,
-  serverErrors,
-  serverMessage,
-}) => {
+const SignInForm: React.FC<SignInFormProps> = ({ onSubmit, isLoading }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({ email: '', password: '' });
-
-  const mergedErrors = {
-    email: errors.email || serverErrors?.email || '',
-    password: errors.password || serverErrors?.password || '',
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,18 +36,11 @@ const SignInForm: React.FC<SignInFormProps> = ({
       hasError = true;
     }
 
-    if (!hasError) {
-      onSubmit({ email, password });
-    }
+    if (!hasError) onSubmit(e);
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 relative">
-      {serverMessage && (
-        <p className="error-text text-center" role="alert">
-          {serverMessage}
-        </p>
-      )}
       {isLoading ? (
         <>
           <Skeleton />
@@ -71,14 +52,14 @@ const SignInForm: React.FC<SignInFormProps> = ({
             placeholder="Your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            error={mergedErrors.email}
+            error={errors.email}
             ariaDescribedby="email"
           />
           <PasswordInput
             placeholder="Your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            error={mergedErrors.password}
+            error={errors.password}
             ariaDescribedby="password"
           />
         </>
