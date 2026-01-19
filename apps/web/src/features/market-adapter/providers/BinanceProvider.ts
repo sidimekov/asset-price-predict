@@ -15,6 +15,25 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
+function getErrorMessage(err: any, fallback: string): string {
+  const status =
+    typeof err?.status === 'number'
+      ? err.status
+      : typeof err?.originalStatus === 'number'
+        ? err.originalStatus
+        : undefined;
+  const base =
+    err?.message ||
+    err?.data?.message ||
+    err?.data?.error ||
+    err?.error ||
+    fallback;
+  if (status === 429) {
+    return `Rate limit exceeded (status ${status})`;
+  }
+  return status ? `${base} (status ${status})` : base;
+}
+
 function mapTimeframeToBinanceInterval(
   timeframe: ProviderRequestBase['timeframe'],
 ): string {
@@ -70,7 +89,8 @@ export async function fetchBinanceTimeseries(
       throw err;
     }
     console.error('Binance timeseries fetch failed:', err);
-    throw new Error(`Binance timeseries fetch failed: ${err.message}`);
+    const message = getErrorMessage(err, 'Request failed');
+    throw new Error(`Binance timeseries fetch failed: ${message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
@@ -142,7 +162,27 @@ export async function searchBinanceSymbols(
   }
 
   try {
-    return await queryResult.unwrap();
+    const response = await queryResult.unwrap();
+    if (Array.isArray(response)) {
+      return response;
+    }
+    if (response && typeof response === 'object' && 'symbols' in response) {
+      const qLower = q.toLowerCase();
+      const symbols = Array.isArray((response as any).symbols)
+        ? ((response as any).symbols as any[])
+        : [];
+      return symbols.filter((item) => {
+        const symbol = String(item?.symbol ?? '').toLowerCase();
+        const baseAsset = String(item?.baseAsset ?? '').toLowerCase();
+        const quoteAsset = String(item?.quoteAsset ?? '').toLowerCase();
+        return (
+          symbol.includes(qLower) ||
+          baseAsset.includes(qLower) ||
+          quoteAsset.includes(qLower)
+        );
+      });
+    }
+    return [];
   } catch (err: any) {
     if (err.name === 'AbortError') {
       throw err;

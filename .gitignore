@@ -67,7 +67,9 @@ tsconfig.tsbuildinfo
 **/*.tsbuildinfo
 
 # Images / data caches
-/data
+/data/features
+/data/normalized
+/data/raw
 /data/cache/
 **/.cache/
 
@@ -79,4 +81,5 @@ docker-compose.override.yml
 # Misc
 *.orig
 *.rej
-.venv
+.venv*
+*__pycache__*
