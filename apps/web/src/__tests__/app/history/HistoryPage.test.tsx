@@ -218,7 +218,7 @@ describe('HistoryPage', () => {
       props.applyFiltersAction?.({
         ...baseFilters,
         providers: { ...baseFilters.providers, binance: true },
-        currencies: { USD: true },
+        currencies: { USDT: true },
       });
     });
 
