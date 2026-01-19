@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Skeleton from '@/shared/ui/Skeleton';
 import type { HistoryEntry } from '@/entities/history/model';
 
@@ -17,6 +18,7 @@ export default function HistoryTable({
   loading?: boolean;
   items?: HistoryEntry[];
 }) {
+  const router = useRouter();
   const rows = items ?? [];
 
   if (loading) {
@@ -48,7 +50,19 @@ export default function HistoryTable({
           </thead>
           <tbody>
             {rows.map((entry) => (
-              <tr key={entry.id}>
+              <tr
+                key={entry.id}
+                role="link"
+                tabIndex={0}
+                aria-label={`Open forecast for ${entry.symbol}`}
+                onClick={() => router.push(`/forecast/${entry.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    router.push(`/forecast/${entry.id}`);
+                  }
+                }}
+              >
                 <td>
                   <Link href={`/forecast/${entry.id}`}>{entry.symbol}</Link>
                 </td>
