@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import HistoryPage from '@/app/history/page';
 
 const useHistoryMock = vi.fn();
+const setPageMock = vi.fn();
+const setLimitMock = vi.fn();
 
 vi.mock('@/entities/history/useHistory', () => ({
   useHistory: () => useHistoryMock(),
@@ -35,7 +37,17 @@ vi.mock('@/features/history/HistoryTable', () => ({
 describe('HistoryPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useHistoryMock.mockReturnValue({ items: [], loading: false, error: null });
+    useHistoryMock.mockReturnValue({
+      items: [],
+      loading: false,
+      error: null,
+      page: 1,
+      limit: 20,
+      total: 0,
+      setPage: setPageMock,
+      setLimit: setLimitMock,
+      refresh: vi.fn(),
+    });
   });
 
   test('passes loading=false to HistoryTable by default', () => {
@@ -54,6 +66,12 @@ describe('HistoryPage', () => {
       items: [],
       loading: false,
       error: 'Failed to load',
+      page: 1,
+      limit: 20,
+      total: 0,
+      setPage: setPageMock,
+      setLimit: setLimitMock,
+      refresh: vi.fn(),
     });
 
     render(<HistoryPage />);
@@ -86,6 +104,12 @@ describe('HistoryPage', () => {
       ],
       loading: false,
       error: null,
+      page: 1,
+      limit: 20,
+      total: 2,
+      setPage: setPageMock,
+      setLimit: setLimitMock,
+      refresh: vi.fn(),
     });
 
     render(<HistoryPage />);
@@ -100,5 +124,32 @@ describe('HistoryPage', () => {
     const lastCall =
       historyTableMock.mock.calls[historyTableMock.mock.calls.length - 1];
     expect(lastCall[0].items).toHaveLength(1);
+  });
+
+  test('pagination buttons call setters', () => {
+    useHistoryMock.mockReturnValue({
+      items: [],
+      loading: false,
+      error: null,
+      page: 2,
+      limit: 10,
+      total: 30,
+      setPage: setPageMock,
+      setLimit: setLimitMock,
+      refresh: vi.fn(),
+    });
+
+    render(<HistoryPage />);
+
+    fireEvent.click(screen.getByTestId('history-prev'));
+    expect(setPageMock).toHaveBeenCalledWith(1);
+
+    fireEvent.click(screen.getByTestId('history-next'));
+    expect(setPageMock).toHaveBeenCalledWith(3);
+
+    fireEvent.change(screen.getByTestId('history-limit'), {
+      target: { value: '50' },
+    });
+    expect(setLimitMock).toHaveBeenCalledWith(50);
   });
 });

@@ -5,10 +5,12 @@ import RootLayout from '@/app/layout';
 // Мокаем next/navigation
 const mockUsePathname = vi.fn();
 const mockReplace = vi.fn();
+const mockRouterPush = vi.fn();
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
   useRouter: () => ({
     replace: mockReplace,
+    push: mockRouterPush,
   }),
 }));
 
@@ -257,5 +259,19 @@ describe('RootLayout', () => {
     // Проверяем классы main
     const main = document.querySelector('.flex-1.overflow-y-auto');
     expect(main).toBeInTheDocument();
+  });
+
+  it('redirects unauthenticated visitors to /auth', () => {
+    mockUsePathname.mockReturnValue('/history');
+    localStorage.removeItem('auth.token');
+
+    render(
+      <RootLayout>
+        <div data-testid="child">Private Content</div>
+      </RootLayout>,
+    );
+    vi.advanceTimersByTime(100);
+
+    expect(mockReplace).toHaveBeenCalledWith('/auth');
   });
 });

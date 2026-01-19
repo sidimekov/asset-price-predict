@@ -88,9 +88,43 @@ function sortByCreatedAt(entries: HistoryEntry[]): HistoryEntry[] {
     );
 }
 
+const DEFAULT_LIST_LIMIT = 10_000;
+
+const createPageResult = (
+  entries: HistoryEntry[],
+  page: number,
+  limit: number,
+): {
+  items: HistoryEntry[];
+  total: number;
+  page: number;
+  limit: number;
+} => {
+  const normalizedPage = Math.max(1, Math.floor(page));
+  const normalizedLimit = Math.max(1, Math.floor(limit));
+  const start = (normalizedPage - 1) * normalizedLimit;
+  const total = entries.length;
+  const pageItems = entries.slice(start, start + normalizedLimit);
+  return {
+    items: pageItems,
+    total,
+    page: normalizedPage,
+    limit: normalizedLimit,
+  };
+};
+
 export const localHistorySource: HistoryRepository = {
   async list() {
-    return sortByCreatedAt(readEntries());
+    const { items } = await localHistorySource.listPage({
+      page: 1,
+      limit: DEFAULT_LIST_LIMIT,
+    });
+    return items;
+  },
+
+  async listPage({ page, limit }) {
+    const sorted = sortByCreatedAt(readEntries());
+    return createPageResult(sorted, page ?? 1, limit ?? DEFAULT_LIST_LIMIT);
   },
 
   async getById(id: string) {

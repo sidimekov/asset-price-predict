@@ -91,4 +91,37 @@ describe('localHistorySource', () => {
     expect(isHistoryEntry(list[0])).toBe(true);
     expect(list[0].id).toBe(valid.id);
   });
+
+  it('returns paginated entries sorted by created_at', async () => {
+    const createEntry = (index: number): HistoryEntry => ({
+      id: `entry-${index}`,
+      created_at: new Date(Date.UTC(2025, 0, index + 1)).toISOString(),
+      symbol: 'BTC',
+      tf: '1h',
+      horizon: 3,
+      provider: 'MOEX',
+      p50: [[1, 100]],
+      meta: { runtime_ms: 5, backend: 'client', model_ver: 'v1' },
+    });
+
+    for (let i = 0; i < 25; i += 1) {
+      await localHistorySource.save(createEntry(i));
+    }
+
+    const firstPage = await localHistorySource.listPage({
+      page: 1,
+      limit: 10,
+    });
+    expect(firstPage.total).toBe(25);
+    expect(firstPage.items).toHaveLength(10);
+    expect(firstPage.items[0].created_at).toBe(createEntry(24).created_at);
+
+    const secondPage = await localHistorySource.listPage({
+      page: 2,
+      limit: 10,
+    });
+    expect(secondPage.items).toHaveLength(10);
+    expect(secondPage.page).toBe(2);
+    expect(secondPage.items[0].created_at).toBe(createEntry(14).created_at);
+  });
 });

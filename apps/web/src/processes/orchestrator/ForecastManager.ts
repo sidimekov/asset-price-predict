@@ -28,6 +28,7 @@ import {
 
 import { historyRepository } from '@/entities/history/repository';
 import type { HistoryEntry } from '@/entities/history/model';
+import { forecastApi } from '@/shared/api/forecast.api';
 
 export type OrchestratorInput = {
   symbol: Symbol;
@@ -199,11 +200,31 @@ export class ForecastManager {
             tf,
             horizon,
             provider,
+            model,
           },
           storeEntry,
           inferResult,
         );
         await historyRepository.save(historyEntry);
+
+        if (!signal?.aborted) {
+          const backendPayload = {
+            symbol,
+            timeframe: tf,
+            horizon,
+            inputUntil: new Date(lastTs).toISOString(),
+            model: model ?? 'baseline',
+          };
+          const request = dispatch(
+            forecastApi.endpoints.createForecast.initiate(backendPayload),
+          ) as { unwrap: () => Promise<unknown> };
+
+          void request.unwrap().catch((err) => {
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn('[Orchestrator] forecast push failed', err);
+            }
+          });
+        }
       } catch (err) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn('[Orchestrator] history save failed', err);
@@ -389,6 +410,7 @@ export class ForecastManager {
       tf: MarketTimeframe;
       horizon: number;
       provider: MarketDataProvider | 'MOCK';
+      model?: string | null;
     },
     storeEntry: {
       p50: Array<[number, number]>;
@@ -411,7 +433,7 @@ export class ForecastManager {
       meta: {
         runtime_ms: inferResult.diag.runtime_ms,
         backend: 'client',
-        model_ver: inferResult.diag.model_ver,
+        model_ver: inferResult.diag.model_ver ?? ctx.model ?? undefined,
       },
     };
   }
