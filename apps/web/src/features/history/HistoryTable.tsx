@@ -14,7 +14,7 @@ function formatDate(value: string): string {
 }
 
 function buildForecastHref(entry: HistoryEntry): string {
-  const searchParams = new URLSearchParams({
+  const searchParams = new globalThis.URLSearchParams({
     provider: entry.provider,
     tf: entry.tf,
     window: String(DEFAULT_WINDOW),
