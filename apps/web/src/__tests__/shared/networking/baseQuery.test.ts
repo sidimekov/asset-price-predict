@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 type HeadersInstance = InstanceType<typeof globalThis.Headers>;
 
-const { rawBaseQueryFn, relativeQueryFn, absoluteQueryFn, captured } =
+const { relativeQueryFn, absoluteQueryFn, captured } =
   vi.hoisted(() => ({
-    rawBaseQueryFn: vi.fn(),
     relativeQueryFn: vi.fn(),
     absoluteQueryFn: vi.fn(),
     captured: {
@@ -16,11 +15,8 @@ const { rawBaseQueryFn, relativeQueryFn, absoluteQueryFn, captured } =
 
 vi.mock('@reduxjs/toolkit/query/react', () => ({
   fetchBaseQuery: (opts: { baseUrl?: string }) => {
-    if (opts?.baseUrl === '/api') {
-      captured.prepareHeaders = opts.prepareHeaders;
-      return rawBaseQueryFn;
-    }
     if (opts?.baseUrl === '') return absoluteQueryFn;
+    captured.prepareHeaders = opts.prepareHeaders;
     return relativeQueryFn;
   },
 }));
@@ -29,7 +25,6 @@ import { createBaseQuery, baseQuery } from '@/shared/networking/baseQuery';
 
 describe('createBaseQuery', () => {
   beforeEach(() => {
-    rawBaseQueryFn.mockReset();
     relativeQueryFn.mockReset();
     absoluteQueryFn.mockReset();
   });
@@ -87,7 +82,7 @@ describe('baseQuery', () => {
   const originalEnv = process.env.NODE_ENV;
 
   beforeEach(() => {
-    rawBaseQueryFn.mockReset();
+    relativeQueryFn.mockReset();
   });
 
   afterEach(() => {
@@ -95,7 +90,7 @@ describe('baseQuery', () => {
   });
 
   it('returns normalized errors for failed requests', async () => {
-    rawBaseQueryFn.mockResolvedValue({
+    relativeQueryFn.mockResolvedValue({
       error: { status: 400, data: { message: 'Bad', code: 'bad' } },
     });
 
@@ -108,7 +103,7 @@ describe('baseQuery', () => {
 
   it('returns data + meta for successful requests', async () => {
     const meta = { response: { status: 200 } };
-    rawBaseQueryFn.mockResolvedValue({ data: { ok: true }, meta });
+    relativeQueryFn.mockResolvedValue({ data: { ok: true }, meta });
 
     const result = await baseQuery({ url: '/health' }, {} as any, {} as any);
 
@@ -119,7 +114,7 @@ describe('baseQuery', () => {
     process.env.NODE_ENV = 'development';
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
-    rawBaseQueryFn.mockResolvedValue({
+    relativeQueryFn.mockResolvedValue({
       data: { ok: true },
       meta: { response: { status: 201 } },
     });
@@ -140,7 +135,7 @@ describe('baseQuery', () => {
     process.env.NODE_ENV = 'development';
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
-    rawBaseQueryFn.mockResolvedValue({
+    relativeQueryFn.mockResolvedValue({
       error: { status: 503, data: { message: 'Down' } },
     });
 

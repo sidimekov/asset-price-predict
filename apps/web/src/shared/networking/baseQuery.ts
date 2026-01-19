@@ -14,53 +14,85 @@ const backendBaseUrl =
 
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 
-const createBaseQuery = (
+type CreateBaseQueryOptions = {
+  withAuth?: boolean;
+  withContentType?: boolean;
+  allowAbsolute?: boolean;
+  absolute?: {
+    withAuth?: boolean;
+    withContentType?: boolean;
+  };
+};
+
+const buildBaseQuery = (
   baseUrl: string,
-): BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  FetchBaseQueryError,
-  {},
-  FetchBaseQueryMeta
-> =>
+  options: Pick<CreateBaseQueryOptions, 'withAuth' | 'withContentType'>,
+) =>
   fetchBaseQuery({
     baseUrl,
     timeout: 10_000,
     prepareHeaders: (headers) => {
-      const token =
-        typeof localStorage === 'undefined'
-          ? null
-          : localStorage.getItem('auth.token');
+      if (options.withAuth ?? true) {
+        const token =
+          typeof localStorage === 'undefined'
+            ? null
+            : localStorage.getItem('auth.token');
 
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
+        if (token) {
+          headers.set('authorization', `Bearer ${token}`);
+        }
       }
 
-      if (!headers.has('content-type')) {
-        headers.set('content-type', 'application/json');
+      if (options.withContentType ?? true) {
+        if (!headers.has('content-type')) {
+          headers.set('content-type', 'application/json');
+        }
       }
 
       return headers;
     },
   });
 
-const relativeBaseQuery = createBaseQuery(backendBaseUrl);
-const absoluteBaseQuery = createBaseQuery('');
-
-const rawBaseQuery: BaseQueryFn<
+export const createBaseQuery = (
+  baseUrl: string,
+  options: CreateBaseQueryOptions = {},
+): BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError,
   {},
   FetchBaseQueryMeta
-> = (args, api, extraOptions) => {
-  const url = typeof args === 'string' ? args : args.url;
-  return (ABSOLUTE_URL_RE.test(url) ? absoluteBaseQuery : relativeBaseQuery)(
-    args,
-    api,
-    extraOptions,
-  );
+> => {
+  const relativeBaseQuery = buildBaseQuery(baseUrl, {
+    withAuth: options.withAuth,
+    withContentType: options.withContentType,
+  });
+
+  if (options.allowAbsolute === false) {
+    return relativeBaseQuery;
+  }
+
+  const absoluteBaseQuery = buildBaseQuery('', {
+    withAuth: options.absolute?.withAuth ?? false,
+    withContentType: options.absolute?.withContentType ?? false,
+  });
+
+  return (args, api, extraOptions) => {
+    const url = typeof args === 'string' ? args : args.url;
+    return (ABSOLUTE_URL_RE.test(url) ? absoluteBaseQuery : relativeBaseQuery)(
+      args,
+      api,
+      extraOptions,
+    );
+  };
 };
+
+const rawBaseQuery = createBaseQuery(backendBaseUrl, {
+  absolute: {
+    withAuth: false,
+    withContentType: false,
+  },
+});
 
 const getRequestInfo = (args: string | FetchArgs) => {
   if (typeof args === 'string') {
