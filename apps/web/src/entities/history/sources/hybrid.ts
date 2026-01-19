@@ -27,7 +27,31 @@ export const hybridHistorySource: HistoryRepository = {
 
   async listPage(req: HistoryPageRequest) {
     try {
-      return await backendHistorySource.listPage(req);
+      const [backendItems, localItems] = await Promise.all([
+        backendHistorySource.list(),
+        localHistorySource.list(),
+      ]);
+      const combined = new Map<string, HistoryEntry>();
+      for (const item of backendItems) {
+        combined.set(item.id, item);
+      }
+      for (const item of localItems) {
+        combined.set(item.id, item);
+      }
+      const merged = Array.from(combined.values()).sort((a, b) => {
+        const aDate = Date.parse(a.created_at) || 0;
+        const bDate = Date.parse(b.created_at) || 0;
+        return bDate - aDate;
+      });
+      const page = Math.max(1, req.page ?? 1);
+      const limit = Math.max(1, req.limit ?? 20);
+      const start = (page - 1) * limit;
+      return {
+        items: merged.slice(start, start + limit),
+        total: merged.length,
+        page,
+        limit,
+      };
     } catch (err) {
       fallbackWarning('listPage', err);
       return localHistorySource.listPage(req);

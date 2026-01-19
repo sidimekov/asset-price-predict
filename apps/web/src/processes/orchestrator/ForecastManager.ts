@@ -7,6 +7,7 @@ import { orchestratorState, TIMESERIES_TTL_MS } from './state';
 import type { RootState, AppDispatch } from '@/shared/store';
 import { getMarketTimeseries } from '@/features/market-adapter/MarketAdapter';
 import type { MarketDataProvider, MarketTimeframe } from '@/config/market';
+import { DEFAULT_MODEL_VER, resolveModelVersion } from '@/config/ml';
 
 import { inferForecast } from './mlWorkerClient';
 
@@ -420,20 +421,24 @@ export class ForecastManager {
     },
     inferResult: { diag: { runtime_ms: number; model_ver?: string } },
   ): HistoryEntry {
+    const resolvedModel =
+      resolveModelVersion(inferResult.diag.model_ver ?? ctx.model) ??
+      DEFAULT_MODEL_VER;
+
     return {
       id: base.id,
       created_at: base.created_at,
       symbol: String(ctx.symbol),
       tf: String(ctx.tf),
       horizon: ctx.horizon,
-      provider: String(ctx.provider),
+      provider: String(ctx.provider).toLowerCase(),
       p50: storeEntry.p50,
       p10: storeEntry.p10,
       p90: storeEntry.p90,
       meta: {
         runtime_ms: inferResult.diag.runtime_ms,
         backend: 'client',
-        model_ver: inferResult.diag.model_ver ?? ctx.model ?? undefined,
+        model_ver: resolvedModel,
       },
     };
   }
