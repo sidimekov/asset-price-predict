@@ -1,6 +1,5 @@
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
-import type { Symbol as MarketSymbol, Timeframe } from '@shared/types/market';
 import type { ProviderCallOpts, ProviderRequestBase } from './types';
 
 function createAbortError(): Error {
@@ -15,6 +14,25 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
+function getErrorMessage(err: any, fallback: string): string {
+  const status =
+    typeof err?.status === 'number'
+      ? err.status
+      : typeof err?.originalStatus === 'number'
+        ? err.originalStatus
+        : undefined;
+  const base =
+    err?.message ||
+    err?.data?.message ||
+    err?.data?.error ||
+    err?.error ||
+    fallback;
+  if (status === 429) {
+    return `Rate limit exceeded (status ${status})`;
+  }
+  return status ? `${base} (status ${status})` : base;
+}
+
 export async function fetchMoexTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
@@ -27,8 +45,11 @@ export async function fetchMoexTimeseries(
 
   const queryResult = dispatch(
     marketApi.endpoints.getMoexTimeseries.initiate({
-      symbol: symbol as MarketSymbol,
-      timeframe: timeframe as Timeframe,
+      symbol,
+      engine: 'stock',
+      market: 'shares',
+      board: 'TQBR',
+      interval: mapTimeframeToMoexInterval(timeframe),
       limit,
     }),
   );
@@ -48,7 +69,8 @@ export async function fetchMoexTimeseries(
       throw err;
     }
     console.error('MOEX timeseries fetch failed:', err);
-    throw new Error(`MOEX timeseries fetch failed: ${err.message}`);
+    const message = getErrorMessage(err, 'Request failed');
+    throw new Error(`MOEX timeseries fetch failed: ${message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
@@ -93,5 +115,24 @@ export async function searchMoexSymbols(
       signal.removeEventListener('abort', onAbort);
     }
     queryResult.unsubscribe();
+  }
+}
+
+function mapTimeframeToMoexInterval(
+  timeframe: ProviderRequestBase['timeframe'],
+): number {
+  switch (timeframe) {
+    case '1h':
+      return 60;
+    case '8h':
+      return 60;
+    case '1d':
+      return 24;
+    case '7d':
+      return 7;
+    case '1mo':
+      return 31;
+    default:
+      return 24;
   }
 }

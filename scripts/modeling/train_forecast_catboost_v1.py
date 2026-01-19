@@ -1,0 +1,130 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+from typing import List
+
+import numpy as np
+from catboost import CatBoostRegressor
+from sklearn.metrics import mean_absolute_error
+
+from feature_dataset import FEATURE_COLUMNS, load_split, zscore_apply, zscore_stats
+
+ROOT = Path(__file__).resolve().parents[2]
+MPL_DIR = ROOT / ".mplconfig"
+MPL_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPL_DIR))
+
+
+def _parse_dirs(value: str) -> List[Path]:
+    return [Path(v.strip()) for v in value.split(",") if v.strip()]
+
+
+def _mape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    denom = np.maximum(np.abs(y_true), 1e-6)
+    return float(np.mean(np.abs((y_true - y_pred) / denom)))
+
+
+def evaluate(
+    y_true: np.ndarray, y_pred: np.ndarray, last_close: np.ndarray
+) -> dict:
+    if y_true.ndim == 1:
+        p50_true = y_true + last_close
+        p50_pred = y_pred + last_close
+    else:
+        p50_true = y_true + last_close[:, None]
+        p50_pred = y_pred + last_close[:, None]
+    return {
+        "mae_delta": float(mean_absolute_error(y_true, y_pred)),
+        "mape_price": _mape(p50_true, p50_pred),
+    }
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Train CatBoost multi-horizon model.")
+    parser.add_argument(
+        "--data-dirs",
+        default="data/features/v1/binance",
+        type=_parse_dirs,
+        help="Comma-separated feature directories.",
+    )
+    parser.add_argument("--out-dir", default="data/models/v1/catboost")
+    parser.add_argument("--model-name", default="forecast_catboost_v1")
+    parser.add_argument("--random-state", type=int, default=7)
+    parser.add_argument("--iterations", type=int, default=600)
+    parser.add_argument("--depth", type=int, default=7)
+    parser.add_argument("--learning-rate", type=float, default=0.05)
+    parser.add_argument("--max-rows", type=int, default=None)
+    parser.add_argument(
+        "--target-index",
+        type=int,
+        default=1,
+        help="1-based target column index (target_1 is 1).",
+    )
+    args = parser.parse_args()
+
+    train = load_split(args.data_dirs, "train", max_rows=args.max_rows)
+    val = load_split(args.data_dirs, "val", max_rows=args.max_rows)
+
+    mean, std = zscore_stats(train.X)
+    X_train = zscore_apply(train.X, mean, std)
+    X_val = zscore_apply(val.X, mean, std)
+
+    if not train.target_columns:
+        raise ValueError("No target columns found in training data.")
+    if args.target_index < 1 or args.target_index > len(train.target_columns):
+        raise ValueError(
+            f"target-index {args.target_index} is out of range (1..{len(train.target_columns)})"
+        )
+
+    target_idx = args.target_index - 1
+    target_column = train.target_columns[target_idx]
+    y_train = train.y[:, target_idx]
+    y_val = val.y[:, target_idx]
+
+    model = CatBoostRegressor(
+        loss_function="RMSE",
+        iterations=args.iterations,
+        depth=args.depth,
+        learning_rate=args.learning_rate,
+        random_seed=args.random_state,
+        verbose=200,
+        allow_writing_files=False,
+    )
+    model.fit(X_train, y_train, eval_set=(X_val, y_val))
+
+    val_pred = model.predict(X_val)
+    metrics = evaluate(y_val, val_pred, val.last_close)
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    model_path = out_dir / f"{args.model_name}.cbm"
+    model.save_model(model_path)
+
+    meta = {
+        "model_name": args.model_name,
+        "features": FEATURE_COLUMNS,
+        "target_columns": [target_column],
+        "normalization": {"type": "zscore", "mean": mean.tolist(), "std": std.tolist()},
+        "metrics": metrics,
+        "splits": {"train": len(train.X), "val": len(val.X)},
+        "data_dirs": [str(p) for p in args.data_dirs],
+        "params": {
+            "iterations": args.iterations,
+            "depth": args.depth,
+            "learning_rate": args.learning_rate,
+            "random_state": args.random_state,
+            "target_index": args.target_index,
+        },
+    }
+    meta_path = out_dir / f"{args.model_name}.meta.json"
+    meta_path.write_text(json.dumps(meta, ensure_ascii=True, indent=2))
+
+    print(f"[catboost] saved model -> {model_path}")
+    print(f"[catboost] metrics -> {meta_path}")
+
+
+if __name__ == "__main__":
+    main()

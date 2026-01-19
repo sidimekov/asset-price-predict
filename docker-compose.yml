@@ -48,6 +48,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:3001}
+      NEXT_PUBLIC_USE_MOCK_MARKET: ${NEXT_PUBLIC_USE_MOCK_MARKET:-}
     ports:
       - '3000:3000'
     depends_on:

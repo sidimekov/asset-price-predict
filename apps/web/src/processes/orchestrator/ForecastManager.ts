@@ -21,6 +21,7 @@ import {
   timeseriesRequested,
   timeseriesReceived,
   timeseriesFailed,
+  timeseriesCancelled,
   buildTimeseriesKey,
   isTimeseriesStaleByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
@@ -105,12 +106,15 @@ export class ForecastManager {
     const { symbol, provider, tf, window, horizon, model } = ctx;
     const { dispatch, getState, signal } = deps;
 
+    const normalizedModel =
+      model === 'client' || model === '' ? null : (model ?? null);
+
     const tsKey = buildTimeseriesKey(provider as any, symbol, tf, window);
     const fcKey = makeForecastKey({
       symbol,
       tf,
       horizon,
-      model: model || undefined,
+      model: normalizedModel || undefined,
     });
 
     orchestratorState.status = 'running';
@@ -122,7 +126,7 @@ export class ForecastManager {
         tf,
         window,
         horizon,
-        model,
+        model: normalizedModel,
         tsKey,
         fcKey,
       });
@@ -154,14 +158,9 @@ export class ForecastManager {
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
       // 3) infer (with abort)
-      const inferResult = await inferForecast(
-        tail,
-        horizon,
-        model ?? undefined,
-        {
-          signal,
-        } as any,
-      );
+      const inferResult = await inferForecast(tail, horizon, normalizedModel, {
+        signal,
+      } as any);
 
       if (signal?.aborted) {
         dispatch(forecastCancelled(fcKey));
@@ -263,7 +262,10 @@ export class ForecastManager {
     const { tsKey, symbol, provider, tf, window } = args;
     const { dispatch, getState, signal } = deps;
 
-    if (signal?.aborted) throw makeAbortError();
+    if (signal?.aborted) {
+      dispatch(timeseriesCancelled({ key: tsKey as any }));
+      throw makeAbortError();
+    }
 
     // 0) check store cache + TTL
     const state = getState();
@@ -296,18 +298,30 @@ export class ForecastManager {
 
     dispatch(timeseriesRequested({ key: tsKey as any }));
 
-    const adapterRes = await getMarketTimeseries(
-      dispatch,
-      {
-        symbol,
-        provider,
-        timeframe: tf,
-        limit: window,
-      } as any,
-      { signal },
-    );
+    let adapterRes: Awaited<ReturnType<typeof getMarketTimeseries>>;
+    try {
+      adapterRes = await getMarketTimeseries(
+        dispatch,
+        {
+          symbol,
+          provider,
+          timeframe: tf,
+          limit: window,
+        } as any,
+        { signal },
+      );
+    } catch (err: any) {
+      if (isAbortError(err) || signal?.aborted) {
+        dispatch(timeseriesCancelled({ key: tsKey as any }));
+        throw makeAbortError();
+      }
+      throw err;
+    }
 
-    if (signal?.aborted) throw makeAbortError();
+    if (signal?.aborted) {
+      dispatch(timeseriesCancelled({ key: tsKey as any }));
+      throw makeAbortError();
+    }
 
     if ('code' in adapterRes) {
       const message = adapterRes.message || 'Failed to load timeseries';

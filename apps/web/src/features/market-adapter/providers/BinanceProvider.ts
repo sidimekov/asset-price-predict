@@ -1,6 +1,6 @@
 import type { AppDispatch } from '@/shared/store';
 import { marketApi } from '@/shared/api/marketApi';
-import type { BinanceKline } from '@/shared/api/marketApi';
+import type { BinanceKlineRaw } from '@/shared/api/marketApi';
 import type { ProviderCallOpts, ProviderRequestBase } from './types';
 
 function createAbortError(): Error {
@@ -13,6 +13,25 @@ function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
     throw createAbortError();
   }
+}
+
+function getErrorMessage(err: any, fallback: string): string {
+  const status =
+    typeof err?.status === 'number'
+      ? err.status
+      : typeof err?.originalStatus === 'number'
+        ? err.originalStatus
+        : undefined;
+  const base =
+    err?.message ||
+    err?.data?.message ||
+    err?.data?.error ||
+    err?.error ||
+    fallback;
+  if (status === 429) {
+    return `Rate limit exceeded (status ${status})`;
+  }
+  return status ? `${base} (status ${status})` : base;
 }
 
 function mapTimeframeToBinanceInterval(
@@ -38,7 +57,7 @@ export async function fetchBinanceTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
   opts: ProviderCallOpts = {},
-): Promise<BinanceKline[]> {
+): Promise<BinanceKlineRaw[]> {
   const { symbol, timeframe, limit } = params;
   const { signal } = opts;
 
@@ -70,7 +89,8 @@ export async function fetchBinanceTimeseries(
       throw err;
     }
     console.error('Binance timeseries fetch failed:', err);
-    throw new Error(`Binance timeseries fetch failed: ${err.message}`);
+    const message = getErrorMessage(err, 'Request failed');
+    throw new Error(`Binance timeseries fetch failed: ${message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);
@@ -142,7 +162,27 @@ export async function searchBinanceSymbols(
   }
 
   try {
-    return await queryResult.unwrap();
+    const response = await queryResult.unwrap();
+    if (Array.isArray(response)) {
+      return response;
+    }
+    if (response && typeof response === 'object' && 'symbols' in response) {
+      const qLower = q.toLowerCase();
+      const symbols = Array.isArray((response as any).symbols)
+        ? ((response as any).symbols as any[])
+        : [];
+      return symbols.filter((item) => {
+        const symbol = String(item?.symbol ?? '').toLowerCase();
+        const baseAsset = String(item?.baseAsset ?? '').toLowerCase();
+        const quoteAsset = String(item?.quoteAsset ?? '').toLowerCase();
+        return (
+          symbol.includes(qLower) ||
+          baseAsset.includes(qLower) ||
+          quoteAsset.includes(qLower)
+        );
+      });
+    }
+    return [];
   } catch (err: any) {
     if (err.name === 'AbortError') {
       throw err;

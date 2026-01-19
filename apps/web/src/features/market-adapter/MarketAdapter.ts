@@ -17,7 +17,11 @@ import {
   generateMockBarsRaw,
 } from './providers/MockProvider';
 import { fetchMoexTimeseries } from './providers/MoexProvider';
-import type { BinanceKline } from '@/shared/api/marketApi';
+import type {
+  BinanceKlineRaw,
+  MoexCandlesResponse,
+  MoexSecuritiesResponse,
+} from '@/shared/api/marketApi';
 import type { CatalogItem } from '@shared/types/market';
 import { normalizeCatalogResponse } from '@/features/asset-catalog/lib/normalizeCatalogItem';
 import { zTimeframe, zProvider, zSymbol } from '@shared/schemas/market.schema';
@@ -54,6 +58,10 @@ export interface MarketAdapterError {
   message: string;
 }
 
+const MARKET_MOCK_MODE =
+  process.env.NODE_ENV !== 'test' &&
+  process.env.NEXT_PUBLIC_MARKET_MOCK === '1';
+
 // TIMESERIES
 
 const providerSchema = zProvider.or(z.literal('MOCK'));
@@ -69,7 +77,8 @@ export const marketAdapterRequestSchema = z.object({
 
 export type MarketAdapterRequest = z.infer<typeof marketAdapterRequestSchema>;
 
-function normalizeBinanceKlines(klines: BinanceKline[]): Bar[] {
+// Нормализация баров
+function normalizeBinanceKlines(klines: BinanceKlineRaw[]): Bar[] {
   return klines.map((k) => [
     k[0],
     Number(k[1]),
@@ -95,6 +104,78 @@ function normalizeRawBars(raw: unknown): Bar[] {
   });
 }
 
+function isMoexCandlesResponse(raw: unknown): raw is MoexCandlesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'candles' in raw;
+}
+
+function isMoexSecuritiesResponse(raw: unknown): raw is MoexSecuritiesResponse {
+  if (!raw || typeof raw !== 'object') return false;
+  return 'securities' in raw;
+}
+
+function normalizeMoexCandlesResponse(raw: MoexCandlesResponse): Bar[] {
+  const { columns, data } = raw.candles;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  const idx = (name: string) => columns.indexOf(name);
+  const tsIdx = idx('begin') !== -1 ? idx('begin') : idx('end');
+  const oIdx = idx('open');
+  const hIdx = idx('high');
+  const lIdx = idx('low');
+  const cIdx = idx('close');
+  const vIdx = idx('volume') !== -1 ? idx('volume') : idx('value');
+
+  return data
+    .map((row) => {
+      const tsRaw = row[tsIdx];
+      let ts: number;
+      if (typeof tsRaw === 'string') {
+        const trimmed = tsRaw.trim();
+        const normalized = trimmed.includes('T')
+          ? trimmed
+          : trimmed.replace(' ', 'T');
+        const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
+        const parseTarget = hasTz ? normalized : `${normalized}Z`;
+        ts = Date.parse(parseTarget);
+      } else {
+        ts = Number(tsRaw ?? NaN);
+      }
+      const o = Number(row[oIdx]);
+      const h = Number(row[hIdx]);
+      const l = Number(row[lIdx]);
+      const c = Number(row[cIdx]);
+      const v =
+        vIdx === -1 || row[vIdx] == null ? undefined : Number(row[vIdx]);
+
+      return [ts, o, h, l, c, v] as Bar;
+    })
+    .filter((b) => Number.isFinite(b[0]));
+}
+
+function normalizeMoexSecuritiesResponse(
+  raw: MoexSecuritiesResponse,
+): Record<string, unknown>[] {
+  const { columns, data } = raw.securities;
+  if (!Array.isArray(columns) || !Array.isArray(data)) return [];
+
+  return data.map((row) => {
+    const record: Record<string, unknown> = {};
+    columns.forEach((column, index) => {
+      record[column] = row[index];
+    });
+    return record;
+  });
+}
+
+function logMoexStats(bars: Bar[]): void {
+  if (process.env.NODE_ENV !== 'development' || bars.length === 0) return;
+  const avgClose =
+    bars.reduce((sum, b) => sum + (Number(b[4]) || 0), 0) / bars.length;
+  console.info('[MOEX] candles:', bars.length, 'avgClose:', avgClose);
+}
+
+// Приводим timestamp к ms, сортируем и чистим ряд
 function normalizeBarsFinal(bars: Bar[]): Bar[] {
   const msBars = bars
     .map((b) => {
@@ -137,6 +218,16 @@ async function resolveProviderData(
   opts: AdapterCallOpts = {},
 ): Promise<ProviderResolveResult> {
   try {
+    if (MARKET_MOCK_MODE && provider !== 'MOCK') {
+      const mockRaw = await fetchMockTimeseries(dispatch, params, opts);
+      return {
+        ok: true,
+        raw: mockRaw,
+        normalized: normalizeBarsFinal(normalizeRawBars(mockRaw)),
+        source: 'LOCAL',
+      };
+    }
+
     switch (provider) {
       case 'BINANCE': {
         const klines = await fetchBinanceTimeseries(dispatch, params, opts);
@@ -149,10 +240,14 @@ async function resolveProviderData(
       }
       case 'MOEX': {
         const moexRaw = await fetchMoexTimeseries(dispatch, params, opts);
+        const moexBars = isMoexCandlesResponse(moexRaw)
+          ? normalizeMoexCandlesResponse(moexRaw)
+          : normalizeRawBars(moexRaw);
+        logMoexStats(moexBars);
         return {
           ok: true,
           raw: moexRaw,
-          normalized: normalizeBarsFinal(normalizeRawBars(moexRaw)),
+          normalized: normalizeBarsFinal(moexBars),
           source: 'NETWORK',
         };
       }
@@ -206,9 +301,24 @@ export async function getMarketTimeseries(
     limit = DEFAULT_LIMIT,
   } = result.data;
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[timeseries] getMarketTimeseries:start', {
+      symbol,
+      provider,
+      timeframe,
+      limit,
+    });
+  }
+
   const cacheKey = makeTimeseriesCacheKey(provider, symbol, timeframe, limit);
   const cached = clientTimeseriesCache.get(cacheKey);
   if (cached) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[timeseries] getMarketTimeseries:cacheHit', {
+        key: cacheKey,
+        count: cached.length,
+      });
+    }
     return { bars: cached, symbol, provider, timeframe, source: 'CACHE' };
   }
 
@@ -219,7 +329,30 @@ export async function getMarketTimeseries(
     opts,
   );
 
-  if (!resolved.ok) return resolved.error;
+  if (!resolved.ok) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[timeseries] getMarketTimeseries:error', {
+        provider,
+        symbol,
+        timeframe,
+        limit,
+        error: resolved.error,
+      });
+    }
+    return resolved.error;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    const rawPreview = Array.isArray(resolved.raw)
+      ? resolved.raw.slice(0, 3)
+      : resolved.raw;
+    console.debug('[timeseries] getMarketTimeseries:resolved', {
+      provider,
+      source: resolved.source,
+      rawPreview,
+      count: resolved.normalized.length,
+    });
+  }
 
   clientTimeseriesCache.set(cacheKey, resolved.normalized);
 
@@ -236,6 +369,7 @@ export async function getMarketTimeseries(
 
 const searchCache = new Map<string, { items: CatalogItem[]; ts: number }>();
 const SEARCH_TTL_MS = 30_000;
+const DEFAULT_LIST_ALL_LIMIT = 100;
 
 function makeSearchCacheKey(
   provider: MarketDataProvider | 'MOCK',
@@ -255,41 +389,87 @@ async function fetchProviderCatalog(
 ): Promise<unknown[]> {
   let raw: unknown[] = [];
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:start', {
+      provider,
+      mode,
+      query,
+      limit,
+      mockMode: MARKET_MOCK_MODE,
+    });
+  }
+
   try {
-    switch (provider) {
-      case 'BINANCE':
-        if (mode === 'listAll') {
-          const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
-          raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
-        } else {
-          raw = (await searchBinanceSymbols(
-            dispatch,
-            query ?? '',
-            opts,
-          )) as unknown[];
-        }
-        break;
+    if (MARKET_MOCK_MODE && provider !== 'MOCK') {
+      const symbols =
+        mode === 'search' && query
+          ? await searchMockSymbols(query, opts)
+          : MOCK_SYMBOLS;
+      raw = symbols.slice(0, limit ?? Infinity);
+    } else {
+      switch (provider) {
+        case 'BINANCE':
+          if (mode === 'listAll') {
+            const exchangeInfo = await fetchBinanceExchangeInfo(dispatch, opts);
+            raw = (exchangeInfo?.symbols || []).slice(0, limit ?? Infinity);
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[catalog] binance:exchangeInfo', {
+                count: raw.length,
+                sample: raw.slice(0, 3),
+              });
+            }
+          } else {
+            raw = (await searchBinanceSymbols(
+              dispatch,
+              query ?? '',
+              opts,
+            )) as unknown[];
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[catalog] binance:searchRaw', {
+                count: raw.length,
+                sample: raw.slice(0, 3),
+              });
+            }
+          }
+          break;
 
-      case 'MOEX':
-        const q = mode === 'listAll' ? '' : (query ?? '');
-        raw = (await searchMoexSymbols(dispatch, q, opts)) as unknown[];
-        if (mode === 'listAll' && limit) {
-          raw = raw.slice(0, limit);
-        }
-        break;
+        case 'MOEX':
+          const q = mode === 'listAll' ? '' : (query ?? '');
+          {
+            const response = await searchMoexSymbols(dispatch, q, opts);
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('[catalog] moex:rawResponse', response);
+            }
+            raw = isMoexSecuritiesResponse(response)
+              ? normalizeMoexSecuritiesResponse(response)
+              : Array.isArray(response)
+                ? response
+                : [];
+          }
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[catalog] moex:normalized', {
+              count: raw.length,
+              sample: raw.slice(0, 3),
+            });
+          }
+          if (mode === 'listAll' && limit) {
+            raw = raw.slice(0, limit);
+          }
+          break;
 
-      case 'MOCK':
-        let symbols = MOCK_SYMBOLS;
-        if (mode === 'search' && query) {
-          symbols = await searchMockSymbols(query, opts);
-        } else if (mode === 'listAll') {
-          symbols = MOCK_SYMBOLS;
-        }
-        raw = symbols.slice(0, limit ?? Infinity);
-        break;
+        case 'MOCK':
+          let symbols = MOCK_SYMBOLS;
+          if (mode === 'search' && query) {
+            symbols = await searchMockSymbols(query, opts);
+          } else if (mode === 'listAll') {
+            symbols = MOCK_SYMBOLS;
+          }
+          raw = symbols.slice(0, limit ?? Infinity);
+          break;
 
-      default:
-        return [];
+        default:
+          return [];
+      }
     }
   } catch (err: any) {
     if (err.name === 'AbortError') {
@@ -299,6 +479,13 @@ async function fetchProviderCatalog(
     return [];
   }
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] fetchProviderCatalog:done', {
+      provider,
+      mode,
+      count: raw.length,
+    });
+  }
   return raw;
 }
 
@@ -307,25 +494,47 @@ export async function searchAssets(
   request: SearchAssetsRequest,
   opts: AdapterCallOpts = {},
 ): Promise<CatalogItem[]> {
-  const { provider, mode } = request;
-  const query = mode === 'search' ? request.query.trim() : undefined;
-  const limit = mode === 'listAll' ? request.limit : undefined;
+  const { provider } = request;
+  const mode = request.mode;
+  const rawQuery = mode === 'search' ? request.query.trim() : undefined;
+  const resolvedMode = mode === 'search' && !rawQuery ? 'listAll' : mode;
+  const query = resolvedMode === 'search' ? rawQuery : undefined;
+  const limit =
+    request.mode === 'listAll'
+      ? (request.limit ?? DEFAULT_LIST_ALL_LIMIT)
+      : undefined;
+
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:start', {
+      provider,
+      mode: resolvedMode,
+      query,
+      limit,
+    });
+  }
 
   const cacheKey = makeSearchCacheKey(
     provider,
-    mode,
+    resolvedMode,
     query ?? `limit_${limit ?? 'inf'}`,
   );
 
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < SEARCH_TTL_MS) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[catalog] searchAssets:cacheHit', {
+        provider,
+        mode,
+        count: cached.items.length,
+      });
+    }
     return cached.items;
   }
 
   const raw = await fetchProviderCatalog(
     dispatch,
     provider,
-    mode,
+    resolvedMode,
     query,
     limit,
     opts,
@@ -333,7 +542,20 @@ export async function searchAssets(
 
   const items = normalizeCatalogResponse(raw as any[], provider);
 
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[catalog] searchAssets:normalized', {
+      provider,
+      mode: resolvedMode,
+      count: items.length,
+      sample: items.slice(0, 3),
+    });
+  }
+
   searchCache.set(cacheKey, { items, ts: Date.now() });
 
   return items;
+}
+
+export function __clearSearchCacheForTests(): void {
+  searchCache.clear();
 }
