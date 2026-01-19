@@ -65,6 +65,7 @@ export default function ForecastPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+  const handledHistoryId = React.useRef<string | null>(null);
 
   const id = params.id;
 
@@ -113,7 +114,8 @@ export default function ForecastPage() {
   }, [storedParams, defaultParams, tfQuery, windowQuery, horizonQuery]);
 
   const effectiveParams = resolvedParams;
-  const selectedSymbol = selectedAsset?.symbol ?? String(id);
+  const routeSymbol = typeof id === 'string' && id.trim().length > 0 ? id : null;
+  const selectedSymbol = routeSymbol ?? selectedAsset?.symbol ?? null;
   const tickerQuery = searchParams.get('ticker');
   const displaySymbol = tickerQuery || selectedSymbol || String(id);
   const selectedPrice = '—';
@@ -168,20 +170,56 @@ export default function ForecastPage() {
   }, [dispatch, effectiveParams, storedParams]);
 
   React.useEffect(() => {
-    if (!historyIdQuery || !fcKey) return;
-    if (forecastEntry) return;
+    if (!historyIdQuery) return;
+    if (handledHistoryId.current === historyIdQuery) return;
     let isActive = true;
 
     historyRepository
       .getById(historyIdQuery)
       .then((entry) => {
         if (!isActive || !entry) return;
-        dispatch(
-          forecastReceived({
-            key: fcKey,
-            entry: mapHistoryToForecastEntry(entry),
-          }),
-        );
+        const historySymbol =
+          entry.symbol || routeSymbol || selectedAsset?.symbol;
+
+        if (historySymbol && entry.provider) {
+          dispatch(
+            setSelected({
+              symbol: historySymbol,
+              provider: entry.provider as Provider,
+            }),
+          );
+        }
+
+        if (
+          entry.tf &&
+          entry.horizon &&
+          (effectiveParams.tf !== entry.tf ||
+            effectiveParams.horizon !== entry.horizon)
+        ) {
+          dispatch(
+            setForecastParams({
+              ...effectiveParams,
+              tf: entry.tf,
+              horizon: entry.horizon,
+            }),
+          );
+        }
+
+        if (historySymbol) {
+          const historyKey = makeForecastKey({
+            symbol: historySymbol,
+            tf: entry.tf as MarketTimeframe,
+            horizon: entry.horizon,
+            model: effectiveParams.model ?? undefined,
+          });
+          dispatch(
+            forecastReceived({
+              key: historyKey,
+              entry: mapHistoryToForecastEntry(entry),
+            }),
+          );
+          handledHistoryId.current = historyIdQuery;
+        }
       })
       .catch((err) => {
         if (process.env.NODE_ENV !== 'production') {
@@ -192,7 +230,13 @@ export default function ForecastPage() {
     return () => {
       isActive = false;
     };
-  }, [dispatch, fcKey, forecastEntry, historyIdQuery]);
+  }, [
+    dispatch,
+    effectiveParams,
+    historyIdQuery,
+    routeSymbol,
+    selectedAsset,
+  ]);
 
   const handleBackToAssets = () => {
     router.push('/dashboard');

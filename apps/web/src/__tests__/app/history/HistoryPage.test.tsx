@@ -1,6 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import HistoryPage from '@/app/history/page';
+import type { HistoryFilters } from '@/features/history/HistorySearch';
 
 const useHistoryMock = vi.fn();
 const setPageMock = vi.fn();
@@ -11,14 +12,23 @@ vi.mock('@/entities/history/useHistory', () => ({
 }));
 
 // Мокируем компоненты
+const searchBarMock = vi.fn();
+
 vi.mock('@/features/history/HistorySearch', () => ({
-  default: ({ searchAction }: { searchAction: (q: string) => void }) => (
-    <input
-      data-testid="search-bar"
-      onChange={(e) => searchAction(e.target.value)}
-      placeholder="Search"
-    />
-  ),
+  default: (props: {
+    searchAction: (q: string) => void;
+    applyFiltersAction?: (filters: HistoryFilters) => void;
+    currencyOptions?: string[];
+  }) => {
+    searchBarMock(props);
+    return (
+      <input
+        data-testid="search-bar"
+        onChange={(e) => props.searchAction(e.target.value)}
+        placeholder="Search"
+      />
+    );
+  },
 }));
 
 const historyTableMock = vi.fn();
@@ -49,6 +59,20 @@ describe('HistoryPage', () => {
       refresh: vi.fn(),
     });
   });
+
+  const baseFilters: HistoryFilters = {
+    providers: { binance: false, moex: false, mock: false },
+    assetClasses: {
+      equity: false,
+      fx: false,
+      crypto: false,
+      etf: false,
+      bond: false,
+      other: false,
+    },
+    currencies: {},
+    order: 'desc',
+  };
 
   test('passes loading=false to HistoryTable by default', () => {
     render(<HistoryPage />);
@@ -151,5 +175,102 @@ describe('HistoryPage', () => {
       target: { value: '50' },
     });
     expect(setLimitMock).toHaveBeenCalledWith(50);
+  });
+
+  test('filters items by provider and currency', () => {
+    useHistoryMock.mockReturnValue({
+      items: [
+        {
+          id: '1',
+          symbol: 'BTCUSDT',
+          provider: 'BINANCE',
+          created_at: '2025-01-01T00:00:00.000Z',
+          tf: '1h',
+          horizon: 2,
+          p50: [[1, 1]],
+          meta: { runtime_ms: 1, backend: 'client' },
+        },
+        {
+          id: '2',
+          symbol: 'SBER',
+          provider: 'MOEX',
+          created_at: '2025-01-02T00:00:00.000Z',
+          tf: '1h',
+          horizon: 2,
+          p50: [[1, 1]],
+          meta: { runtime_ms: 1, backend: 'client' },
+        },
+      ],
+      loading: false,
+      error: null,
+      page: 1,
+      limit: 20,
+      total: 2,
+      setPage: setPageMock,
+      setLimit: setLimitMock,
+      refresh: vi.fn(),
+    });
+
+    render(<HistoryPage />);
+
+    act(() => {
+      const props = searchBarMock.mock.calls.at(-1)?.[0];
+      props.applyFiltersAction?.({
+        ...baseFilters,
+        providers: { ...baseFilters.providers, binance: true },
+        currencies: { USD: true },
+      });
+    });
+
+    const lastCall =
+      historyTableMock.mock.calls[historyTableMock.mock.calls.length - 1];
+    expect(lastCall[0].items).toHaveLength(1);
+    expect(lastCall[0].items?.[0].symbol).toBe('BTCUSDT');
+  });
+
+  test('applies ascending sort order', () => {
+    useHistoryMock.mockReturnValue({
+      items: [
+        {
+          id: '1',
+          symbol: 'ETHUSDT',
+          provider: 'BINANCE',
+          created_at: '2025-01-03T00:00:00.000Z',
+          tf: '1h',
+          horizon: 2,
+          p50: [[1, 1]],
+          meta: { runtime_ms: 1, backend: 'client' },
+        },
+        {
+          id: '2',
+          symbol: 'AAPL',
+          provider: 'MOEX',
+          created_at: '2025-01-01T00:00:00.000Z',
+          tf: '1h',
+          horizon: 2,
+          p50: [[1, 1]],
+          meta: { runtime_ms: 1, backend: 'client' },
+        },
+      ],
+      loading: false,
+      error: null,
+      page: 1,
+      limit: 20,
+      total: 2,
+      setPage: setPageMock,
+      setLimit: setLimitMock,
+      refresh: vi.fn(),
+    });
+
+    render(<HistoryPage />);
+
+    act(() => {
+      const props = searchBarMock.mock.calls.at(-1)?.[0];
+      props.applyFiltersAction?.({ ...baseFilters, order: 'asc' });
+    });
+
+    const lastCall =
+      historyTableMock.mock.calls[historyTableMock.mock.calls.length - 1];
+    expect(lastCall[0].items?.[0].symbol).toBe('AAPL');
   });
 });
