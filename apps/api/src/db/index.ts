@@ -17,8 +17,8 @@ function buildConnectionString() {
   const host = process.env.POSTGRES_HOST ?? defaultHost;
   const isLocalHost = host === 'localhost' || host === '127.0.0.1';
   const port = isLocalHost
-    ? process.env.POSTGRES_PORT ?? '5432'
-    : process.env.POSTGRES_PORT_INTERNAL ?? '5432';
+    ? (process.env.POSTGRES_PORT ?? '5432')
+    : (process.env.POSTGRES_PORT_INTERNAL ?? '5432');
   const encodedPassword = encodeURIComponent(password);
 
   return `postgres://${user}:${encodedPassword}@${host}:${port}/${database}`;
