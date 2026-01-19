@@ -28,6 +28,7 @@ const MONTH_MS = 30 * DAY_MS;
 const timeFormatter = new Intl.DateTimeFormat('ru-RU', {
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'UTC',
 });
 
 const dayMonthTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -35,11 +36,13 @@ const dayMonthTimeFormatter = new Intl.DateTimeFormat('ru-RU', {
   month: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
+  timeZone: 'UTC',
 });
 
 const dayMonthFormatter = new Intl.DateTimeFormat('ru-RU', {
   day: '2-digit',
   month: 'short',
+  timeZone: 'UTC',
 });
 
 const formatDateParts = (

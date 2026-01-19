@@ -1,5 +1,5 @@
 // apps/web/src/__tests__/features/market-adapter/MarketAdapter.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AppDispatch } from '@/shared/store';
 
 // Используем vi.hoisted для создания моков, которые будут доступны при hoisting'е
@@ -79,6 +79,7 @@ vi.mock('@/features/market-adapter/providers/MockProvider', () => ({
 import {
   getMarketTimeseries,
   searchAssets,
+  __clearSearchCacheForTests,
 } from '@/features/market-adapter/MarketAdapter';
 import {
   clientTimeseriesCache,
@@ -259,6 +260,32 @@ describe('MarketAdapter - Получение временных рядов (getM
       expect(result).toHaveProperty('bars');
       if ('bars' in result) {
         expect(result.bars).toEqual([[Date.parse(ts), 10, 12, 9, 11, 500]]);
+      }
+    });
+
+    it('нормализует MOEX свечи без таймзоны как UTC', async () => {
+      vi.mocked(clientTimeseriesCache.get).mockReturnValue(null);
+
+      const ts = '2024-01-02 00:00:00';
+      mockFetchMoexTimeseries.mockResolvedValue({
+        candles: {
+          columns: ['begin', 'open', 'high', 'low', 'close', 'volume'],
+          data: [[ts, 10, 12, 9, 11, 500]],
+        },
+      } as any);
+
+      const result = await getMarketTimeseries(dispatch, {
+        symbol: 'SBER',
+        provider: 'MOEX',
+        timeframe: '1d',
+        limit: 1,
+      });
+
+      expect(result).toHaveProperty('bars');
+      if ('bars' in result) {
+        expect(result.bars).toEqual([
+          [Date.parse('2024-01-02T00:00:00Z'), 10, 12, 9, 11, 500],
+        ]);
       }
     });
 
@@ -462,6 +489,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
         currency: 'USD',
       },
     ] as any);
+    __clearSearchCacheForTests();
   });
 
   it('возвращает результат поиска для Binance', async () => {
@@ -548,7 +576,7 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     );
   });
 
-  it('возвращает все активы при пустом запросе для Binance', async () => {
+  it('использует listAll при пустом запросе для Binance (fallback)', async () => {
     vi.mocked(normalizeCatalogResponse).mockReturnValue([
       {
         symbol: 'BTCUSDT',
@@ -568,10 +596,9 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
       },
     ] as any);
 
-    mockSearchBinanceSymbols.mockResolvedValue([
-      { symbol: 'BTCUSDT' },
-      { symbol: 'ETHUSDT' },
-    ]);
+    mockFetchBinanceExchangeInfo.mockResolvedValue({
+      symbols: [{ symbol: 'BTCUSDT' }, { symbol: 'ETHUSDT' }],
+    });
 
     const result = await searchAssets(dispatch, {
       mode: 'search',
@@ -581,14 +608,10 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
 
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
-    expect(mockSearchBinanceSymbols).toHaveBeenCalledWith(
-      dispatch,
-      '',
-      expect.any(Object),
-    );
+    expect(mockFetchBinanceExchangeInfo).toHaveBeenCalled();
   });
 
-  it('возвращает все активы при пустом запросе для MOEX', async () => {
+  it('использует listAll при пустом запросе для MOEX (fallback)', async () => {
     vi.mocked(normalizeCatalogResponse).mockReturnValue([
       {
         symbol: 'SBER',
@@ -683,6 +706,45 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBe(3);
     expect(mockFetchBinanceExchangeInfo).toHaveBeenCalled();
+  });
+
+  it('возвращает все активы MOEX в режиме listAll', async () => {
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'SBER',
+        name: 'Сбербанк',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+      {
+        symbol: 'GAZP',
+        name: 'Газпром',
+        provider: 'MOEX',
+        assetClass: 'equity',
+        currency: 'RUB',
+        exchange: 'MOEX',
+      },
+    ] as any);
+
+    mockSearchMoexSymbols.mockResolvedValue([
+      { SECID: 'SBER' },
+      { SECID: 'GAZP' },
+    ]);
+
+    const result = await searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'MOEX',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(2);
+    expect(mockSearchMoexSymbols).toHaveBeenCalledWith(
+      dispatch,
+      '',
+      expect.any(Object),
+    );
   });
 
   it('ограничивает количество активов в режиме listAll с limit', async () => {
@@ -870,5 +932,138 @@ describe('MarketAdapter - Поиск активов (searchAssets)', () => {
 
     expect(result.length).toBe(2);
     expect(mockSearchMockSymbols).not.toHaveBeenCalled();
+  });
+});
+
+describe('MarketAdapter - Mock mode', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalMockEnv = process.env.NEXT_PUBLIC_MARKET_MOCK;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    if (originalMockEnv === undefined) {
+      delete process.env.NEXT_PUBLIC_MARKET_MOCK;
+    } else {
+      process.env.NEXT_PUBLIC_MARKET_MOCK = originalMockEnv;
+    }
+  });
+
+  it('uses mock timeseries even for BINANCE when mock mode enabled', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.NEXT_PUBLIC_MARKET_MOCK = '1';
+    vi.resetModules();
+
+    const marketAdapter = await import(
+      '@/features/market-adapter/MarketAdapter'
+    );
+    const cacheModule = await import(
+      '@/features/market-adapter/cache/ClientTimeseriesCache'
+    );
+
+    vi.mocked(cacheModule.clientTimeseriesCache.get).mockReturnValue(null);
+    mockFetchMockTimeseries.mockResolvedValue([
+      [1000, '1', '2', '0.5', '1.5', '10'],
+    ] as any);
+
+    const result = await marketAdapter.getMarketTimeseries(dispatch, {
+      symbol: 'BTCUSDT',
+      provider: 'BINANCE',
+      timeframe: '1h',
+      limit: 1,
+    });
+
+    expect(mockFetchMockTimeseries).toHaveBeenCalled();
+    expect(mockFetchBinanceTimeseries).not.toHaveBeenCalled();
+    expect('bars' in result).toBe(true);
+  });
+
+  it('uses mock catalog for listAll and skips provider fetches', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.NEXT_PUBLIC_MARKET_MOCK = '1';
+    vi.resetModules();
+
+    const marketAdapter = await import(
+      '@/features/market-adapter/MarketAdapter'
+    );
+
+    mockFetchBinanceExchangeInfo.mockResolvedValue({
+      symbols: [{ symbol: 'BTCUSDT' }],
+    });
+
+    const result = await marketAdapter.searchAssets(dispatch, {
+      mode: 'listAll',
+      provider: 'BINANCE',
+    });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(mockFetchBinanceExchangeInfo).not.toHaveBeenCalled();
+    expect(mockSearchBinanceSymbols).not.toHaveBeenCalled();
+  });
+});
+
+describe('MarketAdapter - Development branches', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    vi.restoreAllMocks();
+  });
+
+  it('executes development log branches and cache hit for searchAssets', async () => {
+    process.env.NODE_ENV = 'development';
+    vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+    mockSearchBinanceSymbols.mockResolvedValue([{ symbol: 'BTCUSDT' }]);
+    vi.mocked(normalizeCatalogResponse).mockReturnValue([
+      {
+        symbol: 'BTCUSDT',
+        name: 'BTC/USDT',
+        provider: 'BINANCE',
+        assetClass: 'crypto',
+        currency: 'USDT',
+        exchange: 'BINANCE',
+      },
+    ] as any);
+
+    const first = await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'BTC',
+      provider: 'BINANCE',
+    });
+    const second = await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'BTC',
+      provider: 'BINANCE',
+    });
+
+    expect(first).toEqual(second);
+  });
+
+  it('propagates AbortError from provider catalog fetch', async () => {
+    process.env.NODE_ENV = 'development';
+    const abortErr = new Error('Aborted');
+    (abortErr as any).name = 'AbortError';
+    mockSearchMoexSymbols.mockRejectedValue(abortErr);
+
+    await expect(
+      searchAssets(dispatch, {
+        mode: 'search',
+        query: 'SBER',
+        provider: 'MOEX',
+      }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('handles MOEX search response as array', async () => {
+    const moexRaw = [{ SECID: 'SBER' }, { SECID: 'GAZP' }];
+    mockSearchMoexSymbols.mockResolvedValue(moexRaw as any);
+
+    await searchAssets(dispatch, {
+      mode: 'search',
+      query: 'S',
+      provider: 'MOEX',
+    });
+
+    expect(normalizeCatalogResponse).toHaveBeenCalledWith(moexRaw, 'MOEX');
   });
 });

@@ -13,6 +13,7 @@ from typing import Iterable, List, Dict, Any, Optional, Tuple
 class FeatureConfig:
     horizon: int = 5
     target: str = "log_return"  # or "delta_price"
+    feature_window: int = 64
 
 
 FEATURE_COLUMNS = [
@@ -72,12 +73,16 @@ def _iter_json_files(root: Path) -> Iterable[Path]:
             yield path
 
 
-def _target_value(closes: List[float], idx: int, cfg: FeatureConfig) -> float:
-    future_idx = idx + cfg.horizon
-    if cfg.target == "delta_price":
-        return closes[future_idx] - closes[idx]
-    # forward log-return: log(close[t+H] / close[t])
-    return _log_return(closes[idx], closes[future_idx])
+def _target_values(closes: List[float], idx: int, cfg: FeatureConfig) -> List[float]:
+    values: List[float] = []
+    for step in range(1, cfg.horizon + 1):
+        future_idx = idx + step
+        if cfg.target == "delta_price":
+            values.append(closes[future_idx] - closes[idx])
+        else:
+            # forward log-return: log(close[t+step] / close[t])
+            values.append(_log_return(closes[idx], closes[future_idx]))
+    return values
 
 
 def build_features_for_bars(
@@ -92,7 +97,8 @@ def build_features_for_bars(
         curr = closes[i]
         returns.append(0.0 if prev == 0 else (curr - prev) / prev)
 
-    min_idx = 20
+    min_idx = max(cfg.feature_window, 20)
+    target_columns = [f"target_{i}" for i in range(1, cfg.horizon + 1)]
     rows: List[Dict[str, Any]] = []
     for i in range(min_idx, len(closes) - cfg.horizon):
         mean_5 = sum(closes[i - 4 : i + 1]) / 5
@@ -103,7 +109,7 @@ def build_features_for_bars(
         ret_20 = returns[i - 20 : i]
         mean_ret_20 = sum(ret_20) / 20
         var_ret_20 = sum((v - mean_ret_20) ** 2 for v in ret_20) / 20
-        row = {
+        row: Dict[str, Any] = {
             "ts": timestamps[i],
             "close": closes[i],
             "last_close": closes[i],
@@ -116,21 +122,29 @@ def build_features_for_bars(
             "ema_10": _ema_window(closes[i - 9 : i + 1], 10),
             "ret_mean_5": sum(ret_5) / 5,
             "ret_std_20": sqrt(var_ret_20),
-            "target": _target_value(closes, i, cfg),
         }
+        target_values = _target_values(closes, i, cfg)
+        for col, value in zip(target_columns, target_values):
+            row[col] = value
         rows.append(row)
 
     meta = {
         "rows": len(rows),
         "horizon": cfg.horizon,
         "target": cfg.target,
+        "feature_window": cfg.feature_window,
         "features": FEATURE_COLUMNS,
+        "target_columns": target_columns,
     }
     return rows, meta
 
 
 def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
-    fieldnames = ["ts", "close"] + FEATURE_COLUMNS + ["target"]
+    target_columns = [
+        key for key in (rows[0] if rows else {}).keys() if key.startswith("target_")
+    ]
+    target_columns.sort(key=lambda k: int(k.split("_", 1)[1]))
+    fieldnames = ["ts", "close"] + FEATURE_COLUMNS + target_columns
     with path.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -172,12 +186,14 @@ def main() -> None:
     parser.add_argument("--bars", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--horizon", type=int, default=5)
+    parser.add_argument("--feature-window", type=int, default=64)
     parser.add_argument("--target", choices=["log_return", "delta_price"], default="log_return")
     args = parser.parse_args()
 
     cfg = FeatureConfig(
         horizon=args.horizon,
         target=args.target,
+        feature_window=args.feature_window,
     )
 
     files = list(_iter_json_files(Path(args.bars)))

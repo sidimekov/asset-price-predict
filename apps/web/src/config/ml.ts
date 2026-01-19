@@ -1,3 +1,4 @@
+import lgbmManifest from './ml.lgbm_v1.json';
 import manifest from './ml.manifest.json';
 
 export type Normalization = {
@@ -37,12 +38,24 @@ export const forecastMinimalConfig: ForecastModelConfig = {
   postprocess: manifest.postprocess as ForecastModelConfig['postprocess'],
 };
 
-export const modelRegistry: ModelManifest = [forecastMinimalConfig];
+export const forecastLgbmConfig: ForecastModelConfig = {
+  ...lgbmManifest,
+  inputShape: lgbmManifest.inputShape as [number, number],
+  normalization: lgbmManifest.normalization as Normalization,
+  outputs: lgbmManifest.outputs as ForecastModelConfig['outputs'],
+  postprocess: lgbmManifest.postprocess as ForecastModelConfig['postprocess'],
+};
+
+export const modelRegistry: ModelManifest = [
+  forecastLgbmConfig,
+  forecastMinimalConfig,
+];
 
 export function getModelConfig(version?: string | null): ForecastModelConfig {
-  if (!version) return forecastMinimalConfig;
+  if (!version) return forecastLgbmConfig;
   const found = modelRegistry.find((m) => m.modelVer === version);
-  return found || forecastMinimalConfig;
+  return found || forecastLgbmConfig;
 }
 
-export const DEFAULT_MODEL_VER = forecastMinimalConfig.modelVer;
+export const DEFAULT_MODEL_VER = forecastLgbmConfig.modelVer;
+export const FALLBACK_MODEL_VER = forecastMinimalConfig.modelVer;

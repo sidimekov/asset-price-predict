@@ -1,24 +1,60 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AuthBrand from '@/features/auth/AuthBrand';
 import AuthTabs from '@/features/auth/AuthTabs';
 import { GradientCard } from '@/shared/ui/GradientCard';
 import SignUpForm from '@/features/auth/SignUpForm';
 import SignInForm from '@/features/auth/SignInForm';
-import type { AuthFormValues } from '@/features/auth/types';
 import { useLoginMutation, useRegisterMutation } from '@/shared/api/auth.api';
+import type { HttpError } from '@/shared/networking/types';
+
+type FieldErrors = {
+  email?: string;
+  password?: string;
+  username?: string;
+  confirm?: string;
+};
+
+const extractFieldErrors = (detail?: unknown): FieldErrors => {
+  if (!detail || typeof detail !== 'object') {
+    return {};
+  }
+
+  const details = (detail as { details?: unknown }).details;
+  if (!Array.isArray(details)) {
+    return {};
+  }
+
+  const fieldErrors: FieldErrors = {};
+  details.forEach((entry) => {
+    if (typeof entry !== 'string') {
+      return;
+    }
+    const [rawField, ...rest] = entry.split(':');
+    const field = rawField?.trim();
+    const message = rest.join(':').trim();
+    if (!field || !message) {
+      return;
+    }
+    if (field === 'email' || field === 'password' || field === 'username') {
+      fieldErrors[field] = message;
+    }
+  });
+
+  return fieldErrors;
+};
 
 const AuthPageContent = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlMode = searchParams.get('mode');
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const router = useRouter();
-
-  const [login, { isLoading: loginLoading }] = useLoginMutation();
-  const [register, { isLoading: registerLoading }] = useRegisterMutation();
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [formMessage, setFormMessage] = useState('');
+  const [login, { isLoading: isLoginLoading }] = useLoginMutation();
+  const [register, { isLoading: isRegisterLoading }] = useRegisterMutation();
 
   useEffect(() => {
     if (urlMode === 'signin' || urlMode === 'signup') {
@@ -27,7 +63,8 @@ const AuthPageContent = () => {
   }, [urlMode]);
 
   useEffect(() => {
-    setStatusMessage(null);
+    setFieldErrors({});
+    setFormMessage('');
   }, [mode]);
 
   const toggleMode = (e: React.MouseEvent<any>) => {
@@ -35,34 +72,64 @@ const AuthPageContent = () => {
     setMode((prev) => (prev === 'signup' ? 'signin' : 'signup'));
   };
 
-  const handleSuccess = () => {
-    setStatusMessage(null);
-    router.push('/dashboard');
+  const applyError = (error: unknown) => {
+    if (
+      !error ||
+      typeof error !== 'object' ||
+      typeof (error as HttpError).status !== 'number'
+    ) {
+      setFormMessage('Не удалось выполнить запрос');
+      return;
+    }
+
+    const normalized = error as HttpError;
+
+    if (normalized.status === 401) {
+      setFormMessage('Неверный email или пароль');
+      return;
+    }
+
+    if (normalized.status === 409) {
+      setFormMessage('Этот email уже зарегистрирован');
+      return;
+    }
+
+    if (normalized.status === 400) {
+      const extracted = extractFieldErrors(normalized.detail);
+      if (Object.keys(extracted).length > 0) {
+        setFieldErrors(extracted);
+        return;
+      }
+      setFormMessage('Проверьте корректность введенных данных');
+      return;
+    }
+
+    setFormMessage(normalized.message || 'Не удалось выполнить запрос');
   };
 
-  const handleLogin = async (values: AuthFormValues) => {
+  const handleSignIn = async (payload: { email: string; password: string }) => {
+    setFieldErrors({});
+    setFormMessage('');
     try {
-      await login(values).unwrap();
-      handleSuccess();
-    } catch (err: any) {
-      setStatusMessage(
-        err?.data?.message ||
-          err?.message ||
-          'Не удалось войти. Попробуйте ещё раз.',
-      );
+      await login(payload).unwrap();
+      router.push('/dashboard');
+    } catch (err) {
+      applyError(err);
     }
   };
 
-  const handleRegister = async (values: AuthFormValues) => {
+  const handleSignUp = async (payload: {
+    email: string;
+    password: string;
+    username?: string;
+  }) => {
+    setFieldErrors({});
+    setFormMessage('');
     try {
-      await register(values).unwrap();
-      handleSuccess();
-    } catch (err: any) {
-      setStatusMessage(
-        err?.data?.message ||
-          err?.message ||
-          'Не удалось зарегистрироваться. Попробуйте ещё раз.',
-      );
+      await register(payload).unwrap();
+      router.push('/dashboard');
+    } catch (err) {
+      applyError(err);
     }
   };
 
@@ -102,9 +169,19 @@ const AuthPageContent = () => {
               </div>
             ) : null}
             {mode === 'signup' ? (
-              <SignUpForm onSubmit={handleRegister} isLoading={isSubmitting} />
+              <SignUpForm
+                onSubmit={handleSignUp}
+                isLoading={isRegisterLoading}
+                serverErrors={fieldErrors}
+                serverMessage={formMessage}
+              />
             ) : (
-              <SignInForm onSubmit={handleLogin} isLoading={isSubmitting} />
+              <SignInForm
+                onSubmit={handleSignIn}
+                isLoading={isLoginLoading}
+                serverErrors={fieldErrors}
+                serverMessage={formMessage}
+              />
             )}
           </GradientCard>
         </div>

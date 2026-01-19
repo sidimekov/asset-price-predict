@@ -18,8 +18,43 @@ const seedHistory = [
   },
 ];
 
+const accountStub = {
+  id: 'e2e-user',
+  email: 'e2e@example.com',
+  username: 'E2E User',
+  avatarUrl: '/images/profile-avatar.png',
+};
+
 test.describe('History Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/account**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const isApiCall =
+        url.pathname === '/account' &&
+        (request.resourceType() === 'fetch' ||
+          request.resourceType() === 'xhr');
+
+      if (!isApiCall) {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(accountStub),
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
+  });
+
   test('should load and show table header', async ({ page }) => {
+    const accountResponse = page.waitForResponse((response) =>
+      response.url().includes('/account'),
+    );
     await page.addInitScript((items) => {
       window.localStorage.setItem('localForecasts', JSON.stringify(items));
     }, seedHistory);
@@ -27,6 +62,7 @@ test.describe('History Page', () => {
       window.localStorage.setItem('auth.token', 'e2e-token');
     });
     await page.goto(buildUrl('/history'));
+    await accountResponse;
 
     // Дождались самой таблицы
     const table = page.locator('table');
@@ -50,6 +86,9 @@ test.describe('History Page', () => {
   });
 
   test('should type into Search input', async ({ page }) => {
+    const accountResponse = page.waitForResponse((response) =>
+      response.url().includes('/account'),
+    );
     await page.addInitScript((items) => {
       window.localStorage.setItem('localForecasts', JSON.stringify(items));
     }, seedHistory);
@@ -57,6 +96,7 @@ test.describe('History Page', () => {
       window.localStorage.setItem('auth.token', 'e2e-token');
     });
     await page.goto(buildUrl('/history'));
+    await accountResponse;
     const input = page.getByPlaceholder('Search');
     await input.fill('btc');
     await expect(input).toHaveValue('btc');
