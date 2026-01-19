@@ -249,9 +249,8 @@ describe('RootLayout', () => {
         <div data-testid="child">Private Content</div>
       </RootLayout>,
     );
-
     vi.advanceTimersByTime(100);
 
-    expect(mockRouterPush).toHaveBeenCalledWith('/auth');
+    expect(mockReplace).toHaveBeenCalledWith('/auth');
   });
 });

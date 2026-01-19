@@ -66,8 +66,7 @@ const AuthPageContent = () => {
     }
   };
 
-  const isSubmitting = mode === 'signin' ? loginLoading : registerLoading;
-  const errorMessage = statusMessage;
+  const errorMessage = formMessage;
 
   return (
     <div className="bg-primary min-h-screen flex flex-col">
