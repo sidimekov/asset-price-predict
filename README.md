@@ -28,11 +28,18 @@ AssetPredict — веб-приложение для прогноза време�
 
 ### 1) Настройка окружения
 
+Опционально скопируйте шаблон, если хотите переопределить значения:
+
 ```bash
 cp .env.example .env
 ```
 
-При необходимости отредактируйте `.env`. Для локальной разработки можно поставить `JWT_SECRET=0` (или любое непустое значение).
+По умолчанию сервисы используют значения из compose и кода:
+
+- Postgres: `assetpredict/assetpredict/assetpredict` на `localhost:5432`.
+- API порт: `3001`.
+- `JWT_SECRET`: `dev-secret` в `development/test` (в production обязателен).
+- Web backend URL: `http://localhost:3001` в dev/test, `/api` в production (если нет reverse‑proxy, укажите `NEXT_PUBLIC_BACKEND_URL`).
 
 ## Запуск через Docker Compose
 
@@ -59,4 +66,4 @@ docker compose up --build
 
 - **Postgres**: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`
 - **API**: `API_PORT`, `JWT_SECRET`, `JWT_EXPIRES_IN`
-- **Web**: `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_USE_MOCK_MARKET`
+- **Web**: `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_USE_MOCK_MARKET`, `NEXT_PUBLIC_YM_ID`

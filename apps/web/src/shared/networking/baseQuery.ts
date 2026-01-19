@@ -9,8 +9,16 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { normalizeHttpError } from './errors';
 import type { HttpError } from './types';
 
-const backendBaseUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/+$/, '') || '/api';
+const backendBaseUrl = (() => {
+  const configuredUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(
+    /\/+$/,
+    '',
+  );
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+  return 'http://localhost:3001';
+})();
 
 const ABSOLUTE_URL_RE = /^https?:\/\//i;
 

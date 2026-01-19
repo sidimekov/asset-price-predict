@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main" , "revert-176-ci/remove-deploy-tmp"]
+    branches: [ "main" , "fix/ci/deploy.yml"]
   workflow_dispatch: {}
 
 permissions:
@@ -14,7 +14,7 @@ env:
   IMAGE_API: ghcr.io/${{ github.repository_owner }}/asset-price-predict-api
   IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/asset-price-predict-web
   DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-  COMPOSE_FILE: docker-compose.prod.yml
+  COMPOSE_FILE: docker-compose.yml
 
 jobs:
   build-and-deploy:
@@ -57,7 +57,7 @@ jobs:
             ${{ env.IMAGE_WEB }}:${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_YM_ID=${{ secrets.NEXT_PUBLIC_YM_ID }}
-            NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_YM_ID }}
+            NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

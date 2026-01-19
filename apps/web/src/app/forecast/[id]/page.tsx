@@ -21,7 +21,6 @@ import {
 } from '@/entities/timeseries/model/timeseriesSlice';
 import {
   selectForecastByKey,
-  selectForecastLoading,
   selectForecastParams,
 } from '@/entities/forecast/model/selectors';
 import {
@@ -198,16 +197,6 @@ export default function ForecastPage() {
     router.push('/dashboard');
   };
 
-  const seriesRows = forecastEntry
-    ? forecastEntry.p50.map((point, index) => {
-        const ts = point[0];
-        const p50 = point[1];
-        const p10 = forecastEntry.p10?.[index]?.[1];
-        const p90 = forecastEntry.p90?.[index]?.[1];
-        return { ts, p50, p10, p90 };
-      })
-    : [];
-
   const chartState: State =
     !providerNorm || !selectedSymbol
       ? 'empty'
@@ -376,43 +365,7 @@ export default function ForecastPage() {
 
           <div className="hidden lg:block col-span-1" />
 
-          <div className="col-span-12 lg:col-span-8">
-            <div className="bg-surface-dark rounded-3xl p-6">
-              <div className="text-sm text-ink-tertiary">Forecast series</div>
-              {forecastLoading ? (
-                <div className="mt-4 text-ink-tertiary">
-                  Loading forecast...
-                </div>
-              ) : forecastEntry ? (
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-sm text-white">
-                    <thead>
-                      <tr className="text-ink-tertiary">
-                        <th className="text-left">Timestamp</th>
-                        <th className="text-left">P50</th>
-                        <th className="text-left">P10</th>
-                        <th className="text-left">P90</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {seriesRows.slice(0, 12).map((row, idx) => (
-                        <tr key={`${row.ts}-${idx}`}>
-                          <td>{row.ts}</td>
-                          <td>{row.p50}</td>
-                          <td>{row.p10 ?? '—'}</td>
-                          <td>{row.p90 ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="mt-4 text-ink-tertiary">
-                  Forecast not found.
-                </div>
-              )}
-            </div>
-          </div>
+          <div className="col-span-12 lg:col-span-8" />
         </div>
       )}
 

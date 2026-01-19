@@ -30,6 +30,16 @@ test('readEnv: parses PORT and CORS_ORIGINS', () => {
   assert.deepEqual(env.corsOrigins, ['https://a.com', 'https://b.com']);
 });
 
+test('readEnv: keeps wildcard CORS origin', () => {
+  const env = readEnv({
+    NODE_ENV: 'production',
+    CORS_ORIGINS: '*',
+    JWT_SECRET: 'test-secret',
+  } as any);
+
+  assert.deepEqual(env.corsOrigins, ['*']);
+});
+
 test('readEnv: invalid PORT falls back to default', () => {
   const env = readEnv({
     NODE_ENV: 'production',
