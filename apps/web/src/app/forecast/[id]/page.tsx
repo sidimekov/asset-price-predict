@@ -20,7 +20,8 @@ import {
   selectTimeseriesErrorByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 import {
-  selectForecastByKey, selectForecastLoading,
+  selectForecastByKey,
+  selectForecastLoading,
   selectForecastParams,
 } from '@/entities/forecast/model/selectors';
 import {
