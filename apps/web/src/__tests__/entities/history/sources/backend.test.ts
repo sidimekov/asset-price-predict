@@ -1,91 +1,163 @@
-import { describe, it, expect, vi } from 'vitest';
-import { backendHistorySource } from '@/entities/history/sources/backend';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { HistoryEntry } from '@/entities/history/model';
+import { baseQuery } from '@/shared/networking/baseQuery';
+import { backendHistorySource } from '@/entities/history/sources/backend';
+
+vi.mock('@/shared/networking/baseQuery', () => ({
+  baseQuery: vi.fn(),
+}));
+
+const baseQueryMock = vi.mocked(baseQuery);
 
 describe('backendHistorySource', () => {
-  describe('list', () => {
-    it('возвращает пустой массив', async () => {
-      const result = await backendHistorySource.list();
-      expect(result).toEqual([]);
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  describe('getById', () => {
-    it('возвращает null для любого id', async () => {
-      const result = await backendHistorySource.getById('test-id');
-      expect(result).toBeNull();
+  it('maps listPage results to HistoryPage', async () => {
+    baseQueryMock.mockResolvedValueOnce({
+      data: {
+        items: [
+          {
+            id: 'fc-1',
+            symbol: 'BTC',
+            timeframe: '1h',
+            createdAt: '2025-01-01T00:00:00.000Z',
+            horizon: 4,
+          },
+        ],
+        total: 1,
+        page: 2,
+        limit: 5,
+      },
     });
 
-    it('возвращает null для пустого id', async () => {
-      const result = await backendHistorySource.getById('');
-      expect(result).toBeNull();
+    const result = await backendHistorySource.listPage({
+      page: 2,
+      limit: 5,
     });
-  });
 
-  describe('save', () => {
-    it('всегда выбрасывает ошибку "Not implemented"', async () => {
-      const mockEntry: HistoryEntry = {
-        id: 'test-id',
-        created_at: new Date().toISOString(),
-        symbol: 'BTCUSDT',
-        tf: '1h',
-        horizon: 24,
-        provider: 'BINANCE',
-        p50: [[1000, 50000]],
-        meta: {
-          runtime_ms: 100,
-          backend: 'client',
+    expect(baseQueryMock).toHaveBeenCalledWith(
+      {
+        url: '/forecasts',
+        method: 'GET',
+        params: { page: 2, limit: 5 },
+      },
+      expect.anything(),
+      {},
+    );
+    expect(result).toEqual({
+      items: [
+        {
+          id: 'fc-1',
+          created_at: '2025-01-01T00:00:00.000Z',
+          symbol: 'BTC',
+          tf: '1h',
+          horizon: 4,
+          provider: 'BACKEND',
+          p50: [],
+          meta: { runtime_ms: 0, backend: 'server' },
         },
-      };
-
-      await expect(backendHistorySource.save(mockEntry)).rejects.toThrow(
-        'Not implemented',
-      );
+      ],
+      total: 1,
+      page: 2,
+      limit: 5,
     });
   });
 
-  describe('remove', () => {
-    it('всегда выбрасывает ошибку "Not implemented"', async () => {
-      await expect(backendHistorySource.remove('test-id')).rejects.toThrow(
-        'Not implemented',
-      );
+  it('maps detailed forecast data into history entry', async () => {
+    baseQueryMock.mockResolvedValueOnce({
+      data: {
+        id: 'fc-42',
+        symbol: 'ETH',
+        timeframe: '1d',
+        createdAt: '2025-01-02T00:00:00.000Z',
+        horizon: 8,
+        series: {
+          t: [1, 2],
+          p50: [10, 20],
+          p10: [8, 18],
+          p90: [12, 22],
+        },
+        factors: [
+          { name: 'A', impact: 1.5, shap: 0.5, conf: 0.9 },
+          { name: 'B', impact: -2, shap: 0.2, conf: 0.1 },
+        ],
+      },
     });
+
+    const entry = await backendHistorySource.getById('fc-42');
+
+    expect(baseQueryMock).toHaveBeenCalled();
+    expect(entry).toEqual({
+      id: 'fc-42',
+      created_at: '2025-01-02T00:00:00.000Z',
+      symbol: 'ETH',
+      tf: '1d',
+      horizon: 8,
+      provider: 'BACKEND',
+      p50: [
+        [1, 10],
+        [2, 20],
+      ],
+      p10: [
+        [1, 8],
+        [2, 18],
+      ],
+      p90: [
+        [1, 12],
+        [2, 22],
+      ],
+      explain: [
+        {
+          name: 'A',
+          group: 'model',
+          impact_abs: 1.5,
+          sign: '+',
+          shap: 0.5,
+          confidence: 0.9,
+        },
+        {
+          name: 'B',
+          group: 'model',
+          impact_abs: 2,
+          sign: '-',
+          shap: 0.2,
+          confidence: 0.1,
+        },
+      ],
+      meta: { runtime_ms: 0, backend: 'server' },
+    } as HistoryEntry);
   });
 
-  describe('clear', () => {
-    it('всегда выбрасывает ошибку "Not implemented"', async () => {
-      await expect(backendHistorySource.clear()).rejects.toThrow(
-        'Not implemented',
-      );
+  it('returns null for missing id', async () => {
+    baseQueryMock.mockResolvedValueOnce({
+      error: { status: 404, message: 'Not found' },
     });
+
+    const entry = await backendHistorySource.getById('missing');
+    expect(entry).toBeNull();
   });
 
-  describe('типизация', () => {
-    it('соответствует интерфейсу HistoryRepository', () => {
-      expect(typeof backendHistorySource.list).toBe('function');
-      expect(typeof backendHistorySource.getById).toBe('function');
-      expect(typeof backendHistorySource.save).toBe('function');
-      expect(typeof backendHistorySource.remove).toBe('function');
-      expect(typeof backendHistorySource.clear).toBe('function');
+  it('list() delegates to listPage helper', async () => {
+    baseQueryMock.mockResolvedValueOnce({
+      data: {
+        items: [
+          {
+            id: 'fc-2',
+            symbol: 'BTC',
+            timeframe: '1h',
+            createdAt: '2025-01-03T00:00:00.000Z',
+            horizon: 3,
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+      },
     });
 
-    it('методы возвращают промисы', async () => {
-      const listResult = backendHistorySource.list();
-      expect(listResult).toBeInstanceOf(Promise);
-
-      const getByIdResult = backendHistorySource.getById('id');
-      expect(getByIdResult).toBeInstanceOf(Promise);
-
-      const savePromise = backendHistorySource
-        .save({} as HistoryEntry)
-        .catch(() => {});
-      expect(savePromise).toBeInstanceOf(Promise);
-
-      const removePromise = backendHistorySource.remove('id').catch(() => {});
-      expect(removePromise).toBeInstanceOf(Promise);
-
-      const clearPromise = backendHistorySource.clear().catch(() => {});
-      expect(clearPromise).toBeInstanceOf(Promise);
-    });
+    const list = await backendHistorySource.list();
+    expect(list).toHaveLength(1);
   });
 });

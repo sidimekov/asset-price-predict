@@ -13,7 +13,10 @@ vi.mock('@/processes/orchestrator/ForecastManager', () => ({
 }));
 
 import { ForecastManager } from '@/processes/orchestrator/ForecastManager';
-import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import {
+  useOrchestrator,
+  __resetOrchestratorStateForTests,
+} from '@/processes/orchestrator/useOrchestrator';
 import { DEFAULT_LIMIT, DEFAULT_TIMEFRAME } from '@/config/market';
 
 const catalogReducer = (
@@ -62,6 +65,7 @@ describe('useOrchestrator', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    __resetOrchestratorStateForTests();
   });
 
   const createTestStore = () =>

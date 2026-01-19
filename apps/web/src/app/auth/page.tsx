@@ -133,6 +133,8 @@ const AuthPageContent = () => {
     }
   };
 
+  const errorMessage = formMessage;
+
   return (
     <div className="bg-primary min-h-screen flex flex-col">
       <header className="flex justify-between items-center pt-6 pb-4 px-6 mobile:pt-5 mobile:pb-3 mobile:px-4">
@@ -160,6 +162,11 @@ const AuthPageContent = () => {
               {mode === 'signup' ? 'Sign up for AssetPredict' : 'Welcome back'}
             </h2>
             <AuthTabs mode={mode} setMode={setMode} />
+            {errorMessage ? (
+              <div className="text-red-400 text-sm mb-3" role="alert">
+                {errorMessage}
+              </div>
+            ) : null}
             {mode === 'signup' ? (
               <SignUpForm
                 onSubmit={handleSignUp}

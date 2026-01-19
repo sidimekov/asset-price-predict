@@ -22,6 +22,14 @@ import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
 
+let pendingForecastRequestId: number | null = null;
+let handledForecastRequestId = 0;
+
+export const __resetOrchestratorStateForTests = () => {
+  pendingForecastRequestId = null;
+  handledForecastRequestId = 0;
+};
+
 const DEFAULT_FORECAST_PARAMS = {
   tf: DEFAULT_TIMEFRAME,
   window: DEFAULT_WINDOW,
@@ -121,6 +129,8 @@ export function useOrchestrator() {
 
   useEffect(() => {
     if (!predictRequestId) return;
+    if (predictRequestId <= handledForecastRequestId) return;
+    if (pendingForecastRequestId === predictRequestId) return;
     if (predictRequestId === fcLastRequestIdRef.current) return;
 
     const req = predictRequest;
@@ -145,6 +155,7 @@ export function useOrchestrator() {
     if (fcTimeoutRef.current) {
       clearTimeout(fcTimeoutRef.current);
       fcTimeoutRef.current = null;
+      pendingForecastRequestId = null;
     }
     if (fcAbortRef.current) {
       fcAbortRef.current.abort();
@@ -154,8 +165,12 @@ export function useOrchestrator() {
     const abortController = new AbortController();
     fcAbortRef.current = abortController;
 
+    pendingForecastRequestId = requestId;
+
     fcTimeoutRef.current = setTimeout(() => {
       fcLastRequestIdRef.current = requestId;
+      pendingForecastRequestId = null;
+      handledForecastRequestId = requestId;
       ForecastManager.runForecast(
         {
           symbol: symbol as any,
@@ -177,6 +192,9 @@ export function useOrchestrator() {
       if (fcTimeoutRef.current) {
         clearTimeout(fcTimeoutRef.current);
         fcTimeoutRef.current = null;
+        if (pendingForecastRequestId === requestId) {
+          pendingForecastRequestId = null;
+        }
       }
       if (fcAbortRef.current) {
         fcAbortRef.current.abort();
