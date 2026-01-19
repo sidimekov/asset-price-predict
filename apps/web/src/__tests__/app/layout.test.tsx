@@ -5,10 +5,12 @@ import RootLayout from '@/app/layout';
 // Мокаем next/navigation
 const mockUsePathname = vi.fn();
 const mockReplace = vi.fn();
+const mockRouterPush = vi.fn();
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
   useRouter: () => ({
     replace: mockReplace,
+    push: mockRouterPush,
   }),
 }));
 
