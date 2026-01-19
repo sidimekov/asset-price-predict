@@ -5,10 +5,21 @@ import { useRouter } from 'next/navigation';
 import Skeleton from '@/shared/ui/Skeleton';
 import type { HistoryEntry } from '@/entities/history/model';
 
+const DEFAULT_WINDOW = 200;
+
 function formatDate(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toISOString();
+}
+
+function buildForecastHref(entry: HistoryEntry): string {
+  const searchParams = new URLSearchParams({
+    provider: entry.provider,
+    tf: entry.tf,
+    window: String(DEFAULT_WINDOW),
+  });
+  return `/forecast/${encodeURIComponent(entry.symbol)}?${searchParams.toString()}`;
 }
 
 export default function HistoryTable({
@@ -49,22 +60,24 @@ export default function HistoryTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((entry) => (
+            {rows.map((entry) => {
+              const href = buildForecastHref(entry);
+              return (
               <tr
                 key={entry.id}
                 role="link"
                 tabIndex={0}
                 aria-label={`Open forecast for ${entry.symbol}`}
-                onClick={() => router.push(`/forecast/${entry.id}`)}
+                onClick={() => router.push(href)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    router.push(`/forecast/${entry.id}`);
+                    router.push(href);
                   }
                 }}
               >
                 <td>
-                  <Link href={`/forecast/${entry.id}`}>{entry.symbol}</Link>
+                  <Link href={href}>{entry.symbol}</Link>
                 </td>
                 <td>{formatDate(entry.created_at)}</td>
                 <td>{entry.meta.model_ver ?? '—'}</td>
@@ -73,7 +86,8 @@ export default function HistoryTable({
                   {entry.tf} / {entry.horizon}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
