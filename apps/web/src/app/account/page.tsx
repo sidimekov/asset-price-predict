@@ -1,30 +1,59 @@
-// apps/web/src/app/account/page.tsx
 'use client';
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProfileHeader } from '@/features/account/ProfileHeader';
 import { ActionsList } from '@/features/account/ActionsList';
-import { useGetMeQuery } from '@/shared/api/account.api';
+import { EditAccountModal } from '@/features/account/EditAccountModal';
+import type { AccountEditMode } from '@/features/account/model/accountTypes';
+import {
+  useGetMeQuery,
+  useUpdateMeMutation,
+  accountApi,
+} from '@/shared/api/account.api';
 import { useLogoutMutation } from '@/shared/api/auth.api';
 import { useAppDispatch } from '@/shared/store/hooks';
+import type { UpdateAccountReq } from '@assetpredict/shared';
 import { backendApi } from '@/shared/api/backendApi';
+
+const EMPTY_PROFILE = {
+  username: '',
+  email: '',
+  avatarUrl: undefined as string | undefined,
+};
 
 const AccountPage: React.FC = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const token =
-    typeof localStorage === 'undefined'
-      ? null
-      : localStorage.getItem('auth.token');
-  const {
-    data: profile,
-    isFetching,
-    isLoading,
-  } = useGetMeQuery(undefined, {
-    skip: !token,
-  });
+
+  const { data: profile, isLoading } = useGetMeQuery();
+  const [updateMe] = useUpdateMeMutation();
   const [logout] = useLogoutMutation();
-  const loading = isLoading || isFetching;
+
+  const [editMode, setEditMode] = useState<AccountEditMode | null>(null);
+
+  const safeProfile = profile ?? EMPTY_PROFILE;
+
+  const handleSave = async (patch: UpdateAccountReq) => {
+    if (!profile) {
+      console.warn('Account not loaded — update skipped');
+      return;
+    }
+
+    // optimistic update
+    dispatch(
+      accountApi.util.updateQueryData('getMe', undefined, (draft) => {
+        if (!draft) return;
+        Object.assign(draft, patch);
+      }),
+    );
+
+    try {
+      await updateMe(patch).unwrap();
+    } catch (e) {
+      console.error('Update failed', e);
+    }
+  };
 
   const handleLogout = async () => {
     if (typeof localStorage !== 'undefined') {
@@ -39,68 +68,38 @@ const AccountPage: React.FC = () => {
     }
   };
 
-  const handleActionClick = (label: string) => {
-    if (label === 'Log out') {
-      localStorage.setItem('ap.auth.mock', 'false');
-      router.push('/auth');
-      return;
-    }
-
-    const mapped = mapActionToMode(label);
-    if (mapped) {
-      openModal(mapped);
-    }
-  };
-
-  const handleSave = async (payload: any) => {
-    setSaving(true);
-    setError(null);
-
-    try {
-      if (mode === 'password') {
-        await accountService.changePassword(payload);
-      } else {
-        // Используем функцию updateProfile из контекста
-        await updateProfile(payload);
-        // После успешного обновления контекст обновит профиль везде
-      }
-
-      setIsModalOpen(false);
-    } catch (e: any) {
-      setError(e?.message ?? 'Something went wrong');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const openEditMode = (mode: AccountEditMode) => setEditMode(mode);
+  const closeEditMode = () => setEditMode(null);
 
   return (
     <main className="account-content">
-      <div className="max-w-md mx-auto space-y-8">
+      <div className="max-w-md mx-auto space-y-6">
+        {/* ProfileHeader всегда виден */}
         <ProfileHeader
-          loading={loading}
-          onClick={handleProfileClick}
-          profile={profile}
-        />
-        <ActionsList
-          loading={loading}
-          onClick={(label) => console.log(label)}
-          onLogout={handleLogout}
+          loading={isLoading}
+          profile={safeProfile}
+          onClick={() => openEditMode('profile')} // можно сделать редактирование профиля по клику
         />
 
-        {!isModalOpen && (
-          <ActionsList loading={loading} onClick={handleActionClick} />
+        {/* Если editMode не выбран — показываем ActionsList */}
+        {!editMode && (
+          <ActionsList
+            loading={isLoading}
+            onAction={openEditMode}
+            onLogout={handleLogout}
+          />
+        )}
+
+        {/* Если editMode выбран — показываем форму редактирования */}
+        {editMode && (
+          <EditAccountModal
+            mode={editMode}
+            profile={safeProfile}
+            onCancel={closeEditMode}
+            onSave={handleSave}
+          />
         )}
       </div>
-
-      <EditAccountModal
-        open={isModalOpen}
-        mode={mode}
-        profile={profile}
-        loading={saving}
-        error={error}
-        onClose={closeModal}
-        onSave={handleSave}
-      />
     </main>
   );
 };

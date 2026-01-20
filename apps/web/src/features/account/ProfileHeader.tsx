@@ -1,55 +1,60 @@
 'use client';
 
 import React from 'react';
-import type { AccountRes } from '@assetpredict/shared';
+import Image from 'next/image';
 import Skeleton from '@/shared/ui/Skeleton';
 
 interface ProfileHeaderProps {
-  profile?: {
-    avatarUrl?: string;
-    username: string;
-    login: string;
-  };
   loading?: boolean;
   onClick?: () => void;
-  profile?: AccountRes | null;
+  profile: {
+    username?: string;
+    email?: string;
+    avatarUrl?: string;
+  };
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
-  profile,
   loading = false,
   onClick,
   profile,
 }) => {
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="profile-header">
-        <Skeleton width="128px" height="128px" />
-        <div className="profile-header__text">
-          <Skeleton width="200px" height="24px" />
-          <Skeleton width="150px" height="18px" />
-        </div>
+        <Skeleton height="80px" />
       </div>
     );
   }
 
-  const avatarUrl = profile?.avatarUrl ?? '/images/profile-avatar.png';
-  const username = profile?.username ?? 'Unknown user';
-  const email = profile?.email ?? '';
+  const avatarSrc =
+    profile.avatarUrl && profile.avatarUrl.trim()
+      ? profile.avatarUrl
+      : '/images/profile-avatar.png';
 
   return (
-    <div className="profile-header" onClick={onClick}>
-      <img
-        src={avatarUrl}
-        alt={`${username} avatar`}
-        className="profile-header-avatar"
+    <div
+      className="profile-header cursor-pointer"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+    >
+      <Image
+        src={avatarSrc}
+        alt="Profile avatar"
+        width={100}
+        height={100}
+        className="profile-avatar rounded-full "
+        priority
       />
-
       <div className="profile-header-text">
         <p className="profile-header-username">
-          Username: <span className="profile-header-username">{username}</span>
+          Username:{' '}
+          <span className="profile-header-username">
+            {profile.username || '—'}
+          </span>
         </p>
-        <p className="profile-header-login">Email: {email}</p>
+        <p className="profile-header-login">Email: {profile.email || '—'}</p>
       </div>
     </div>
   );
