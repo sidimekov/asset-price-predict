@@ -1,0 +1,70 @@
+{
+  "model_name": "forecast_lgbm_v1",
+  "features": [
+    "last_close",
+    "mean_5",
+    "mean_20",
+    "std_20",
+    "momentum_3",
+    "momentum_8",
+    "ema_5",
+    "ema_10",
+    "ret_mean_5",
+    "ret_std_20"
+  ],
+  "target_columns": [
+    "target_1",
+    "target_2",
+    "target_3",
+    "target_4",
+    "target_5",
+    "target_6",
+    "target_7",
+    "target_8",
+    "target_9",
+    "target_10",
+    "target_11",
+    "target_12",
+    "target_13",
+    "target_14",
+    "target_15",
+    "target_16",
+    "target_17",
+    "target_18",
+    "target_19",
+    "target_20",
+    "target_21",
+    "target_22",
+    "target_23",
+    "target_24"
+  ],
+  "normalization": {
+    "type": "zscore",
+    "mean": [
+      8320.4013671875, 8320.03125, 8318.3857421875, 95.19403839111328,
+      0.42469319701194763, 1.5103819370269775, 8320.1064453125, 8319.642578125,
+      0.00011972610809607431, 0.007521859835833311
+    ],
+    "std": [
+      14593.4619140625, 14592.9140625, 14590.9638671875, 219.14361572265625,
+      188.08030700683594, 344.7851867675781, 14592.939453125, 14592.2041015625,
+      0.004049153532832861, 0.005128764547407627
+    ]
+  },
+  "metrics": {
+    "mae_delta": 141.66734997629737,
+    "mape_price": 0.011698776407672716
+  },
+  "splits": {
+    "train": 110241,
+    "val": 23625
+  },
+  "data_dirs": ["data/features/v1/binance"],
+  "params": {
+    "n_estimators": 400,
+    "learning_rate": 0.05,
+    "max_depth": 7,
+    "num_leaves": 63,
+    "random_state": 7
+  }
+}

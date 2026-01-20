@@ -16,11 +16,19 @@ const DEFAULT_WINDOW =
 import {
   DEFAULT_LIMIT,
   DEFAULT_TIMEFRAME,
-  type MarketDataProvider,
   type MarketTimeframe,
 } from '@/config/market';
+import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
 const ORCHESTRATOR_DEBOUNCE_MS = 250;
+
+let pendingForecastRequestId: number | null = null;
+let handledForecastRequestId = 0;
+
+export const __resetOrchestratorStateForTests = () => {
+  pendingForecastRequestId = null;
+  handledForecastRequestId = 0;
+};
 
 const DEFAULT_FORECAST_PARAMS = {
   tf: DEFAULT_TIMEFRAME,
@@ -28,22 +36,6 @@ const DEFAULT_FORECAST_PARAMS = {
   horizon: 24,
   model: null,
 };
-
-function mapProviderToMarket(
-  provider: string,
-): MarketDataProvider | 'MOCK' | null {
-  switch (provider.toLowerCase()) {
-    case 'binance':
-      return 'BINANCE';
-    case 'moex':
-      return 'MOEX';
-    case 'mock':
-    case 'custom':
-      return 'MOCK';
-    default:
-      return null;
-  }
-}
 
 export function useOrchestrator() {
   const dispatch = useAppDispatch();
@@ -137,8 +129,9 @@ export function useOrchestrator() {
 
   useEffect(() => {
     if (!predictRequestId) return;
+    if (predictRequestId <= handledForecastRequestId) return;
+    if (pendingForecastRequestId === predictRequestId) return;
     if (predictRequestId === fcLastRequestIdRef.current) return;
-    fcLastRequestIdRef.current = predictRequestId;
 
     const req = predictRequest;
 
@@ -157,9 +150,12 @@ export function useOrchestrator() {
     const windowNum = typeof window === 'string' ? Number(window) : window;
     if (!Number.isFinite(windowNum) || windowNum <= 0) return;
 
+    const requestId = predictRequestId;
+
     if (fcTimeoutRef.current) {
       clearTimeout(fcTimeoutRef.current);
       fcTimeoutRef.current = null;
+      pendingForecastRequestId = null;
     }
     if (fcAbortRef.current) {
       fcAbortRef.current.abort();
@@ -169,7 +165,12 @@ export function useOrchestrator() {
     const abortController = new AbortController();
     fcAbortRef.current = abortController;
 
+    pendingForecastRequestId = requestId;
+
     fcTimeoutRef.current = setTimeout(() => {
+      fcLastRequestIdRef.current = requestId;
+      pendingForecastRequestId = null;
+      handledForecastRequestId = requestId;
       ForecastManager.runForecast(
         {
           symbol: symbol as any,
@@ -191,6 +192,9 @@ export function useOrchestrator() {
       if (fcTimeoutRef.current) {
         clearTimeout(fcTimeoutRef.current);
         fcTimeoutRef.current = null;
+        if (pendingForecastRequestId === requestId) {
+          pendingForecastRequestId = null;
+        }
       }
       if (fcAbortRef.current) {
         fcAbortRef.current.abort();

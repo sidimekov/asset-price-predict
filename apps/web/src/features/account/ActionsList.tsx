@@ -7,6 +7,7 @@ import Skeleton from '@/shared/ui/Skeleton';
 interface ActionsListProps {
   loading?: boolean;
   onClick?: (label: string) => void;
+  onLogout?: () => void;
 }
 
 const ACTIONS = [
@@ -19,6 +20,7 @@ const ACTIONS = [
 export const ActionsList: React.FC<ActionsListProps> = ({
   loading = false,
   onClick,
+  onLogout,
 }) => {
   const handleClick = (label: string) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -39,7 +41,7 @@ export const ActionsList: React.FC<ActionsListProps> = ({
       {loading ? (
         <Skeleton height="48px" />
       ) : (
-        <Button variant="danger" onClick={handleClick('Log out')}>
+        <Button onClick={onLogout} variant="danger">
           Log out
         </Button>
       )}

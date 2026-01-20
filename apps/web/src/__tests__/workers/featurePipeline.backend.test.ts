@@ -19,8 +19,12 @@ describe('featurePipeline.buildFeaturesWithBackend', () => {
     const size = forecastMinimalConfig.featureWindow + 5;
     for (let i = 0; i < size; i++) tail.push([i, 100 + i]);
 
-    const cpu = buildFeatures(tail as any);
-    const result = await buildFeaturesWithBackend(tail as any, 'cpu');
+    const cpu = buildFeatures(tail as any, forecastMinimalConfig);
+    const result = await buildFeaturesWithBackend(
+      tail as any,
+      forecastMinimalConfig,
+      'cpu',
+    );
 
     expect(result.backend).toBe('cpu');
     expect(Array.from(result.features)).toEqual(Array.from(cpu));
@@ -38,8 +42,12 @@ describe('featurePipeline.buildFeaturesWithBackend', () => {
     const size = forecastMinimalConfig.featureWindow + 5;
     for (let i = 0; i < size; i++) tail.push([i, 100 + i]);
 
-    const cpu = buildFeatures(tail as any);
-    const result = await buildFeaturesWithBackend(tail as any, 'auto');
+    const cpu = buildFeatures(tail as any, forecastMinimalConfig);
+    const result = await buildFeaturesWithBackend(
+      tail as any,
+      forecastMinimalConfig,
+      'auto',
+    );
 
     expect(result.backend).toBe('cpu');
     expect(Array.from(result.features)).toEqual(Array.from(cpu));

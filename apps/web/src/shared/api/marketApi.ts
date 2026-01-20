@@ -93,7 +93,7 @@ export const marketApi = createApi({
       BinanceTimeseriesRequest
     >({
       query: ({ symbol, interval, limit }) => ({
-        url: 'binance/timeseries',
+        url: 'https://api.binance.com/api/v3/klines',
         params: { symbol, interval, limit },
       }),
     }),
@@ -101,7 +101,7 @@ export const marketApi = createApi({
     // GET /api/market/binance/exchange-info
     getBinanceExchangeInfo: builder.query<BinanceExchangeInfo, void>({
       query: () => ({
-        url: 'binance/exchange-info',
+        url: 'https://api.binance.com/api/v3/exchangeInfo',
       }),
     }),
 
@@ -140,11 +140,10 @@ export const marketApi = createApi({
       }),
     }),
 
-    // GET /api/market/binance/search-symbols?q=...
-    searchBinanceSymbols: builder.query<BinanceSymbolRaw[], SearchQuery>({
-      query: (q) => ({
-        url: 'binance/search-symbols',
-        params: { q },
+    // GET /api/market/binance/search-symbols
+    searchBinanceSymbols: builder.query<BinanceExchangeInfo, SearchQuery>({
+      query: () => ({
+        url: 'https://api.binance.com/api/v3/exchangeInfo',
       }),
     }),
 

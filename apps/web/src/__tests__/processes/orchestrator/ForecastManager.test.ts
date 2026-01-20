@@ -58,6 +58,16 @@ vi.mock('@/entities/forecast/model/forecastSlice', () => {
   };
 });
 
+vi.mock('@/shared/api/forecast.api', () => ({
+  forecastApi: {
+    endpoints: {
+      createForecast: {
+        initiate: vi.fn(),
+      },
+    },
+  },
+}));
+
 vi.mock('@/entities/history/repository', () => ({
   historyRepository: {
     list: vi.fn(),
@@ -96,6 +106,11 @@ import {
   forecastCancelled,
 } from '@/entities/forecast/model/forecastSlice';
 import { historyRepository } from '@/entities/history/repository';
+import { forecastApi } from '@/shared/api/forecast.api';
+
+const createForecastInitiateMock = vi.mocked(
+  forecastApi.endpoints.createForecast.initiate,
+);
 
 // @ts-ignore
 const getMarketTimeseriesMock = getMarketTimeseries as unknown as vi.Mock;
@@ -116,6 +131,10 @@ describe('ForecastManager (new orchestrator)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     orchestratorState.status = 'idle';
+    mockDispatch.mockImplementation(() => ({
+      unwrap: () => Promise.resolve(),
+    }));
+    createForecastInitiateMock.mockReset();
   });
 
   it('uses timeseries from store when fresh (no MarketAdapter call), then calls inferForecast and stores forecast', async () => {
@@ -175,6 +194,53 @@ describe('ForecastManager (new orchestrator)', () => {
 
     // status back to idle
     expect(orchestratorState.status).toBe('idle');
+  });
+
+  it('pushes backend createForecast after successful run', async () => {
+    const ctx: OrchestratorInput = {
+      symbol: 'SBER' as any,
+      provider: 'MOEX' as any,
+      tf: '1h',
+      window: 200,
+      horizon: 2,
+      model: null,
+    };
+
+    const tsKey = `${ctx.provider}:${ctx.symbol}:${ctx.tf}:${ctx.window}`;
+    (buildTimeseriesKey as any).mockReturnValue(tsKey);
+    (isTimeseriesStaleByKey as any).mockReturnValue(false);
+
+    const bars: Bar[] = [
+      [1_000_000, 1, 2, 0.5, 1.5, 100],
+      [2_000_000, 1.5, 2.5, 1, 2, 120],
+    ];
+
+    mockGetState.mockReturnValue({
+      timeseries: {
+        byKey: {
+          [tsKey]: { bars, fetchedAt: new Date().toISOString() },
+        },
+      },
+      forecast: { byKey: {}, loadingByKey: {}, errorByKey: {} },
+    } as any);
+
+    inferForecastMock.mockResolvedValue({
+      p50: [10, 20],
+      p10: [9, 19],
+      p90: [11, 21],
+      diag: { runtime_ms: 10, backend: 'mock', model_ver: 'v1' },
+    });
+
+    await ForecastManager.run(ctx, makeDeps());
+
+    const expectedInputUntil = new Date(bars[bars.length - 1][0]).toISOString();
+    expect(createForecastInitiateMock).toHaveBeenCalledWith({
+      symbol: ctx.symbol,
+      timeframe: ctx.tf,
+      horizon: ctx.horizon,
+      inputUntil: expectedInputUntil,
+      model: 'baseline',
+    });
   });
 
   it('loads timeseries via MarketAdapter when missing/stale, dispatches timeseries actions, then infers and stores forecast', async () => {

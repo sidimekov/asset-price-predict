@@ -2,10 +2,42 @@ import { test, expect } from '@playwright/test';
 import { buildUrl } from './utils/basePath';
 
 test.describe('Account Page', () => {
-  test('should load and show profile information', async ({ page }) => {
-    await page.goto(buildUrl('/account'));
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/account**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const isApiCall =
+        url.pathname === '/account' &&
+        (request.resourceType() === 'fetch' ||
+          request.resourceType() === 'xhr');
 
-    // Проверяем, что профиль загружен
+      if (!isApiCall) {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'e2e-user',
+          email: 'e2e@example.com',
+          username: 'E2E User',
+          avatarUrl: '/images/profile-avatar.png',
+        }),
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem('auth.token', 'e2e-token');
+    });
+  });
+
+  test('should load and show profile information', async ({ page }) => {
+    const accountResponse = page.waitForResponse((response) =>
+      response.url().includes('/account'),
+    );
+    await page.goto(buildUrl('/account'));
+    await accountResponse;
     await expect(page.getByText('Username:')).toBeVisible();
     await expect(page.getByText('Email:')).toBeVisible();
   });
@@ -13,9 +45,11 @@ test.describe('Account Page', () => {
   test('should display action buttons when no form is open', async ({
     page,
   }) => {
+    const accountResponse = page.waitForResponse((response) =>
+      response.url().includes('/account'),
+    );
     await page.goto(buildUrl('/account'));
-
-    // Кнопки ActionsList видны
+    await accountResponse;
     await expect(
       page.getByRole('button', { name: 'Edit photo' }),
     ).toBeVisible();
@@ -57,7 +91,11 @@ test.describe('Account Page', () => {
   test('should close form and show actions list after Cancel', async ({
     page,
   }) => {
+    const accountResponse = page.waitForResponse((response) =>
+      response.url().includes('/account'),
+    );
     await page.goto(buildUrl('/account'));
+    await accountResponse;
 
     await page.getByRole('button', { name: 'Change email' }).click();
 

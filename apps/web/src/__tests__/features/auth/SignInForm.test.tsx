@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SignInForm from '@/features/auth/SignInForm';
@@ -50,6 +50,38 @@ describe('SignInForm', () => {
       'pass123',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
-    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'pass123',
+    });
+  });
+
+  it('shows validation errors for invalid inputs', async () => {
+    render(<SignInForm onSubmit={mockOnSubmit} isLoading={false} />);
+
+    const form = screen
+      .getByRole('button', { name: 'Confirm' })
+      .closest('form');
+    fireEvent.submit(form!);
+
+    expect(
+      screen.getByText('Please enter the correct email address'),
+    ).toBeInTheDocument();
+    expect(screen.getByText("The password can't be empty")).toBeInTheDocument();
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  it('renders server errors and message', () => {
+    render(
+      <SignInForm
+        onSubmit={mockOnSubmit}
+        isLoading={false}
+        serverErrors={{ email: 'Server email error' }}
+        serverMessage="Invalid credentials"
+      />,
+    );
+
+    expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
+    expect(screen.getByText('Server email error')).toBeInTheDocument();
   });
 });

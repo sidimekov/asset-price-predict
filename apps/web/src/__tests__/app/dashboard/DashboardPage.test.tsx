@@ -13,8 +13,15 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
-vi.mock('@/widgets/recent-assets/RecentAssetsBar', () => ({
-  default: vi.fn(),
+vi.mock('@/shared/api/account.api', () => ({
+  useGetMeQuery: () => ({
+    data: {
+      id: '1',
+      username: 'John Doe',
+      email: 'john@example.com',
+      avatarUrl: '/avatar.jpg',
+    },
+  }),
 }));
 
 vi.mock('@/widgets/chart/CandlesChartPlaceholder', () => ({
@@ -33,9 +40,11 @@ vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
   default: vi.fn(),
 }));
 
-vi.mock('@/features/asset-catalog/ui/AssetCatalogPanel', () => ({
-  AssetCatalogPanel: vi.fn(),
-}));
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUsePathname.mockReturnValue('/dashboard');
+    localStorage.setItem('auth.token', 'test-token');
+  });
 
 vi.mock('@/shared/store/hooks', () => ({
   useAppDispatch: vi.fn(),

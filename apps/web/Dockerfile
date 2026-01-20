@@ -6,6 +6,8 @@ RUN corepack enable
 
 ARG NEXT_PUBLIC_YM_ID
 ENV NEXT_PUBLIC_YM_ID=$NEXT_PUBLIC_YM_ID
+ARG NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 COPY tsconfig.base.json tsconfig.base.json

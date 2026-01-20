@@ -1,27 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 
-const ORIGINAL_ENV = process.env.NODE_ENV;
+const ORIGINAL_USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_MARKET;
 
 describe('mapProviderToMarket', () => {
   beforeEach(() => {
-    process.env.NODE_ENV = ORIGINAL_ENV;
+    process.env.NEXT_PUBLIC_USE_MOCK_MARKET = ORIGINAL_USE_MOCK;
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = ORIGINAL_ENV;
+    process.env.NEXT_PUBLIC_USE_MOCK_MARKET = ORIGINAL_USE_MOCK;
   });
 
-  it('returns MOCK in non-production', () => {
-    process.env.NODE_ENV = 'development';
+  it('maps providers without mock flag', () => {
+    process.env.NEXT_PUBLIC_USE_MOCK_MARKET = '';
     expect(mapProviderToMarket('binance')).toBe('BINANCE');
     expect(mapProviderToMarket('moex')).toBe('MOEX');
+    expect(mapProviderToMarket('mock')).toBeNull();
   });
 
-  it('maps providers in production', () => {
-    process.env.NODE_ENV = 'production';
-    expect(mapProviderToMarket('binance')).toBe('BINANCE');
-    expect(mapProviderToMarket('moex')).toBe('MOEX');
+  it('returns MOCK only when flag is enabled', () => {
+    process.env.NEXT_PUBLIC_USE_MOCK_MARKET = '1';
+    expect(mapProviderToMarket('mock')).toBe('MOCK');
+    expect(mapProviderToMarket('custom')).toBe('MOCK');
     expect(mapProviderToMarket('unknown')).toBeNull();
   });
 });

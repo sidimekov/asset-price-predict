@@ -60,10 +60,12 @@ const inferHistoryMeta = (entry: { symbol: string; provider: string }) => {
 export default function HistoryPage() {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_FILTERS);
-  const { items, loading, error } = useHistory();
+  const { items, loading, error, page, limit, total, setPage, setLimit } =
+    useHistory();
 
-  const handleSearch = (query: string) => {
-    setQuery(query);
+  const handleSearch = (value: string) => {
+    setQuery(value);
+    setPage(1);
   };
 
   const currencyOptions = useMemo(() => {
@@ -76,6 +78,26 @@ export default function HistoryPage() {
     });
     return Array.from(currencies).sort();
   }, [items]);
+
+  const paginationOptions = [10, 20, 50];
+  const pageCount = Math.max(1, Math.ceil(total / Math.max(1, limit)));
+
+  const handlePrevPage = () => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page < pageCount) {
+      setPage(page + 1);
+    }
+  };
+
+  const handleLimitChange = (value: number) => {
+    setLimit(value);
+    setPage(1);
+  };
 
   const filteredItems = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -137,6 +159,55 @@ export default function HistoryPage() {
           applyFiltersAction={setFilters}
           currencyOptions={currencyOptions}
         />
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          data-testid="history-prev"
+          type="button"
+          onClick={handlePrevPage}
+          disabled={page <= 1 || loading}
+          className="px-3 py-1 rounded bg-surface-dark/50"
+        >
+          Prev
+        </button>
+        <span
+          data-testid="history-page-info"
+          className="text-sm text-ink-muted"
+        >
+          Страница {page} / {pageCount}
+        </span>
+        <button
+          data-testid="history-next"
+          type="button"
+          onClick={handleNextPage}
+          disabled={page >= pageCount || loading}
+          className="px-3 py-1 rounded bg-surface-dark/50"
+        >
+          Next
+        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <label htmlFor="history-limit" className="text-sm text-ink-muted">
+            Limit
+          </label>
+          <select
+            id="history-limit"
+            data-testid="history-limit"
+            value={limit}
+            onChange={(event) =>
+              handleLimitChange(
+                Number(event.target.value) || paginationOptions[0],
+              )
+            }
+            className="bg-surface-dark/70 rounded px-2 py-1 text-sm text-ink border border-white/20 focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {paginationOptions.map((value) => (
+              <option key={value} value={value} className="text-ink">
+                {value}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="history-page-content">

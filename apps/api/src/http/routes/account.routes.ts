@@ -17,7 +17,7 @@ import {
 } from '../../config/uploads.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { parseOr400 } from '../validation.js';
-import { sendError } from '../errors';
+import { sendError } from '../errors.js';
 
 export async function accountRoutes(app: FastifyInstance) {
   const controller = new AccountController();

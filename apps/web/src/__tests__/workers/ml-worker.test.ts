@@ -102,7 +102,8 @@ describe('ml-worker', () => {
     };
 
     // @ts-ignore
-    await messageHandler!({ data: message } as MessageEvent);
+    messageHandler!({ data: message } as MessageEvent);
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(postMessageMock).toHaveBeenCalledTimes(1);
 
@@ -130,7 +131,8 @@ describe('ml-worker', () => {
     };
 
     // @ts-ignore
-    await messageHandler!({ data: message } as MessageEvent);
+    messageHandler!({ data: message } as MessageEvent);
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(postMessageMock).toHaveBeenCalledTimes(1);
 
