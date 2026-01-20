@@ -61,6 +61,7 @@ export default [
         Image: 'readonly',
         File: 'readonly',
         Event: 'readonly',
+        Blob: 'readonly',
       },
     },
     rules: {
