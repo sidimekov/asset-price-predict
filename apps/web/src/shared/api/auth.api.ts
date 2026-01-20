@@ -66,6 +66,7 @@ export const authApi = backendApi.injectEndpoints({
       query: () => ({
         url: '/auth/logout',
         method: 'POST',
+        body: {},
       }),
       async onQueryStarted(_, { queryFulfilled }) {
         try {

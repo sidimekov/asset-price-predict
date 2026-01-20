@@ -40,11 +40,11 @@ vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
   default: vi.fn(),
 }));
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUsePathname.mockReturnValue('/dashboard');
-    localStorage.setItem('auth.token', 'test-token');
-  });
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockUsePathname.mockReturnValue('/dashboard');
+  localStorage.setItem('auth.token', 'test-token');
+});
 
 vi.mock('@/shared/store/hooks', () => ({
   useAppDispatch: vi.fn(),
