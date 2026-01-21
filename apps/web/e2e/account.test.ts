@@ -13,7 +13,7 @@ test.describe('Account Page', () => {
           user: {
             id: 'e2e-user',
             email: 'e2e@example.com',
-          }
+          },
         }),
       });
     });
@@ -60,8 +60,9 @@ test.describe('Account Page', () => {
     await page.goto(buildUrl('/account'), { waitUntil: 'networkidle' });
 
     // Проверяем что нет ошибок авторизации
-    const hasUnauthorized = await page.getByText('401').count() > 0 ||
-        await page.getByText('Unauthorized').count() > 0;
+    const hasUnauthorized =
+      (await page.getByText('401').count()) > 0 ||
+      (await page.getByText('Unauthorized').count()) > 0;
 
     expect(hasUnauthorized).toBe(false);
   });
@@ -71,16 +72,20 @@ test.describe('Account Page', () => {
     await page.waitForTimeout(1000);
 
     // Ищем кнопку для открытия формы
-    const changeUsernameButton = page.getByText('Change username', { exact: false });
+    const changeUsernameButton = page.getByText('Change username', {
+      exact: false,
+    });
 
-    if (await changeUsernameButton.count() > 0) {
+    if ((await changeUsernameButton.count()) > 0) {
       await changeUsernameButton.first().click();
       await page.waitForTimeout(500);
 
       // Проверяем что форма открылась (ищем поле ввода или кнопки Save/Cancel)
-      const hasInput = await page.locator('input, textarea').count() > 0;
-      const hasSave = await page.getByText('Save', { exact: false }).count() > 0;
-      const hasCancel = await page.getByText('Cancel', { exact: false }).count() > 0;
+      const hasInput = (await page.locator('input, textarea').count()) > 0;
+      const hasSave =
+        (await page.getByText('Save', { exact: false }).count()) > 0;
+      const hasCancel =
+        (await page.getByText('Cancel', { exact: false }).count()) > 0;
 
       expect(hasInput || hasSave || hasCancel).toBe(true);
 
@@ -99,7 +104,7 @@ test.describe('Account Page', () => {
     // Ищем кнопку выхода
     const logoutButton = page.getByText('Log out', { exact: false });
 
-    if (await logoutButton.count() > 0) {
+    if ((await logoutButton.count()) > 0) {
       await logoutButton.first().click();
 
       // Ждем навигации
