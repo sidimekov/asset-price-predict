@@ -62,6 +62,8 @@ export default [
         File: 'readonly',
         Event: 'readonly',
         Blob: 'readonly',
+        HTMLCanvasElement: 'readonly',
+        HTMLImageElement: 'readonly',
       },
     },
     rules: {
