@@ -8,13 +8,13 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
   },
 
   webServer: {
-    command: 'pnpm dev', // ⬅️ скрипт dev из apps/web/package.json
-    url: 'http://localhost:3000',
+    command: 'pnpm exec next dev -H 127.0.0.1 -p 3000',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: true,
     timeout: 120_000,
   },

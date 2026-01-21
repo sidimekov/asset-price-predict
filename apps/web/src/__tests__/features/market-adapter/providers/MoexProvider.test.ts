@@ -151,6 +151,32 @@ describe('fetchMoexTimeseries', () => {
     expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it('формирует понятное сообщение при rate limit (429)', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+
+    const params = {
+      symbol: 'SBER',
+      timeframe: '1d' as const,
+      limit: 20,
+    };
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockRejectedValue({
+        status: 429,
+        data: { message: 'Too Many Requests' },
+      }),
+      unsubscribe: vi.fn(),
+    };
+
+    mockMoexInitiate.mockReturnValue(mockQueryResult);
+
+    await expect(
+      fetchMoexTimeseries(mockDispatch as any, params as any),
+    ).rejects.toThrow('Rate limit exceeded (status 429)');
+
+    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('searchMoexSymbols сразу отказывает при abort', async () => {
     const mockDispatch = vi.fn();
     const controller = new AbortController();

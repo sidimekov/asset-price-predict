@@ -12,6 +12,7 @@ export default [
   {
     ignores: [
       'node_modules/',
+      '.venv*/',
       'apps/',
       'packages/',
       'dist/',

@@ -19,6 +19,7 @@ import {
   selectError,
   selectTailForFeatures,
   selectIsStale,
+  selectPriceChangeByAsset,
 } from '@/entities/timeseries/model/selectors';
 
 const key = buildTimeseriesCacheKey('MOCK', 'BTCUSDT', '1h', 120);
@@ -235,5 +236,140 @@ describe('timeseriesSlice selectors', () => {
     expect(selectIsStale(stateFresh, key, ttlMs, now)).toBe(false);
     expect(selectIsStale(stateStale, key, ttlMs, now)).toBe(true);
     expect(selectIsStale(stateEmpty, key, ttlMs, now)).toBe(true);
+  });
+
+  it('selectPriceChangeByAsset returns lastPrice and changePct for limit key', () => {
+    const provider = 'MOCK';
+    const symbol = 'BTCUSDT';
+    const timeframe = '1h';
+    const limit = 200;
+    const targetKey = buildTimeseriesCacheKey(
+      provider,
+      symbol,
+      timeframe,
+      limit,
+    );
+    const otherKey = buildTimeseriesCacheKey(provider, symbol, timeframe, 500);
+
+    const bars: Bar[] = [
+      [1000, 1, 2, 0.5, 10, 10],
+      [2000, 2, 3, 1, 20, 20],
+    ];
+
+    const rootState = makeRootState({
+      byKey: {
+        [targetKey]: { bars, fetchedAt: new Date().toISOString() },
+        [otherKey]: {
+          bars: [[1000, 1, 2, 0.5, 999, 10]],
+          fetchedAt: new Date().toISOString(),
+        },
+      },
+      loadingByKey: {},
+      errorByKey: {},
+    });
+
+    const stats = selectPriceChangeByAsset(
+      rootState,
+      'MOCK',
+      symbol,
+      timeframe,
+      limit,
+    );
+
+    expect(stats.lastPrice).toBe(20);
+    expect(stats.changePct).toBe(100);
+  });
+
+  it('selectPriceChangeByAsset returns only lastPrice when one bar', () => {
+    const provider = 'MOEX';
+    const symbol = 'SBER';
+    const timeframe = '1h';
+    const limit = 120;
+    const tsKey = buildTimeseriesCacheKey(provider, symbol, timeframe, limit);
+
+    const rootState = makeRootState({
+      byKey: {
+        [tsKey]: {
+          bars: [[1000, 1, 2, 0.5, 7, 10]],
+          fetchedAt: new Date().toISOString(),
+        },
+      },
+      loadingByKey: {},
+      errorByKey: {},
+    });
+
+    const stats = selectPriceChangeByAsset(
+      rootState,
+      'MOEX',
+      symbol,
+      timeframe,
+      limit,
+    );
+
+    expect(stats).toEqual({ lastPrice: 7 });
+  });
+
+  it('selectPriceChangeByAsset ignores changePct when prevClose is 0', () => {
+    const provider = 'MOEX';
+    const symbol = 'GAZP';
+    const timeframe = '1h';
+    const limit = 50;
+    const tsKey = buildTimeseriesCacheKey(provider, symbol, timeframe, limit);
+
+    const rootState = makeRootState({
+      byKey: {
+        [tsKey]: {
+          bars: [
+            [1000, 1, 2, 0.5, 0, 10],
+            [2000, 2, 3, 1, 5, 20],
+          ],
+          fetchedAt: new Date().toISOString(),
+        },
+      },
+      loadingByKey: {},
+      errorByKey: {},
+    });
+
+    const stats = selectPriceChangeByAsset(
+      rootState,
+      'MOEX',
+      symbol,
+      timeframe,
+      limit,
+    );
+
+    expect(stats).toEqual({ lastPrice: 5 });
+  });
+
+  it('selectPriceChangeByAsset skips invalid last close', () => {
+    const provider = 'BINANCE';
+    const symbol = 'BTCUSDT';
+    const timeframe = '1h';
+    const limit = 30;
+    const tsKey = buildTimeseriesCacheKey(provider, symbol, timeframe, limit);
+
+    const rootState = makeRootState({
+      byKey: {
+        [tsKey]: {
+          bars: [
+            [1000, 1, 2, 0.5, 10, 10],
+            [2000, 2, 3, 1, Number.NaN, 20],
+          ],
+          fetchedAt: new Date().toISOString(),
+        },
+      },
+      loadingByKey: {},
+      errorByKey: {},
+    });
+
+    const stats = selectPriceChangeByAsset(
+      rootState,
+      'BINANCE',
+      symbol,
+      timeframe,
+      limit,
+    );
+
+    expect(stats).toEqual({});
   });
 });

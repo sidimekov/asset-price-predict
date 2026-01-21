@@ -5,6 +5,7 @@ import {
   selectRecent,
   selectSelectedAsset,
 } from '@/features/asset-catalog/model/catalogSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
 const pushMock = vi.fn();
 const dispatchMock = vi.fn();
@@ -37,13 +38,25 @@ vi.mock('@/widgets/recent-assets/RecentAssetsBar', () => ({
 }));
 
 vi.mock('@/features/params/ParamsPanel', () => ({
-  default: ({ onPredict, onModelChange, onDateChange }: any) => (
+  default: ({
+    onPredict,
+    onTimeframeChange,
+    onWindowChange,
+    onHorizonChange,
+    onModelChange,
+  }: any) => (
     <div>
+      <button type="button" onClick={() => onTimeframeChange('8h')}>
+        set timeframe
+      </button>
+      <button type="button" onClick={() => onWindowChange(150)}>
+        set window
+      </button>
+      <button type="button" onClick={() => onHorizonChange(18)}>
+        set horizon
+      </button>
       <button type="button" onClick={() => onModelChange('v1')}>
         set model
-      </button>
-      <button type="button" onClick={() => onDateChange('2025-01-01')}>
-        set date
       </button>
       <button type="button" onClick={() => onPredict()}>
         predict
@@ -58,10 +71,6 @@ vi.mock('@/features/factors/FactorsTable', () => ({
 
 vi.mock('@/widgets/chart/CandlesChartPlaceholder', () => ({
   default: () => <div>chart</div>,
-}));
-
-vi.mock('@/widgets/chart/ForecastShapePlaceholder', () => ({
-  default: () => <div>forecast-shape</div>,
 }));
 
 vi.mock('@/widgets/chart/coordinates/XAxis', () => ({
@@ -92,6 +101,8 @@ describe('Dashboard page', () => {
     useAppSelectorMock.mockImplementation((selector: any) => {
       if (selector === selectRecent) return [];
       if (selector === selectSelectedAsset) return null;
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
       return undefined;
     });
 
@@ -107,17 +118,21 @@ describe('Dashboard page', () => {
     useAppSelectorMock.mockImplementation((selector: any) => {
       if (selector === selectRecent) return recent;
       if (selector === selectSelectedAsset) return selected;
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
       return undefined;
     });
 
     render(<Dashboard />);
 
+    fireEvent.click(screen.getByText('set timeframe'));
+    fireEvent.click(screen.getByText('set window'));
+    fireEvent.click(screen.getByText('set horizon'));
     fireEvent.click(screen.getByText('set model'));
-    fireEvent.click(screen.getByText('set date'));
     fireEvent.click(screen.getByText('predict'));
 
     expect(pushMock).toHaveBeenCalledWith(
-      '/forecast/0?ticker=BTC&model=v1&to=2025-01-01',
+      '/forecast/BTC?provider=binance&tf=1h&window=200',
     );
   });
 
@@ -126,6 +141,8 @@ describe('Dashboard page', () => {
       if (selector === selectRecent) return [];
       if (selector === selectSelectedAsset)
         return { symbol: 'ETH', provider: 'moex' };
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
       return undefined;
     });
 
@@ -143,6 +160,8 @@ describe('Dashboard page', () => {
     useAppSelectorMock.mockImplementation((selector: any) => {
       if (selector === selectRecent) return recent;
       if (selector === selectSelectedAsset) return selected;
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
       return undefined;
     });
 

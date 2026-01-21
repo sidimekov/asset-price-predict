@@ -17,7 +17,6 @@ describe('ForecastShapePlaceholder', () => {
         ]}
       />,
     );
-
     expect(container.querySelector('polyline')).toBeInTheDocument();
     expect(container.querySelector('polygon')).not.toBeInTheDocument();
   });
@@ -39,7 +38,6 @@ describe('ForecastShapePlaceholder', () => {
         ]}
       />,
     );
-
     expect(container.querySelector('polygon')).toBeInTheDocument();
   });
 });

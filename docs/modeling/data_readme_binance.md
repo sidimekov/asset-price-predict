@@ -37,6 +37,7 @@
 - приводит timestamp к UTC epoch ms
 - проверяет валидность OHLC
 - сортирует и удаляет дубликаты
+- выравнивает по TF и заполняет пропуски (close=prev_close, volume=0)
 
 Нормализованные бары: `data/normalized/binance/{SYMBOL}_{TF}.json`
 

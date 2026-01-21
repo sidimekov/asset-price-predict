@@ -21,12 +21,14 @@ import {
   timeseriesRequested,
   timeseriesReceived,
   timeseriesFailed,
+  timeseriesCancelled,
   buildTimeseriesKey,
   isTimeseriesStaleByKey,
 } from '@/entities/timeseries/model/timeseriesSlice';
 
 import { historyRepository } from '@/entities/history/repository';
 import type { HistoryEntry } from '@/entities/history/model';
+import { forecastApi } from '@/shared/api/forecast.api';
 
 import { track } from '@/shared/analytics';
 import { AnalyticsEvent } from '@/shared/analytics/events';
@@ -105,16 +107,33 @@ export class ForecastManager {
     const { symbol, provider, tf, window, horizon, model } = ctx;
     const { dispatch, getState, signal } = deps;
 
+    const normalizedModel =
+      model === 'client' || model === '' ? null : (model ?? null);
+
     const tsKey = buildTimeseriesKey(provider as any, symbol, tf, window);
     const fcKey = makeForecastKey({
       symbol,
       tf,
       horizon,
-      model: model || undefined,
+      model: normalizedModel || undefined,
     });
 
     orchestratorState.status = 'running';
-    const startedAt = performance.now();
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Orchestrator] runForecast', {
+        symbol,
+        provider,
+        tf,
+        window,
+        horizon,
+        model: normalizedModel,
+        tsKey,
+        fcKey,
+      });
+    }
+
+    // старт прогноза
     dispatch(forecastRequested(fcKey));
 
     try {
@@ -139,13 +158,10 @@ export class ForecastManager {
       // 2) tail
       const tail = ForecastManager.buildTailForWorker(bars, horizon);
 
-      // 3) infer
-      const inferResult = await inferForecast(
-        tail,
-        horizon,
-        model ?? undefined,
-        { signal } as any,
-      );
+      // 3) infer (with abort)
+      const inferResult = await inferForecast(tail, horizon, normalizedModel, {
+        signal,
+      } as any);
 
       if (signal?.aborted) {
         dispatch(forecastCancelled(fcKey));
@@ -187,13 +203,48 @@ export class ForecastManager {
             id: ForecastManager.generateHistoryId(),
             created_at: new Date().toISOString(),
           },
-          { symbol, tf, horizon, provider },
+          {
+            symbol,
+            tf,
+            horizon,
+            provider,
+            model,
+          },
           storeEntry,
           inferResult,
         );
         await historyRepository.save(historyEntry);
-      } catch {
-        // no-op
+
+        if (!signal?.aborted) {
+          const backendPayload = {
+            symbol,
+            timeframe: tf,
+            horizon,
+            inputUntil: new Date(lastTs).toISOString(),
+            model: model ?? 'baseline',
+          };
+          const request = dispatch(
+            forecastApi.endpoints.createForecast.initiate(backendPayload),
+          ) as { unwrap: () => Promise<unknown> };
+
+          void request.unwrap().catch((err) => {
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn('[Orchestrator] forecast push failed', err);
+            }
+          });
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[Orchestrator] history save failed', err);
+        }
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[Orchestrator] forecast ready', {
+          fcKey,
+          horizon,
+          points: inferResult.p50.length,
+        });
       }
     } catch (err: any) {
       if (signal?.aborted || isAbortError(err)) {
@@ -242,7 +293,10 @@ export class ForecastManager {
     const { tsKey, symbol, provider, tf, window } = args;
     const { dispatch, getState, signal } = deps;
 
-    if (signal?.aborted) throw makeAbortError();
+    if (signal?.aborted) {
+      dispatch(timeseriesCancelled({ key: tsKey as any }));
+      throw makeAbortError();
+    }
 
     const state = getState();
     const isStale = isTimeseriesStaleByKey(
@@ -258,13 +312,30 @@ export class ForecastManager {
 
     dispatch(timeseriesRequested({ key: tsKey as any }));
 
-    const adapterRes = await getMarketTimeseries(
-      dispatch,
-      { symbol, provider, timeframe: tf, limit: window } as any,
-      { signal },
-    );
+    let adapterRes: Awaited<ReturnType<typeof getMarketTimeseries>>;
+    try {
+      adapterRes = await getMarketTimeseries(
+        dispatch,
+        {
+          symbol,
+          provider,
+          timeframe: tf,
+          limit: window,
+        } as any,
+        { signal },
+      );
+    } catch (err: any) {
+      if (isAbortError(err) || signal?.aborted) {
+        dispatch(timeseriesCancelled({ key: tsKey as any }));
+        throw makeAbortError();
+      }
+      throw err;
+    }
 
-    if (signal?.aborted) throw makeAbortError();
+    if (signal?.aborted) {
+      dispatch(timeseriesCancelled({ key: tsKey as any }));
+      throw makeAbortError();
+    }
 
     if ('code' in adapterRes) {
       const message = adapterRes.message || 'Failed to load timeseries';
@@ -317,6 +388,7 @@ export class ForecastManager {
       tf: MarketTimeframe;
       horizon: number;
       provider: MarketDataProvider | 'MOCK';
+      model?: string | null;
     },
     storeEntry: {
       p50: Array<[number, number]>;
@@ -339,7 +411,7 @@ export class ForecastManager {
       meta: {
         runtime_ms: inferResult.diag.runtime_ms,
         backend: 'client',
-        model_ver: inferResult.diag.model_ver,
+        model_ver: inferResult.diag.model_ver ?? ctx.model ?? undefined,
       },
     };
   }

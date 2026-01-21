@@ -50,6 +50,10 @@ interface TimeseriesFailedPayload {
   error: string;
 }
 
+interface TimeseriesCancelledPayload {
+  key: TimeseriesKey;
+}
+
 const timeseriesSlice = createSlice({
   name: 'timeseries',
   initialState,
@@ -81,6 +85,15 @@ const timeseriesSlice = createSlice({
       state.errorByKey[key] = error;
     },
 
+    timeseriesCancelled(
+      state,
+      action: PayloadAction<TimeseriesCancelledPayload>,
+    ) {
+      const { key } = action.payload;
+      state.loadingByKey[key] = false;
+      state.errorByKey[key] = null;
+    },
+
     clearTimeseries(state, action: PayloadAction<TimeseriesKey>) {
       const key = action.payload;
       delete state.byKey[key];
@@ -98,6 +111,7 @@ export const {
   timeseriesRequested,
   timeseriesReceived,
   timeseriesFailed,
+  timeseriesCancelled,
   clearTimeseries,
   clearAllTimeseries,
 } = timeseriesSlice.actions;

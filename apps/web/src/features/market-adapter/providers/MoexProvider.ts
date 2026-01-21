@@ -14,6 +14,25 @@ function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
+function getErrorMessage(err: any, fallback: string): string {
+  const status =
+    typeof err?.status === 'number'
+      ? err.status
+      : typeof err?.originalStatus === 'number'
+        ? err.originalStatus
+        : undefined;
+  const base =
+    err?.message ||
+    err?.data?.message ||
+    err?.data?.error ||
+    err?.error ||
+    fallback;
+  if (status === 429) {
+    return `Rate limit exceeded (status ${status})`;
+  }
+  return status ? `${base} (status ${status})` : base;
+}
+
 export async function fetchMoexTimeseries(
   dispatch: AppDispatch,
   params: ProviderRequestBase,
@@ -50,7 +69,8 @@ export async function fetchMoexTimeseries(
       throw err;
     }
     console.error('MOEX timeseries fetch failed:', err);
-    throw new Error(`MOEX timeseries fetch failed: ${err.message}`);
+    const message = getErrorMessage(err, 'Request failed');
+    throw new Error(`MOEX timeseries fetch failed: ${message}`);
   } finally {
     if (signal) {
       signal.removeEventListener('abort', onAbort);

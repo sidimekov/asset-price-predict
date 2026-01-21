@@ -28,6 +28,9 @@ import { track } from '@/shared/analytics';
 import { AnalyticsEvent } from '@/shared/analytics/events';
 
 const DEBOUNCE_MS = 400;
+const LIST_ALL_PAGE_SIZE = 100;
+
+type ProviderKey = 'binance' | 'moex' | 'mock';
 
 type CatalogFilters = {
   categories: {
@@ -197,6 +200,13 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const recent = useAppSelector(selectRecent);
 
   const abortRef = useRef<AbortController | null>(null);
+  const [listAllLimits, setListAllLimits] = useState<
+    Record<ProviderKey, number>
+  >({
+    binance: LIST_ALL_PAGE_SIZE,
+    moex: LIST_ALL_PAGE_SIZE,
+    mock: LIST_ALL_PAGE_SIZE,
+  });
 
   const filterPopoverRef = useRef<HTMLDivElement>(null);
   const [selectedForAdd, setSelectedForAdd] = useState<{
@@ -234,16 +244,8 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   }, [filterClicked]);
 
   const performSearch = useCallback(
-    async (q: string) => {
-      if (q.length >= 2) {
-        track(AnalyticsEvent.SEARCH_ASSET, {
-          provider,
-          query_len: q.length,
-          filters_active_count: Object.values(filters.categories).filter(
-            Boolean,
-          ).length,
-        });
-      }
+    async (q: string, listLimitOverride?: number) => {
+      console.log(`Поиск: "${q}", провайдер: ${provider}, фильтры:`, filters);
 
       abortRef.current?.abort();
       abortRef.current = new AbortController();
@@ -259,18 +261,21 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
           | 'MOEX'
           | 'MOCK';
 
-        items =
-          q.length < 2
-            ? await searchAssets(
-                dispatch,
-                { mode: 'listAll', provider: upperProvider },
-                { signal },
-              )
-            : await searchAssets(
-                dispatch,
-                { mode: 'search', query: q, provider: upperProvider },
-                { signal },
-              );
+        if (q.length < 2) {
+          const limit =
+            listLimitOverride ?? listAllLimits[provider as ProviderKey];
+          items = await searchAssets(
+            dispatch,
+            { mode: 'listAll', provider: upperProvider, limit },
+            { signal },
+          );
+        } else {
+          items = await searchAssets(
+            dispatch,
+            { mode: 'search', query: q, provider: upperProvider },
+            { signal },
+          );
+        }
 
         const filteredItems = applyFiltersToItems(items, filters, provider);
 
@@ -283,7 +288,7 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
         }
       }
     },
-    [dispatch, provider, filters],
+    [dispatch, provider, filters, listAllLimits],
   );
 
   const debouncedSearch = useMemo(
@@ -308,6 +313,17 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     setFilterClicked((v) => !v);
   };
 
+  const handleShowMore = () => {
+    const key = provider as ProviderKey;
+    const nextLimit =
+      (listAllLimits[key] ?? LIST_ALL_PAGE_SIZE) + LIST_ALL_PAGE_SIZE;
+    setListAllLimits((prev) => ({
+      ...prev,
+      [key]: nextLimit,
+    }));
+    performSearch(query, nextLimit);
+  };
+
   const applyFiltersHandler = () => {
     performSearch(query);
     setFilterClicked(false);
@@ -327,25 +343,34 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     });
   };
 
+  const normalizeProvider = (
+    value: string,
+  ): 'binance' | 'moex' | 'mock' | null => {
+    const lower = value.toLowerCase();
+    if (lower === 'custom') return 'mock';
+    if (lower === 'binance' || lower === 'moex' || lower === 'mock') {
+      return lower;
+    }
+    return null;
+  };
+
   const handleItemClick = (item: CatalogItem) => {
+    const provider = normalizeProvider(item.provider);
+    if (!provider) return;
     setSelectedForAdd({
       symbol: item.symbol,
-      provider: item.provider.toLowerCase() as 'binance' | 'moex' | 'mock',
+      provider,
     });
   };
 
   const handleAddClick = () => {
     if (!selectedForAdd) return;
-
-    track(AnalyticsEvent.SELECT_ASSET, {
-      provider: selectedForAdd.provider,
-      symbol: selectedForAdd.symbol,
-      source: 'search',
-    });
-
-    dispatch(setSelected(selectedForAdd));
-    dispatch(addRecent(selectedForAdd));
-    onSelect?.(selectedForAdd);
+    if (onSelect) {
+      onSelect(selectedForAdd);
+    } else {
+      dispatch(setSelected(selectedForAdd));
+      dispatch(addRecent(selectedForAdd));
+    }
     onClose();
   };
 
@@ -353,15 +378,12 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
     symbol: string;
     provider: 'binance' | 'moex' | 'mock';
   }) => {
-    track(AnalyticsEvent.SELECT_ASSET, {
-      provider: recentItem.provider,
-      symbol: recentItem.symbol,
-      source: 'recent',
-    });
-
-    dispatch(setSelected(recentItem));
-    dispatch(addRecent(recentItem));
-    onSelect?.(recentItem);
+    if (onSelect) {
+      onSelect(recentItem);
+    } else {
+      dispatch(setSelected(recentItem));
+      dispatch(addRecent(recentItem));
+    }
     onClose();
   };
 
@@ -376,6 +398,13 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
   const activeFilterCount = Object.values(filters.categories).filter(
     Boolean,
   ).length;
+  const listLimitForProvider =
+    listAllLimits[provider as ProviderKey] ?? LIST_ALL_PAGE_SIZE;
+  const canShowMore =
+    showAllAssets &&
+    !loading &&
+    !error &&
+    displayItems.length >= listLimitForProvider;
 
   const showNoResultsMessage =
     !loading && !error && query.length >= 2 && displayItems.length === 0;
@@ -656,10 +685,8 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
             )}
 
             {displayItems.map((item) => {
-              const lowerProvider = item.provider.toLowerCase() as
-                | 'binance'
-                | 'moex'
-                | 'mock';
+              const lowerProvider = normalizeProvider(item.provider);
+              if (!lowerProvider) return null;
               const category = detectAssetCategory(item);
               const isSelected =
                 selectedForAdd?.symbol === item.symbol &&
@@ -699,6 +726,17 @@ export const AssetCatalogPanel: React.FC<AssetCatalogPanelProps> = ({
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {canShowMore && (
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={handleShowMore}
+              className="px-6 py-3 rounded-xl bg-white/10 text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+            >
+              Show more
+            </button>
           </div>
         )}
 

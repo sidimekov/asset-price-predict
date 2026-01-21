@@ -7,13 +7,15 @@ vi.mock('next/navigation', () => ({
   usePathname: vi.fn(),
 }));
 
-// Мокаем профиль
-vi.mock('@/mocks/profile.json', () => ({
-  default: {
-    username: 'John Doe',
-    login: 'john@example.com',
-    avatarUrl: '/avatar.jpg',
-  },
+vi.mock('@/shared/api/account.api', () => ({
+  useGetMeQuery: () => ({
+    data: {
+      id: '1',
+      username: 'John Doe',
+      email: 'john@example.com',
+      avatarUrl: '/avatar.jpg',
+    },
+  }),
 }));
 
 // Мокаем next/image
@@ -39,6 +41,7 @@ describe('Sidebar', () => {
     vi.clearAllMocks();
     // Устанавливаем дефолтное значение
     mockUsePathname.mockReturnValue('/dashboard');
+    localStorage.setItem('auth.token', 'test-token');
   });
 
   it('renders logo, profile and navigation', () => {

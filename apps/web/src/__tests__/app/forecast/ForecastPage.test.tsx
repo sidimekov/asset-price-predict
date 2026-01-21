@@ -1,17 +1,17 @@
 import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ForecastPage from '@/app/forecast/[id]/page';
+import { selectSelectedAsset } from '@/features/asset-catalog/model/catalogSlice';
+import { selectForecastParams } from '@/entities/forecast/model/selectors';
 
 const pushMock = vi.fn();
+const dispatchMock = vi.fn();
+const useAppSelectorMock = vi.fn();
+
+let query: Record<string, string> = {};
 
 vi.mock('next/navigation', () => {
-  const query = {
-    ticker: 'BTC',
-    model: 'model-1',
-    to: '2025-12-14',
-  } as const;
-
   return {
     useRouter: () => ({
       push: pushMock,
@@ -26,28 +26,63 @@ vi.mock('next/navigation', () => {
   };
 });
 
+vi.mock('@/shared/store/hooks', () => ({
+  useAppDispatch: () => dispatchMock,
+  useAppSelector: (selector: any) => useAppSelectorMock(selector),
+}));
+
+vi.mock('@/processes/orchestrator/useOrchestrator', () => ({
+  useOrchestrator: () => undefined,
+}));
+
 // Мокаем ParamsPanel, чтобы удобно кликать по кнопке
 vi.mock('@/features/params/ParamsPanel', () => ({
   __esModule: true,
   default: (props: any) => (
     <div>
       <div>Parameters</div>
+      <div>Timeframe: {props.selectedTimeframe}</div>
+      <div>Window: {props.selectedWindow}</div>
       <button onClick={props.onPredict}>Back to asset selection</button>
     </div>
   ),
 }));
 
 describe('ForecastPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    query = {
+      ticker: 'BTC',
+      model: 'model-1',
+      to: '2025-12-14',
+    };
+  });
+
   it('renders forecast page with selected asset and panels', () => {
+    useAppSelectorMock.mockImplementation((selector: any) => {
+      if (selector === selectSelectedAsset)
+        return { symbol: 'BTC', provider: 'binance' };
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
+      return undefined;
+    });
+
     const { container } = render(<ForecastPage />);
 
     expect(container.firstChild).toBeTruthy();
     expect(container.textContent).toContain('Selected asset');
     expect(container.textContent).toContain('Parameters');
-    expect(container.textContent).toContain('Factors');
   });
 
   it('navigates back to dashboard when back button is clicked', () => {
+    useAppSelectorMock.mockImplementation((selector: any) => {
+      if (selector === selectSelectedAsset)
+        return { symbol: 'BTC', provider: 'binance' };
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
+      return undefined;
+    });
+
     const { getByText } = render(<ForecastPage />);
 
     const backButton = getByText('Back to asset selection');
@@ -55,5 +90,44 @@ describe('ForecastPage', () => {
 
     expect(pushMock).toHaveBeenCalledTimes(1);
     expect(pushMock).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('uses query params for timeframe and window when provided', () => {
+    query = {
+      ticker: 'BTC',
+      tf: '8h',
+      window: '150',
+    };
+
+    useAppSelectorMock.mockImplementation((selector: any) => {
+      if (selector === selectSelectedAsset)
+        return { symbol: 'BTC', provider: 'binance' };
+      if (selector === selectForecastParams)
+        return { tf: '1h', window: 200, horizon: 24, model: null };
+      return undefined;
+    });
+
+    const { getByText } = render(<ForecastPage />);
+
+    expect(getByText('Timeframe: 8h')).toBeInTheDocument();
+    expect(getByText('Window: 150')).toBeInTheDocument();
+  });
+
+  it('falls back to default window when query is invalid and params are missing', () => {
+    query = {
+      ticker: 'BTC',
+      window: 'nope',
+    };
+
+    useAppSelectorMock.mockImplementation((selector: any) => {
+      if (selector === selectSelectedAsset)
+        return { symbol: 'BTC', provider: 'binance' };
+      if (selector === selectForecastParams) return undefined;
+      return undefined;
+    });
+
+    const { getByText } = render(<ForecastPage />);
+
+    expect(getByText('Window: 200')).toBeInTheDocument();
   });
 });

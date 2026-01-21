@@ -1,8 +1,7 @@
-import { forecastMinimalConfig } from '@/config/ml';
+import type { ForecastModelConfig } from '@/config/ml';
 import type { TailPoint } from './types';
 import { buildFeaturesGpu, isWebGpuSupported } from './featurePipelineGpu';
 
-const MODEL = forecastMinimalConfig;
 const FEATURE_BACKEND_PREF = (
   process.env.NEXT_PUBLIC_FEATURES_BACKEND || 'auto'
 ).toLowerCase();
@@ -32,8 +31,11 @@ function ema(values: number[], span: number): number {
   return acc;
 }
 
-function normalizeZscore(features: number[]): Float32Array {
-  const norm = MODEL.normalization;
+function normalizeZscore(
+  features: number[],
+  normalization: ForecastModelConfig['normalization'],
+): Float32Array {
+  const norm = normalization;
 
   // если конфиг поменяется, просто отдаётся как есть
   if (!norm || norm.type !== 'zscore') return Float32Array.from(features);
@@ -51,14 +53,19 @@ function normalizeZscore(features: number[]): Float32Array {
  * фиксированные 10 фич только по close
  * требуется минимум featureWindow точек (из конфига модели)
  */
-export function buildFeatures(tail: TailPoint[]): Float32Array {
-  if (tail.length < MODEL.featureWindow) {
+export function buildFeatures(
+  tail: TailPoint[],
+  modelConfig: ForecastModelConfig,
+): Float32Array {
+  if (tail.length < modelConfig.featureWindow) {
     throw new Error(
-      `EBADINPUT: tail too short (need >= ${MODEL.featureWindow}, got ${tail.length})`,
+      `EBADINPUT: tail too short (need >= ${modelConfig.featureWindow}, got ${tail.length})`,
     );
   }
 
-  const closes = tail.slice(-MODEL.featureWindow).map(([, close]) => close);
+  const closes = tail
+    .slice(-modelConfig.featureWindow)
+    .map(([, close]) => close);
 
   // returns
   const returns: number[] = [];
@@ -95,7 +102,7 @@ export function buildFeatures(tail: TailPoint[]): Float32Array {
     std(lastReturns20),
   ];
 
-  return normalizeZscore(feats);
+  return normalizeZscore(feats, modelConfig.normalization);
 }
 
 function normalizeBackend(value: string): FeatureBackend {
@@ -106,14 +113,15 @@ function normalizeBackend(value: string): FeatureBackend {
 
 export async function buildFeaturesWithBackend(
   tail: TailPoint[],
+  modelConfig: ForecastModelConfig,
   backend: FeatureBackend = normalizeBackend(FEATURE_BACKEND_PREF),
 ): Promise<{ features: Float32Array; backend: 'cpu' | 'webgpu' }> {
   if (backend === 'cpu') {
-    return { features: buildFeatures(tail), backend: 'cpu' };
+    return { features: buildFeatures(tail, modelConfig), backend: 'cpu' };
   }
 
   const canUseWebGpu = isWebGpuSupported();
-  const normalization = MODEL.normalization;
+  const normalization = modelConfig.normalization;
   const canNormalize = normalization?.type === 'zscore';
 
   if (
@@ -122,12 +130,12 @@ export async function buildFeaturesWithBackend(
     canNormalize
   ) {
     try {
-      const features = await buildFeaturesGpu(tail);
+      const features = await buildFeaturesGpu(tail, modelConfig);
       return { features, backend: 'webgpu' };
     } catch (_err) {
       // fallback to CPU below
     }
   }
 
-  return { features: buildFeatures(tail), backend: 'cpu' };
+  return { features: buildFeatures(tail, modelConfig), backend: 'cpu' };
 }

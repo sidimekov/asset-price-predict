@@ -159,6 +159,32 @@ describe('fetchBinanceTimeseries', () => {
     expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it('формирует понятное сообщение при rate limit (429)', async () => {
+    const mockDispatch = vi.fn((action: any) => action);
+
+    const params = {
+      symbol: 'BTCUSDT',
+      timeframe: '1h' as const,
+      limit: 5,
+    };
+
+    const mockQueryResult = {
+      unwrap: vi.fn().mockRejectedValue({
+        status: 429,
+        data: { message: 'Too Many Requests' },
+      }),
+      unsubscribe: vi.fn(),
+    };
+
+    mockBinanceInitiate.mockReturnValue(mockQueryResult);
+
+    await expect(
+      fetchBinanceTimeseries(mockDispatch as any, params),
+    ).rejects.toThrow('Rate limit exceeded (status 429)');
+
+    expect(mockQueryResult.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('searchBinanceSymbols сразу отказывает при abort', async () => {
     const mockDispatch = vi.fn();
     const controller = new AbortController();
