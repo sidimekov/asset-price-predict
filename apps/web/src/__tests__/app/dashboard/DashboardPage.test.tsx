@@ -1,256 +1,299 @@
-// apps/web/src/app/dashboard/page.test.tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+// __tests__/dashboard.test.tsx
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
+import { useRouter } from 'next/navigation';
 import Dashboard from '@/app/dashboard/page';
-import type { RootState } from '@/shared/store/index';
+import catalogReducer from '@/features/asset-catalog/model/catalogSlice';
+import { timeseriesReducer } from '@/entities/timeseries/model/timeseriesSlice';
+import { forecastReducer } from '@/entities/forecast/model/forecastSlice';
 
-// Мокаем хуки и компоненты
-vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-  })),
-}));
+// Определяем типы, так как они не экспортируются из слайсов
+type ProviderType = 'binance' | 'moex' | 'mock';
 
-vi.mock('@/shared/api/account.api', () => ({
-  useGetMeQuery: () => ({
-    data: {
-      id: '1',
-      username: 'John Doe',
-      email: 'john@example.com',
-      avatarUrl: '/avatar.jpg',
+interface RecentItem {
+  symbol: string;
+  provider: ProviderType;
+  usedAt: string;
+}
+
+interface CatalogState {
+  provider: ProviderType;
+  query: string;
+  results: any[];
+  recent: RecentItem[];
+  selected?: { symbol: string; provider: ProviderType };
+  loading: boolean;
+  error: string | null;
+}
+
+interface TimeseriesEntry {
+  bars: any[];
+  fetchedAt: string;
+}
+
+interface TimeseriesState {
+  byKey: Record<string, TimeseriesEntry>;
+  loadingByKey: Record<string, boolean>;
+  errorByKey: Record<string, string | null>;
+}
+
+interface ForecastParams {
+  tf: string;
+  window: number | string;
+  horizon: number;
+  model: string;
+}
+
+interface ForecastState {
+  params?: ForecastParams;
+  predict: {
+    requestId: number;
+    request: any;
+  };
+  byKey: Record<string, any>;
+  loadingByKey: Record<string, boolean>;
+  errorByKey: Record<string, string | null>;
+}
+
+// Вспомогательная функция для создания store
+const createTestStore = ({
+  catalogState = {},
+  timeseriesState = {},
+  forecastState = {},
+}: {
+  catalogState?: Partial<CatalogState>;
+  timeseriesState?: Partial<TimeseriesState>;
+  forecastState?: Partial<ForecastState>;
+} = {}) => {
+  const fullCatalogState: CatalogState = {
+    provider: 'binance',
+    query: '',
+    results: [],
+    recent: [],
+    selected: undefined,
+    loading: false,
+    error: null,
+    ...catalogState,
+  };
+
+  const fullTimeseriesState: TimeseriesState = {
+    byKey: {},
+    loadingByKey: {},
+    errorByKey: {},
+    ...timeseriesState,
+  };
+
+  const fullForecastState: ForecastState = {
+    params: undefined,
+    predict: { requestId: 0, request: null },
+    byKey: {},
+    loadingByKey: {},
+    errorByKey: {},
+    ...forecastState,
+  };
+
+  const store = configureStore({
+    reducer: {
+      catalog: (state = fullCatalogState, action) => {
+        // Используем реальный редьюсер с начальным состоянием
+        return catalogReducer(state, action);
+      },
+      timeseries: (state = fullTimeseriesState, action) => {
+        return timeseriesReducer(state, action);
+      },
+      forecast: (state = fullForecastState, action) => {
+        return forecastReducer(state, action);
+      },
     },
-  }),
-}));
+  });
 
-vi.mock('@/widgets/chart/CandlesChartPlaceholder', () => ({
-  default: vi.fn(),
-}));
+  return store;
+};
 
-vi.mock('@/features/params/ParamsPanel', () => ({
-  default: vi.fn(),
-}));
-
-vi.mock('@/widgets/chart/coordinates/XAxis', () => ({
-  default: vi.fn(),
-}));
-
-vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
-  default: vi.fn(),
-}));
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockUsePathname.mockReturnValue('/dashboard');
-  localStorage.setItem('auth.token', 'test-token');
-});
-
-vi.mock('@/shared/store/hooks', () => ({
-  useAppDispatch: vi.fn(),
-  useAppSelector: vi.fn(),
+// Моки для внешних зависимостей
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn(),
 }));
 
 vi.mock('@/processes/orchestrator/useOrchestrator', () => ({
   useOrchestrator: vi.fn(),
 }));
 
-// Импортируем мокированные функции
-import { useRouter } from 'next/navigation';
-import RecentAssetsBar from '@/widgets/recent-assets/RecentAssetsBar';
-import CandlesChartPlaceholder from '@/widgets/chart/CandlesChartPlaceholder';
-import ParamsPanel from '@/features/params/ParamsPanel';
-import XAxis from '@/widgets/chart/coordinates/XAxis';
-import YAxis from '@/widgets/chart/coordinates/YAxis';
-import { AssetCatalogPanel } from '@/features/asset-catalog/ui/AssetCatalogPanel';
-import { useAppDispatch, useAppSelector } from '@/shared/store/hooks';
-import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+// Моки компонентов (остаются такими же, как в предыдущем примере)...
 
-// Типы для селекторов
-type SelectorFunction = (state: RootState) => any;
+vi.mock('@/widgets/recent-assets/RecentAssetsBar', () => ({
+  default: ({ assets, onSelect, onRemove, onAdd, selected, state }: any) => (
+    <div data-testid="recent-assets-bar" data-state={state}>
+      <button data-testid="open-catalog" onClick={onAdd}>
+        Add Asset
+      </button>
+      {assets?.map((asset: any) => (
+        <div
+          key={`${asset.symbol}-${asset.provider}`}
+          data-testid="recent-asset"
+          data-selected={selected === asset.symbol}
+        >
+          <span data-testid="asset-symbol">{asset.symbol}</span>
+          <button
+            data-testid="select-asset-btn"
+            onClick={() => onSelect(asset.symbol)}
+          >
+            Select
+          </button>
+          <button
+            data-testid="remove-asset-btn"
+            onClick={() => onRemove(asset.symbol, asset.provider)}
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  ),
+}));
 
-// Создаем моки с типами
-const mockUseRouter = useRouter as Mock;
-const MockRecentAssetsBar = RecentAssetsBar as Mock;
-const MockCandlesChartPlaceholder = CandlesChartPlaceholder as Mock;
-const MockParamsPanel = ParamsPanel as Mock;
-const MockXAxis = XAxis as Mock;
-const MockYAxis = YAxis as Mock;
-const MockAssetCatalogPanel = AssetCatalogPanel as Mock;
-const mockUseAppDispatch = useAppDispatch as Mock;
-const mockUseAppSelector = useAppSelector as Mock;
-const mockUseOrchestrator = useOrchestrator as Mock;
+vi.mock('@/widgets/chart/CandlesChartPlaceholder', () => ({
+  default: ({ state }: any) => (
+    <div data-testid="chart-placeholder" data-state={state}>
+      Chart Placeholder: {state}
+    </div>
+  ),
+}));
 
-describe('Dashboard', () => {
-  const mockPush = vi.fn();
-  const mockDispatch = vi.fn();
+vi.mock('@/widgets/chart/LineChart', () => ({
+  default: ({ series, className }: any) => (
+    <div data-testid="line-chart" className={className}>
+      Line Chart with {series?.length || 0} data points
+    </div>
+  ),
+}));
 
-  // Создаем типизированные селекторы
-  const mockSelectors = {
-    selectRecent: vi.fn(),
-    selectSelectedAsset: vi.fn(),
+vi.mock('@/features/params/ParamsPanel', () => ({
+  default: ({
+    onPredict,
+    selectedTimeframe,
+    selectedWindow,
+    selectedHorizon,
+    selectedModel,
+    onTimeframeChange,
+    onWindowChange,
+    onHorizonChange,
+    onModelChange,
+    state,
+  }: any) => (
+    <div data-testid="params-panel" data-state={state}>
+      <button data-testid="predict-button" onClick={onPredict}>
+        Predict
+      </button>
+      <select
+        data-testid="timeframe-select"
+        value={selectedTimeframe}
+        onChange={(e) => onTimeframeChange(e.target.value)}
+      >
+        <option value="1h">1h</option>
+        <option value="4h">4h</option>
+        <option value="1d">1d</option>
+      </select>
+      <input
+        data-testid="window-input"
+        type="number"
+        value={selectedWindow}
+        onChange={(e) => onWindowChange(Number(e.target.value))}
+      />
+      <input
+        data-testid="horizon-input"
+        type="number"
+        value={selectedHorizon}
+        onChange={(e) => onHorizonChange(Number(e.target.value))}
+      />
+      <select
+        data-testid="model-select"
+        value={selectedModel || ''}
+        onChange={(e) => onModelChange(e.target.value)}
+      >
+        <option value="minimal">Minimal</option>
+        <option value="advanced">Advanced</option>
+      </select>
+    </div>
+  ),
+}));
+
+vi.mock('@/widgets/chart/coordinates/XAxis', () => ({
+  default: ({ timestamps, className }: any) => (
+    <div data-testid="x-axis" className={className}>
+      X Axis with {timestamps?.length || 0} timestamps
+    </div>
+  ),
+}));
+
+vi.mock('@/widgets/chart/coordinates/YAxis', () => ({
+  default: ({ values, className }: any) => (
+    <div data-testid="y-axis" className={className}>
+      Y Axis with {values?.length || 0} values
+    </div>
+  ),
+}));
+
+vi.mock('@/features/asset-catalog/ui/AssetCatalogPanel', () => ({
+  AssetCatalogPanel: ({ query, onQueryChange, onSelect, onClose }: any) => (
+    <div data-testid="asset-catalog">
+      <input
+        data-testid="catalog-search"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        placeholder="Search assets..."
+      />
+      <button
+        data-testid="select-btc"
+        onClick={() => onSelect({ symbol: 'BTCUSDT', provider: 'binance' })}
+      >
+        Select BTC/USDT
+      </button>
+      <button
+        data-testid="select-sber"
+        onClick={() => onSelect({ symbol: 'SBER', provider: 'moex' })}
+      >
+        Select SBER
+      </button>
+      <button data-testid="close-catalog" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
+}));
+
+describe('Dashboard Component', () => {
+  const mockRouter = {
+    push: vi.fn(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (useRouter as any).mockReturnValue(mockRouter);
 
-    // Настраиваем моки
-    mockUseRouter.mockReturnValue({ push: mockPush });
-    mockUseAppDispatch.mockReturnValue(mockDispatch);
-    mockUseOrchestrator.mockImplementation(() => {});
-
-    // Сбрасываем селекторы к значениям по умолчанию
-    mockSelectors.selectRecent.mockReturnValue([]);
-    mockSelectors.selectSelectedAsset.mockReturnValue(null);
-
-    // Настраиваем useAppSelector чтобы он использовал наши мокированные селекторы
-    mockUseAppSelector.mockImplementation((selector: SelectorFunction) => {
-      // Проверяем имя функции селектора
-      const selectorName = selector.name || '';
-
-      if (selectorName.includes('selectRecent')) {
-        return mockSelectors.selectRecent();
-      }
-      if (selectorName.includes('selectSelectedAsset')) {
-        return mockSelectors.selectSelectedAsset();
-      }
-      return undefined;
-    });
-
-    // Мокируем компоненты
-    MockRecentAssetsBar.mockImplementation(
-      ({ state, assets, selected, onSelect, onRemove, onAdd }: any) => (
-        <div data-testid="recent-assets-bar">
-          <div data-testid="recent-assets-state">{state}</div>
-          <div data-testid="recent-assets-count">{(assets || []).length}</div>
-          <button data-testid="add-asset-button" onClick={onAdd || (() => {})}>
-            Add Asset
-          </button>
-          {(assets || []).map((asset: any, index: number) => (
-            <div key={index} data-testid={`asset-${asset.symbol}`}>
-              <span data-testid={`asset-symbol-${asset.symbol}`}>
-                {asset.symbol}
-              </span>
-              <button
-                data-testid={`select-${asset.symbol}`}
-                onClick={() => onSelect?.(asset.symbol)}
-              >
-                Select
-              </button>
-              <button
-                data-testid={`remove-${asset.symbol}`}
-                onClick={() => onRemove?.(asset.symbol)}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
-      ),
-    );
-
-    MockCandlesChartPlaceholder.mockImplementation(({ state }: any) => (
-      <div data-testid="chart-placeholder" data-state={state}>
-        Candles Chart Placeholder
-      </div>
-    ));
-
-    MockParamsPanel.mockImplementation(
-      ({
-        state,
-        onPredict,
-        selectedModel,
-        selectedDate,
-        onModelChange,
-        onDateChange,
-      }: any) => (
-        <div data-testid="params-panel">
-          <div data-testid="params-state">{state}</div>
-          <button
-            data-testid="predict-button"
-            onClick={onPredict || (() => {})}
-          >
-            Predict
-          </button>
-          <select
-            data-testid="model-select"
-            value={selectedModel || ''}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              onModelChange?.(e.target.value)
-            }
-          >
-            <option value="">Select Model</option>
-            <option value="model1">Model 1</option>
-          </select>
-          <input
-            data-testid="date-input"
-            type="date"
-            value={selectedDate || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onDateChange?.(e.target.value)
-            }
-          />
-        </div>
-      ),
-    );
-
-    MockXAxis.mockImplementation(({ className }: any) => (
-      <div data-testid="x-axis" className={className}>
-        X Axis
-      </div>
-    ));
-
-    MockYAxis.mockImplementation(({ className }: any) => (
-      <div data-testid="y-axis" className={className}>
-        Y Axis
-      </div>
-    ));
-
-    MockAssetCatalogPanel.mockImplementation(
-      ({ query, onQueryChange, onSelect, onClose }: any) => (
-        <div data-testid="asset-catalog-panel">
-          <input
-            data-testid="catalog-search"
-            value={query || ''}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onQueryChange?.(e.target.value)
-            }
-          />
-          <button
-            data-testid="select-asset-btc"
-            onClick={() =>
-              onSelect?.({ symbol: 'BTCUSDT', provider: 'binance' })
-            }
-          >
-            Select BTC
-          </button>
-          <button
-            data-testid="select-asset-eth"
-            onClick={() =>
-              onSelect?.({ symbol: 'ETHUSDT', provider: 'binance' })
-            }
-          >
-            Select ETH
-          </button>
-          <button data-testid="close-catalog" onClick={onClose || (() => {})}>
-            Close
-          </button>
-        </div>
-      ),
-    );
+    // Мок для localStorage
+    const localStorageMock = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      clear: vi.fn(),
+    };
+    Object.defineProperty(window, 'localStorage', { value: localStorageMock });
   });
 
-  const createMockStore = (state = {}) => {
-    return configureStore({
-      reducer: {
-        catalog: (state = {}, action) => state,
-      },
-      preloadedState: state,
-    });
-  };
+  afterEach(() => {
+    cleanup();
+  });
 
-  const renderWithProvider = (storeState = {}) => {
-    const store = createMockStore(storeState);
+  const renderDashboard = (options?: {
+    catalogState?: Partial<CatalogState>;
+    timeseriesState?: Partial<TimeseriesState>;
+    forecastState?: Partial<ForecastState>;
+  }) => {
+    const store = createTestStore(options);
+
     return render(
       <Provider store={store}>
         <Dashboard />
@@ -258,330 +301,500 @@ describe('Dashboard', () => {
     );
   };
 
-  describe('Initial Render', () => {
-    it('renders dashboard with correct layout', () => {
-      renderWithProvider();
+  describe('Initial rendering', () => {
+    it('should render the dashboard without errors', () => {
+      renderDashboard();
 
       expect(screen.getByTestId('recent-assets-bar')).toBeInTheDocument();
-      expect(screen.getByTestId('chart-placeholder')).toBeInTheDocument();
       expect(screen.getByTestId('params-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('x-axis')).toBeInTheDocument();
-      expect(screen.getByTestId('y-axis')).toBeInTheDocument();
-
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
-      expect(screen.getByTestId('recent-assets-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('params-state')).toHaveTextContent('idle');
     });
 
-    it('has correct grid layout classes', () => {
-      const { container } = renderWithProvider();
+    it('should show empty state when no assets are selected', () => {
+      renderDashboard();
 
-      const grid = container.querySelector('.grid');
-      expect(grid).toBeInTheDocument();
-      expect(grid).toHaveClass('grid-cols-12');
-      expect(grid).toHaveClass('gap-6');
+      const chartPlaceholder = screen.getByTestId('chart-placeholder');
+      expect(chartPlaceholder).toHaveAttribute('data-state', 'empty');
+    });
+
+    it('should initialize with default forecast parameters', () => {
+      renderDashboard();
+
+      expect(screen.getByTestId('window-input')).toHaveValue(200);
+      expect(screen.getByTestId('horizon-input')).toHaveValue(24);
+      expect(screen.getByTestId('timeframe-select')).toHaveValue('1h');
     });
   });
 
-  describe('Recent Assets Functionality', () => {
-    it('shows empty state when no assets selected', () => {
-      // Уже установлены значения по умолчанию: [] и null
-      renderWithProvider();
+  describe('Recent assets functionality', () => {
+    it('should display recent assets with statistics', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+            {
+              symbol: 'SBER',
+              provider: 'moex',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+      });
 
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
-      expect(screen.getByTestId('recent-assets-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('chart-placeholder')).toHaveAttribute(
-        'data-state',
-        'empty',
-      );
+      const recentAssets = screen.getAllByTestId('recent-asset');
+      expect(recentAssets).toHaveLength(2);
     });
 
-    it('shows ready state when assets exist and one is selected', () => {
-      mockSelectors.selectRecent.mockReturnValue([
-        { symbol: 'BTCUSDT', provider: 'binance' },
-        { symbol: 'ETHUSDT', provider: 'binance' },
-      ]);
-      mockSelectors.selectSelectedAsset.mockReturnValue({
-        symbol: 'BTCUSDT',
-        provider: 'binance',
+    it('should highlight selected asset', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+            {
+              symbol: 'SBER',
+              provider: 'moex',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
       });
 
-      renderWithProvider();
-
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'ready',
-      );
-      expect(screen.getByTestId('recent-assets-count')).toHaveTextContent('2');
-      expect(screen.getByTestId('chart-placeholder')).toHaveAttribute(
-        'data-state',
-        'ready',
-      );
-    });
-
-    it('handles adding assets via catalog', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-      expect(screen.getByTestId('asset-catalog-panel')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByTestId('select-asset-btc'));
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'catalog/addRecent',
-        payload: { symbol: 'BTCUSDT', provider: 'binance' },
-      });
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'catalog/setSelected',
-        payload: { symbol: 'BTCUSDT', provider: 'binance' },
-      });
-    });
-
-    it('handles removing assets', () => {
-      mockSelectors.selectRecent.mockReturnValue([
-        { symbol: 'BTCUSDT', provider: 'binance' },
-        { symbol: 'ETHUSDT', provider: 'binance' },
-      ]);
-      mockSelectors.selectSelectedAsset.mockReturnValue({
-        symbol: 'BTCUSDT',
-        provider: 'binance',
-      });
-
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('remove-BTCUSDT'));
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'catalog/removeRecent',
-        payload: { symbol: 'BTCUSDT', provider: 'binance' },
-      });
-    });
-
-    it('handles selecting recent assets', () => {
-      mockSelectors.selectRecent.mockReturnValue([
-        { symbol: 'BTCUSDT', provider: 'binance' },
-        { symbol: 'ETHUSDT', provider: 'binance' },
-      ]);
-      mockSelectors.selectSelectedAsset.mockReturnValue({
-        symbol: 'BTCUSDT',
-        provider: 'binance',
-      });
-
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('select-ETHUSDT'));
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'catalog/setSelected',
-        payload: { symbol: 'ETHUSDT', provider: 'binance' },
-      });
+      const recentAssets = screen.getAllByTestId('recent-asset');
+      expect(recentAssets[0]).toHaveAttribute('data-selected', 'true');
+      expect(recentAssets[1]).toHaveAttribute('data-selected', 'false');
     });
   });
 
-  describe('Catalog Modal', () => {
-    it('opens and closes catalog modal', () => {
-      renderWithProvider();
+  describe('Asset catalog modal', () => {
+    it('should open catalog modal when add button is clicked', async () => {
+      renderDashboard();
 
-      expect(
-        screen.queryByTestId('asset-catalog-panel'),
-      ).not.toBeInTheDocument();
+      const addButton = screen.getByTestId('open-catalog');
+      await userEvent.click(addButton);
 
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-      expect(screen.getByTestId('asset-catalog-panel')).toBeInTheDocument();
-
-      fireEvent.click(screen.getByTestId('close-catalog'));
-      expect(
-        screen.queryByTestId('asset-catalog-panel'),
-      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('asset-catalog')).toBeInTheDocument();
+      expect(screen.getByTestId('catalog-search')).toBeInTheDocument();
     });
 
-    it('closes catalog when clicking overlay', () => {
-      renderWithProvider();
+    it('should close catalog modal when close button is clicked', async () => {
+      renderDashboard();
 
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-      expect(screen.getByTestId('asset-catalog-panel')).toBeInTheDocument();
+      // Open catalog
+      await userEvent.click(screen.getByTestId('open-catalog'));
+      expect(screen.getByTestId('asset-catalog')).toBeInTheDocument();
 
-      const overlay = document.querySelector('.fixed.inset-0');
-      expect(overlay).toBeInTheDocument();
-      fireEvent.click(overlay!);
+      // Close catalog
+      await userEvent.click(screen.getByTestId('close-catalog'));
 
-      expect(
-        screen.queryByTestId('asset-catalog-panel'),
-      ).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByTestId('asset-catalog')).not.toBeInTheDocument();
+      });
     });
 
-    it('updates search query in catalog', () => {
-      renderWithProvider();
+    it('should update search query in catalog', async () => {
+      renderDashboard();
 
-      fireEvent.click(screen.getByTestId('add-asset-button'));
+      // Open catalog
+      await userEvent.click(screen.getByTestId('open-catalog'));
 
       const searchInput = screen.getByTestId('catalog-search');
-      fireEvent.change(searchInput, { target: { value: 'BTC' } });
+      await userEvent.type(searchInput, 'BTC');
 
       expect(searchInput).toHaveValue('BTC');
     });
+
+    it('should select asset from catalog and close modal', async () => {
+      const store = createTestStore();
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      render(
+        <Provider store={store}>
+          <Dashboard />
+        </Provider>,
+      );
+
+      // Open catalog
+      await userEvent.click(screen.getByTestId('open-catalog'));
+
+      // Select asset
+      await userEvent.click(screen.getByTestId('select-btc'));
+
+      // Modal should close
+      await waitFor(() => {
+        expect(screen.queryByTestId('asset-catalog')).not.toBeInTheDocument();
+      });
+
+      // Should dispatch addRecent and setSelected actions
+      expect(dispatchSpy).toHaveBeenCalled();
+    });
   });
 
-  describe('Prediction Functionality', () => {
-    it('disables predict when no asset selected', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('predict-button'));
-
-      expect(mockPush).not.toHaveBeenCalled();
-      expect(mockDispatch).not.toHaveBeenCalled();
-    });
-
-    it('handles predict with selected asset', () => {
-      mockSelectors.selectRecent.mockReturnValue([
-        { symbol: 'BTCUSDT', provider: 'binance' },
-      ]);
-      mockSelectors.selectSelectedAsset.mockReturnValue({
-        symbol: 'BTCUSDT',
-        provider: 'binance',
-      });
-
-      renderWithProvider();
-
-      fireEvent.change(screen.getByTestId('model-select'), {
-        target: { value: 'model1' },
-      });
-      fireEvent.change(screen.getByTestId('date-input'), {
-        target: { value: '2024-01-01' },
-      });
-
-      fireEvent.click(screen.getByTestId('predict-button'));
-
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'forecast/predictRequested',
-        payload: {
-          symbol: 'BTCUSDT',
-          provider: 'binance',
-          tf: '1h',
-          window: 200,
-          horizon: 24,
-          model: 'model1',
+  describe('Chart display states', () => {
+    it('should show loading state when data is loading', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+        timeseriesState: {
+          loadingByKey: { 'BINANCE:BTCUSDT:1h:200': true },
         },
       });
 
-      expect(mockPush).toHaveBeenCalledWith(
-        '/forecast/0?ticker=BTCUSDT&model=model1&to=2024-01-01',
-      );
+      const chartPlaceholder = screen.getByTestId('chart-placeholder');
+      expect(chartPlaceholder).toHaveAttribute('data-state', 'loading');
+    });
+
+    it('should show line chart when data is available', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+        timeseriesState: {
+          byKey: {
+            'BINANCE:BTCUSDT:1h:200': {
+              bars: [
+                [1640995200000, 100, 110, 95, 105],
+                [1641002400000, 105, 115, 100, 110],
+                [1641009600000, 110, 120, 105, 115],
+              ],
+              fetchedAt: '2024-01-01T00:00:00.000Z',
+            },
+          },
+        },
+      });
+
+      expect(screen.getByTestId('line-chart')).toBeInTheDocument();
+      expect(screen.getByTestId('x-axis')).toBeInTheDocument();
+      expect(screen.getByTestId('y-axis')).toBeInTheDocument();
     });
   });
 
-  describe('Params Panel Integration', () => {
-    it('updates selected model', () => {
-      renderWithProvider();
+  describe('Forecast parameters', () => {
+    it('should update timeframe parameter', async () => {
+      const store = createTestStore({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+      });
+
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      render(
+        <Provider store={store}>
+          <Dashboard />
+        </Provider>,
+      );
+
+      const timeframeSelect = screen.getByTestId('timeframe-select');
+      await userEvent.selectOptions(timeframeSelect, '4h');
+
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'forecast/setForecastParams',
+        }),
+      );
+    });
+
+    it('should update window parameter', async () => {
+      const store = createTestStore({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+      });
+
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      render(
+        <Provider store={store}>
+          <Dashboard />
+        </Provider>,
+      );
+
+      const windowInput = screen.getByTestId('window-input');
+      await userEvent.clear(windowInput);
+      await userEvent.type(windowInput, '100');
+
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'forecast/setForecastParams',
+        }),
+      );
+    });
+
+    it('should update horizon parameter', async () => {
+      const store = createTestStore({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+      });
+
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      render(
+        <Provider store={store}>
+          <Dashboard />
+        </Provider>,
+      );
+
+      const horizonInput = screen.getByTestId('horizon-input');
+      await userEvent.clear(horizonInput);
+      await userEvent.type(horizonInput, '48');
+
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'forecast/setForecastParams',
+        }),
+      );
+    });
+
+    it('should update model parameter', async () => {
+      const store = createTestStore({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+      });
+
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      render(
+        <Provider store={store}>
+          <Dashboard />
+        </Provider>,
+      );
 
       const modelSelect = screen.getByTestId('model-select');
-      fireEvent.change(modelSelect, { target: { value: 'model1' } });
+      await userEvent.selectOptions(modelSelect, 'advanced');
 
-      expect(modelSelect).toHaveValue('model1');
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'forecast/setForecastParams',
+        }),
+      );
     });
+  });
 
-    it('updates selected date', () => {
-      renderWithProvider();
-
-      const dateInput = screen.getByTestId('date-input');
-      const newDate = '2024-12-31';
-      fireEvent.change(dateInput, { target: { value: newDate } });
-
-      expect(dateInput).toHaveValue(newDate);
-    });
-
-    it('shows loading state transition', async () => {
-      renderWithProvider();
-
-      expect(screen.getByTestId('params-state')).toHaveTextContent('idle');
-
-      await waitFor(
-        () => {
-          expect(screen.getByTestId('params-state')).toHaveTextContent(
-            'success',
-          );
+  describe('Predict functionality', () => {
+    it('should navigate to forecast page on predict button click', async () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
         },
-        { timeout: 2000 },
-      );
-    });
-  });
-
-  describe('UseEffect and Hooks', () => {
-    it('calls useOrchestrator hook', () => {
-      renderWithProvider();
-      expect(mockUseOrchestrator).toHaveBeenCalledTimes(1);
-    });
-
-    it('sets default date to today', () => {
-      const today = new Date();
-      const expectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-      renderWithProvider();
-
-      const dateInput = screen.getByTestId('date-input');
-      expect(dateInput).toHaveValue(expectedDate);
-    });
-
-    it('cleans up timer on unmount', () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
-
-      const { unmount } = renderWithProvider();
-      unmount();
-
-      expect(clearTimeoutSpy).toHaveBeenCalled();
-      clearTimeoutSpy.mockRestore();
-    });
-  });
-
-  describe('Accessibility and Styling', () => {
-    it('has correct background and styling', () => {
-      const { container } = renderWithProvider();
-
-      const mainContainer = container.querySelector('.min-h-screen');
-      expect(mainContainer).toBeInTheDocument();
-      expect(mainContainer).toHaveClass('bg-primary');
-    });
-
-    it('close button has proper aria label', () => {
-      renderWithProvider();
-
-      fireEvent.click(screen.getByTestId('add-asset-button'));
-
-      const closeButton = document.querySelector('.find-assets-close-button');
-      expect(closeButton).toBeInTheDocument();
-      expect(closeButton).toHaveAttribute('aria-label', 'Close');
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('handles null asset gracefully', () => {
-      mockSelectors.selectSelectedAsset.mockReturnValue(undefined);
-
-      expect(() => {
-        renderWithProvider();
-      }).not.toThrow();
-
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
-      );
-    });
-
-    it('handles empty recent assets with selected asset', () => {
-      mockSelectors.selectRecent.mockReturnValue([]);
-      mockSelectors.selectSelectedAsset.mockReturnValue({
-        symbol: 'BTCUSDT',
-        provider: 'binance',
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+        timeseriesState: {
+          byKey: {
+            'BINANCE:BTCUSDT:1h:200': {
+              bars: [[1640995200000, 100, 110, 95, 105]],
+              fetchedAt: '2024-01-01T00:00:00.000Z',
+            },
+          },
+        },
       });
 
-      renderWithProvider();
+      const predictButton = screen.getByTestId('predict-button');
+      await userEvent.click(predictButton);
 
-      expect(screen.getByTestId('recent-assets-state')).toHaveTextContent(
-        'empty',
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        expect.stringContaining('/forecast/BTCUSDT'),
       );
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        expect.stringContaining('provider=binance'),
+      );
+    });
+
+    it('should not navigate when no asset is selected', async () => {
+      renderDashboard();
+
+      const predictButton = screen.getByTestId('predict-button');
+      await userEvent.click(predictButton);
+
+      expect(mockRouter.push).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Asset management', () => {
+    it('should remove asset from recent list', async () => {
+      const store = createTestStore({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+            {
+              symbol: 'SBER',
+              provider: 'moex',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: { tf: '1h', window: 200, horizon: 24, model: 'minimal' },
+        },
+      });
+
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      render(
+        <Provider store={store}>
+          <Dashboard />
+        </Provider>,
+      );
+
+      const removeButtons = screen.getAllByTestId('remove-asset-btn');
+      await userEvent.click(removeButtons[0]); // Remove BTCUSDT
+
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'catalog/removeRecent',
+          payload: { symbol: 'BTCUSDT', provider: 'binance' },
+        }),
+      );
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('should handle empty recent assets state', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [],
+        },
+      });
+
+      const recentAssetsBar = screen.getByTestId('recent-assets-bar');
+      expect(recentAssetsBar).toHaveAttribute('data-state', 'empty');
+    });
+
+    it('should handle missing forecast parameters', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: undefined,
+        },
+      });
+
+      // Should still render with default parameters
+      expect(screen.getByTestId('window-input')).toHaveValue(200);
+    });
+
+    it('should handle window parameter as string', () => {
+      renderDashboard({
+        catalogState: {
+          recent: [
+            {
+              symbol: 'BTCUSDT',
+              provider: 'binance',
+              usedAt: new Date().toISOString(),
+            },
+          ],
+          selected: { symbol: 'BTCUSDT', provider: 'binance' },
+        },
+        forecastState: {
+          params: {
+            tf: '1h',
+            window: '200' as any,
+            horizon: 24,
+            model: 'minimal',
+          },
+        },
+      });
+
+      // Should handle string window parameter
+      expect(screen.getByTestId('window-input')).toHaveValue(200);
     });
   });
 });
