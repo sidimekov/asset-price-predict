@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main" , "fix/ci/deploy.yml"]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 permissions:
