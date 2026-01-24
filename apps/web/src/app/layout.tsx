@@ -86,7 +86,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       <YandexMetrika />
-      <ServiceWorkerRegister/>
+      <ServiceWorkerRegister />
       {showAppLayout ? (
         <div className="flex h-screen overflow-hidden">
           <div className={sidebarOpen ? 'sidebar' : 'sidebar collapsed'}>
