@@ -28,7 +28,7 @@ self.addEventListener('fetch', (event) => {
   const isImage =
     event.request.destination === 'image' && url.pathname === 'images/figure.png';
 
-  if (!isLandingRequest || !isImage) {
+  if (!isLandingRequest && !isImage) {
     return;
   }
 
