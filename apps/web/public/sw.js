@@ -26,7 +26,7 @@ self.addEventListener('fetch', (event) => {
   const isLandingRequest =
     event.request.mode === 'navigate' && url.pathname === LANDING_URL;
   const isImage =
-    event.request.destination === 'image' && url.pathname === 'images/figure.png';
+    event.request.destination === 'image' && url.pathname === '/images/figure.png';
 
   if (!isLandingRequest && !isImage) {
     return;
