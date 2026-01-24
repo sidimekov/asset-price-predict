@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main" , "feat/service-worker-welcome"]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 permissions:
