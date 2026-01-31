@@ -56,7 +56,7 @@ function parseJwtExpiresIn(v: string | undefined): string {
 
 export function readEnv(processEnv: NodeJS.ProcessEnv = process.env): Env {
   const nodeEnv = parseNodeEnv(processEnv.NODE_ENV);
-  const port = parsePort(processEnv.PORT);
+  const port = parsePort(processEnv.PORT ?? processEnv.API_PORT);
   const corsOrigins = parseCorsOrigins(processEnv.CORS_ORIGINS, nodeEnv);
   const jwtSecret = parseJwtSecret(processEnv.JWT_SECRET, nodeEnv);
   const jwtExpiresIn = parseJwtExpiresIn(processEnv.JWT_EXPIRES_IN);
