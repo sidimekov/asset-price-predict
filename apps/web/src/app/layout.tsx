@@ -13,6 +13,7 @@ import { useGetMeQuery } from '@/shared/api/account.api';
 import { backendApi } from '@/shared/api/backendApi';
 import { useAppDispatch } from '@/shared/store/hooks';
 import type { HttpError } from '@/shared/networking/types';
+import { ServiceWorkerRegister } from '@/app/ServiceWorkerRegister';
 
 const publicPaths = ['/auth', '/'];
 
@@ -85,6 +86,7 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
       <YandexMetrika />
+      <ServiceWorkerRegister />
       {showAppLayout ? (
         <div className="flex h-screen overflow-hidden">
           <div className={sidebarOpen ? 'sidebar' : 'sidebar collapsed'}>
