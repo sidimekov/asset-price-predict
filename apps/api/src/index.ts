@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { mkdirSync } from 'node:fs';
 
 import { readEnv } from './config/env.js';
+import { loadEnv } from './config/loadEnv.js';
 import { MAX_AVATAR_SIZE, uploadRoot } from './config/uploads.js';
 import { buildLoggerOptions } from './infra/logger.js';
 import { registerErrorHandler } from './infra/errorHandler.js';
@@ -15,6 +16,7 @@ import { registerRouter } from './http/router.js';
 import { checkDbConnection } from './db/index.js';
 
 export function buildApp() {
+  loadEnv();
   const env = readEnv();
 
   const app = Fastify({
