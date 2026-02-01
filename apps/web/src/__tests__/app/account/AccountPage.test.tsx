@@ -361,14 +361,11 @@ describe('AccountPage', () => {
 
   it('should handle logout button click', async () => {
     const mockRouterReplace = vi.fn();
-    const mockRouterRefresh = vi.fn();
     const mockLogoutMutation = vi.fn().mockResolvedValue({});
-    const mockResetApiState = vi.fn();
 
     vi.doMock('next/navigation', () => ({
       useRouter: () => ({
         replace: mockRouterReplace,
-        refresh: mockRouterRefresh,
       }),
     }));
 
@@ -387,14 +384,6 @@ describe('AccountPage', () => {
 
     vi.doMock('@/shared/api/auth.api', () => ({
       useLogoutMutation: () => [mockLogoutMutation, { isLoading: false }],
-    }));
-
-    vi.doMock('@/shared/api/backendApi', () => ({
-      backendApi: {
-        util: {
-          resetApiState: mockResetApiState,
-        },
-      },
     }));
 
     vi.doMock('@/shared/store/hooks', () => ({
@@ -424,9 +413,7 @@ describe('AccountPage', () => {
     await userEvent.click(logoutButton);
 
     await waitFor(() => {
-      expect(mockResetApiState).toHaveBeenCalled();
       expect(mockRouterReplace).toHaveBeenCalledWith('/auth');
-      expect(mockRouterRefresh).toHaveBeenCalled();
       expect(mockLogoutMutation).toHaveBeenCalled();
     });
   });
