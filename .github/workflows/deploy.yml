@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [ "main", "fix/ci/deploy-on-unavailable-server" ]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 permissions:
