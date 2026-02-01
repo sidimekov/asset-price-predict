@@ -197,6 +197,16 @@ function normalizeBarsFinal(bars: Bar[]): Bar[] {
   return deduped;
 }
 
+function applyLimit(bars: Bar[], limit?: number): Bar[] {
+  if (!limit || !Number.isFinite(limit) || limit <= 0) {
+    return bars;
+  }
+  if (bars.length <= limit) {
+    return bars;
+  }
+  return bars.slice(-limit);
+}
+
 type ProviderResolveOk = {
   ok: true;
   raw: unknown;
@@ -244,10 +254,11 @@ async function resolveProviderData(
           ? normalizeMoexCandlesResponse(moexRaw)
           : normalizeRawBars(moexRaw);
         logMoexStats(moexBars);
+        const normalized = normalizeBarsFinal(moexBars);
         return {
           ok: true,
           raw: moexRaw,
-          normalized: normalizeBarsFinal(moexBars),
+          normalized: applyLimit(normalized, params.limit),
           source: 'NETWORK',
         };
       }
