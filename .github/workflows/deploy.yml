@@ -73,14 +73,15 @@ jobs:
             cd ${{ env.DEPLOY_PATH }}
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+  
+            docker compose -f "${{ env.COMPOSE_FILE }}" pull api web
 
             RUNNING_SERVICES="$(docker compose -f "${{ env.COMPOSE_FILE }}" ps --services --filter status=running | tr '\n' ' ' | xargs || true)"
             if [ -z "${RUNNING_SERVICES}" ]; then
               echo "No running services. Skipping deploy."
               exit 0
             fi
-
-            docker compose -f "${{ env.COMPOSE_FILE }}" pull ${RUNNING_SERVICES}
+  
             docker compose -f "${{ env.COMPOSE_FILE }}" up -d --no-deps ${RUNNING_SERVICES}
 
             docker image prune -f
