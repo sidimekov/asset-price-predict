@@ -56,15 +56,14 @@ const AccountPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('auth.token');
-    }
-    dispatch(backendApi.util.resetApiState());
-    router.replace('/auth');
     try {
       await logout().unwrap();
     } catch {
       // noop
+    } finally {
+      dispatch(backendApi.util.resetApiState());
+      router.replace('/auth');
+      router.refresh();
     }
   };
 
