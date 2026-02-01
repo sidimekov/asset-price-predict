@@ -14,7 +14,6 @@ import {
 import { useLogoutMutation } from '@/shared/api/auth.api';
 import { useAppDispatch } from '@/shared/store/hooks';
 import type { UpdateAccountReq } from '@assetpredict/shared';
-import { backendApi } from '@/shared/api/backendApi';
 
 const EMPTY_PROFILE = {
   username: '',
@@ -56,15 +55,12 @@ const AccountPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('auth.token');
-    }
-    dispatch(backendApi.util.resetApiState());
-    router.replace('/auth');
     try {
       await logout().unwrap();
     } catch {
       // noop
+    } finally {
+      router.replace('/auth');
     }
   };
 

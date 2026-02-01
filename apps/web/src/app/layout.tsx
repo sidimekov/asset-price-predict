@@ -35,6 +35,23 @@ const AppShell = ({ children }: { children: React.ReactNode }) => {
     setIsAuthChecked(true);
   }, [pathname]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleAuthTokenChange = () => {
+      const storedToken = getStoredToken();
+      setToken(storedToken);
+      setIsAuthChecked(true);
+    };
+
+    window.addEventListener('auth-token-change', handleAuthTokenChange);
+    return () => {
+      window.removeEventListener('auth-token-change', handleAuthTokenChange);
+    };
+  }, []);
+
   const safePathname = pathname ?? '';
   const isPublicPage = publicPaths.includes(safePathname);
   const { error: accountError } = useGetMeQuery(undefined, {
