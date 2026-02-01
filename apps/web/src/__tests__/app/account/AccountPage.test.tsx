@@ -361,12 +361,14 @@ describe('AccountPage', () => {
 
   it('should handle logout button click', async () => {
     const mockRouterReplace = vi.fn();
+    const mockRouterRefresh = vi.fn();
     const mockLogoutMutation = vi.fn().mockResolvedValue({});
     const mockResetApiState = vi.fn();
 
     vi.doMock('next/navigation', () => ({
       useRouter: () => ({
         replace: mockRouterReplace,
+        refresh: mockRouterRefresh,
       }),
     }));
 
@@ -422,9 +424,9 @@ describe('AccountPage', () => {
     await userEvent.click(logoutButton);
 
     await waitFor(() => {
-      expect(window.localStorage.removeItem).toHaveBeenCalledWith('auth.token');
       expect(mockResetApiState).toHaveBeenCalled();
       expect(mockRouterReplace).toHaveBeenCalledWith('/auth');
+      expect(mockRouterRefresh).toHaveBeenCalled();
       expect(mockLogoutMutation).toHaveBeenCalled();
     });
   });
