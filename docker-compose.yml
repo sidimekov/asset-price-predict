@@ -54,5 +54,14 @@ services:
     depends_on:
       - api
 
+  inference:
+    build:
+      context: .
+      dockerfile: apps/inference/Dockerfile
+    environment:
+      PYTHONUNBUFFERED: '1'
+    ports:
+      - '8000:8000'
+
 volumes:
   pgdata:

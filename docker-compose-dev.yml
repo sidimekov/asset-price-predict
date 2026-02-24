@@ -82,6 +82,28 @@ services:
         'pnpm install --frozen-lockfile=false && pnpm --filter @assetpredict/web dev',
       ]
 
+  inference:
+    build:
+      context: .
+      dockerfile: apps/inference/Dockerfile.dev
+    environment:
+      PYTHONUNBUFFERED: '1'
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/repo
+    working_dir: /repo/apps/inference
+    command:
+      [
+        'uvicorn',
+        'app.main:app',
+        '--host',
+        '0.0.0.0',
+        '--port',
+        '8000',
+        '--reload',
+      ]
+
 volumes:
   pgdata:
   repo_node_modules:
