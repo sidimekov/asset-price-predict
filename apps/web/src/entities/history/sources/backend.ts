@@ -11,6 +11,15 @@ import type {
   HistoryPageRequest,
   HistoryRepository,
 } from '../repository';
+import { DEFAULT_MODEL_VER } from '@/config/ml';
+
+const BINANCE_QUOTES = ['USDT', 'USDC', 'BUSD', 'USD', 'EUR', 'BTC', 'ETH'];
+
+const inferProvider = (symbol: string): string => {
+  const upper = symbol.toUpperCase();
+  const matchesBinance = BINANCE_QUOTES.some((quote) => upper.endsWith(quote));
+  return matchesBinance ? 'binance' : 'moex';
+};
 
 const makeBaseQueryApi = (): BaseQueryApi => ({
   signal: new AbortController().signal,
@@ -28,11 +37,12 @@ const mapListItem = (item: ForecastListItem): HistoryEntry => ({
   symbol: item.symbol,
   tf: item.timeframe,
   horizon: item.horizon,
-  provider: 'BACKEND',
+  provider: inferProvider(item.symbol),
   p50: [],
   meta: {
     runtime_ms: 0,
     backend: 'server',
+    model_ver: DEFAULT_MODEL_VER,
   },
 });
 
@@ -74,7 +84,7 @@ const mapDetail = (item: ForecastDetailRes): HistoryEntry => {
     symbol: item.symbol,
     tf: item.timeframe,
     horizon: item.horizon,
-    provider: 'BACKEND',
+    provider: inferProvider(item.symbol),
     p50: zipSeries(item.series, item.series.p50),
     p10: zipSeries(item.series, item.series.p10),
     p90: zipSeries(item.series, item.series.p90),
@@ -82,6 +92,7 @@ const mapDetail = (item: ForecastDetailRes): HistoryEntry => {
     meta: {
       runtime_ms: 0,
       backend: 'server',
+      model_ver: DEFAULT_MODEL_VER,
     },
   };
 };

@@ -6,6 +6,7 @@ import { localHistorySource } from '@/entities/history/sources/local';
 
 vi.mock('@/entities/history/sources/backend', () => ({
   backendHistorySource: {
+    list: vi.fn(),
     listPage: vi.fn(),
     getById: vi.fn(),
     save: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('@/entities/history/sources/backend', () => ({
 
 vi.mock('@/entities/history/sources/local', () => ({
   localHistorySource: {
+    list: vi.fn(),
     listPage: vi.fn(),
     getById: vi.fn(),
     save: vi.fn(),
@@ -34,23 +36,24 @@ describe('hybridHistorySource', () => {
 
   it('returns backend results when backend listPage succeeds', async () => {
     const page = { items: [], total: 0, page: 1, limit: 10 };
-    backendMock.listPage.mockResolvedValue(page);
+    backendMock.list.mockResolvedValue([]);
+    localMock.list.mockResolvedValue([]);
 
     const result = await hybridHistorySource.listPage({ page: 1, limit: 10 });
 
-    expect(backendMock.listPage).toHaveBeenCalledWith({ page: 1, limit: 10 });
-    expect(localMock.listPage).not.toHaveBeenCalled();
+    expect(backendMock.list).toHaveBeenCalled();
+    expect(localMock.list).toHaveBeenCalled();
     expect(result).toEqual(page);
   });
 
   it('falls back to local listPage on backend failure', async () => {
-    backendMock.listPage.mockRejectedValue(new Error('boom'));
+    backendMock.list.mockRejectedValue(new Error('boom'));
     const fallback = { items: [], total: 0, page: 1, limit: 10 };
     localMock.listPage.mockResolvedValue(fallback);
 
     const result = await hybridHistorySource.listPage({ page: 2, limit: 5 });
 
-    expect(backendMock.listPage).toHaveBeenCalledWith({ page: 2, limit: 5 });
+    expect(backendMock.list).toHaveBeenCalled();
     expect(localMock.listPage).toHaveBeenCalledWith({ page: 2, limit: 5 });
     expect(result).toEqual(fallback);
   });

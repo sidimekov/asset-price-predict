@@ -21,9 +21,14 @@ import {
 } from '@/entities/timeseries/model/timeseriesSlice';
 import {
   selectForecastByKey,
+  selectForecastLoading,
   selectForecastParams,
 } from '@/entities/forecast/model/selectors';
-import { setForecastParams } from '@/entities/forecast/model/forecastSlice';
+import {
+  forecastReceived,
+  setForecastParams,
+} from '@/entities/forecast/model/forecastSlice';
+import type { ForecastEntry } from '@/entities/forecast/types';
 import {
   makeForecastKey,
   makeTimeseriesKey,
@@ -31,14 +36,36 @@ import {
 import { mapProviderToMarket } from '@/processes/orchestrator/provider';
 import type { MarketTimeframe } from '@/config/market';
 import { useOrchestrator } from '@/processes/orchestrator/useOrchestrator';
+import { historyRepository } from '@/entities/history/repository';
+import type { HistoryEntry } from '@/entities/history/model';
 
 type State = 'idle' | 'loading' | 'empty' | 'ready';
+
+function mapHistoryToForecastEntry(entry: HistoryEntry): ForecastEntry {
+  return {
+    p50: entry.p50,
+    p10: entry.p10,
+    p90: entry.p90,
+    explain: entry.explain?.map((item) => ({
+      name: item.name,
+      impact: item.sign === '-' ? -item.impact_abs : item.impact_abs,
+      shap: item.shap,
+      conf: item.confidence,
+    })),
+    meta: {
+      runtime_ms: entry.meta.runtime_ms,
+      backend: entry.meta.backend,
+      model_ver: entry.meta.model_ver ?? 'unknown',
+    },
+  };
+}
 
 export default function ForecastPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+  const handledHistoryId = React.useRef<string | null>(null);
 
   const id = params.id;
 
@@ -47,6 +74,8 @@ export default function ForecastPage() {
   const providerQuery = searchParams.get('provider');
   const tfQuery = searchParams.get('tf');
   const windowQuery = searchParams.get('window');
+  const horizonQuery = searchParams.get('horizon');
+  const historyIdQuery = searchParams.get('historyId');
   const providerValue = providerQuery || selectedAsset?.provider || null;
   const providerNorm = providerValue
     ? mapProviderToMarket(providerValue)
@@ -70,16 +99,24 @@ export default function ForecastPage() {
     const safeWindow = Number.isFinite(parsedWindow)
       ? parsedWindow
       : fallbackWindow;
+    const fallbackHorizon = base.horizon ?? defaultParams.horizon;
+    const parsedHorizon = horizonQuery ? Number(horizonQuery) : Number.NaN;
+    const safeHorizon = Number.isFinite(parsedHorizon)
+      ? parsedHorizon
+      : fallbackHorizon;
 
     return {
       ...base,
       tf: tfQuery || base.tf,
       window: safeWindow,
+      horizon: safeHorizon,
     };
-  }, [storedParams, defaultParams, tfQuery, windowQuery]);
+  }, [storedParams, defaultParams, tfQuery, windowQuery, horizonQuery]);
 
   const effectiveParams = resolvedParams;
-  const selectedSymbol = selectedAsset?.symbol ?? String(id);
+  const routeSymbol =
+    typeof id === 'string' && id.trim().length > 0 ? id : null;
+  const selectedSymbol = routeSymbol ?? selectedAsset?.symbol ?? null;
   const tickerQuery = searchParams.get('ticker');
   const displaySymbol = tickerQuery || selectedSymbol || String(id);
   const selectedPrice = '—';
@@ -116,6 +153,86 @@ export default function ForecastPage() {
   const forecastEntry = useAppSelector((state) =>
     fcKey ? selectForecastByKey(state, fcKey) : undefined,
   );
+  const forecastLoading = useAppSelector((state) =>
+    fcKey ? selectForecastLoading(state, fcKey) : false,
+  );
+
+  React.useEffect(() => {
+    if (!effectiveParams) return;
+    if (
+      storedParams?.tf === effectiveParams.tf &&
+      storedParams?.window === effectiveParams.window &&
+      storedParams?.horizon === effectiveParams.horizon &&
+      storedParams?.model === effectiveParams.model
+    ) {
+      return;
+    }
+    dispatch(setForecastParams(effectiveParams));
+  }, [dispatch, effectiveParams, storedParams]);
+
+  React.useEffect(() => {
+    if (!historyIdQuery) return;
+    if (handledHistoryId.current === historyIdQuery) return;
+    let isActive = true;
+
+    historyRepository
+      .getById(historyIdQuery)
+      .then((entry) => {
+        if (!isActive || !entry) return;
+        const historySymbol =
+          entry.symbol || routeSymbol || selectedAsset?.symbol;
+
+        if (historySymbol && entry.provider) {
+          dispatch(
+            setSelected({
+              symbol: historySymbol,
+              provider: entry.provider as Provider,
+            }),
+          );
+        }
+
+        if (
+          entry.tf &&
+          entry.horizon &&
+          (effectiveParams.tf !== entry.tf ||
+            effectiveParams.horizon !== entry.horizon)
+        ) {
+          dispatch(
+            setForecastParams({
+              ...effectiveParams,
+              tf: entry.tf,
+              horizon: entry.horizon,
+            }),
+          );
+        }
+
+        if (historySymbol) {
+          const historyKey = makeForecastKey({
+            symbol: historySymbol,
+            tf: entry.tf as MarketTimeframe,
+            horizon: entry.horizon,
+            model: effectiveParams.model ?? undefined,
+          });
+          dispatch(
+            forecastReceived({
+              key: historyKey,
+              entry: mapHistoryToForecastEntry(entry),
+            }),
+          );
+          handledHistoryId.current = historyIdQuery;
+        }
+      })
+      .catch((err) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[ForecastPage] history load failed', err);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [dispatch, effectiveParams, historyIdQuery, routeSymbol, selectedAsset]);
+
   const handleBackToAssets = () => {
     router.push('/dashboard');
   };
